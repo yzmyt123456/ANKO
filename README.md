@@ -69,12 +69,27 @@
 ### 环境要求
 - Python ≥ 3.10
 
-### 安装与启动
+### 🚀 一键启动(推荐)
+
+项目在**虚拟环境**中运行,以下脚本会自动完成"创建虚拟环境 → 安装依赖 → 启动":
+
+```bash
+# Windows(双击或命令行运行):
+start.bat
+
+# macOS / Linux(需先赋予执行权限):
+chmod +x start.sh
+./start.sh
+```
+
+启动后浏览器打开 **http://127.0.0.1:8000**(前端页面)或 **http://127.0.0.1:8000/docs**(API 文档)。
+
+### 手动安装与启动
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/<你的用户名>/anko.git
-cd anko
+git clone https://github.com/yzmyt123456/ANKO.git
+cd ANKO
 
 # 2. 创建虚拟环境
 python -m venv .venv
@@ -84,7 +99,7 @@ python -m venv .venv
 # 或 macOS / Linux:
 # source .venv/bin/activate
 
-# 4. 安装依赖
+# 4. 安装依赖(在虚拟环境内)
 pip install -e ".[dev]"
 
 # 5. 启动
@@ -96,6 +111,7 @@ python run.py
 ```
 
 > 💡 服务器默认监听 `127.0.0.1:8000`,可用 `python run.py --port 9000` 修改端口。
+> 💡 所有依赖只安装在本项目的 `.venv` 虚拟环境中,不会污染系统 Python。
 
 
 ## 📁 项目结构

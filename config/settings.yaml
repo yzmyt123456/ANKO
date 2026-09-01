@@ -1,0 +1,45 @@
+# ============================================================
+# 安科创作平台 全局配置
+# 字段说明见 anko/config.py 中的 Settings 模型
+# ============================================================
+
+app:
+  name: "安科创作平台"
+  debug: true
+
+server:
+  host: "127.0.0.1"
+  port: 8000
+  api_prefix: "/api"
+
+database:
+  # SQLite: "sqlite:///./data/anko.db"
+  # 后续可切换: "postgresql+psycopg://user:pass@host/db"
+  url: "sqlite:///./data/anko.db"
+  echo: false
+
+# 骰子引擎默认行为
+dice:
+  # 默认骰娘名(首次启动时自动创建)
+  default_maid: "命运之骰"
+
+# 插件目录(相对项目根目录)
+plugins:
+  directory: "plugins"
+
+# ------------------------------------------------------------
+# AI 助手(OpenAI 兼容接口)
+# 支持 DeepSeek / OpenAI / 通义千问 / Kimi / Ollama(本地)等
+# 用法示例:
+#   enabled: true
+#   base_url: "https://api.deepseek.com/v1"     # 其他服务替换为对应地址
+#   api_key: "sk-xxxxxxxx"                       # 你的 API Key
+#   model: "deepseek-chat"                       # 如 gpt-4o-mini / qwen-plus 等
+# Ollama 本地示例: base_url "http://127.0.0.1:11434/v1" model "qwen2.5"
+# ------------------------------------------------------------
+ai:
+  enabled: false
+  base_url: "https://api.deepseek.com/v1"
+  api_key: ""
+  model: "deepseek-chat"
+  timeout: 30.0

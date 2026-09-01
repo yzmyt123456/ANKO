@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>安科创作平台</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+<div id="app">
+  <div class="app-shell">
+
+    <!-- ==================== 侧边栏 ==================== -->
+    <aside class="sidebar">
+      <div class="sidebar-logo" @click="switchView('home')">
+        <span class="logo-badge">🎲</span>
+        <span class="logo-text">安科创作平台</span>
+      </div>
+
+      <nav class="side-nav">
+        <a v-for="t in tabs" :key="t.id"
+           :class="['side-item', {active: view === t.id}]"
+           @click="switchView(t.id)">
+          <span class="side-icon">{{ t.icon }}</span>
+          <span class="side-label">{{ t.label }}</span>
+          <span v-if="t.badge && itemCount(t.badge)" class="side-count">{{ itemCount(t.badge) }}</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a class="side-item" href="/docs" target="_blank">
+          <span class="side-icon">📘</span><span class="side-label">API 文档</span>
+        </a>
+        <div class="sidebar-version">Anko v0.1.0</div>
+      </div>
+    </aside>
+
+    <!-- ==================== 主区域 ==================== -->
+    <div class="main-area">
+
+      <!-- 顶部栏 -->
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1 class="page-title">{{ pageTitle }}</h1>
+          <p class="page-desc">{{ pageDesc }}</p>
+        </div>
+        <div class="topbar-actions">
+          <template v-if="view === 'characters'">
+            <button class="btn primary" @click="openCharModal()">＋ 新建人物卡</button>
+          </template>
+          <template v-else-if="view === 'stories'">
+            <button class="btn primary" @click="openStoryModal()">＋ 新建故事线</button>
+          </template>
+          <template v-else-if="view === 'maids'">
+            <button class="btn primary" @click="openMaidModal()">＋ 召唤骰娘</button>
+          </template>
+        </div>
+      </header>
+
+      <main class="content">
+
+        <!-- ==================== 首页 ==================== -->
+        <section v-if="view === 'home'" class="view">
+          <div class="hero">
+            <div class="hero-text">
+              <h1>让骰子决定命运的走向</h1>
+              <p>创建人物卡、撰写剧情、召唤你的专属骰娘 —— 一段安科冒险正在等你开启。</p>
+              <div class="hero-actions">
+                <button class="btn hero-btn" @click="switchView('characters')">✍️ 创建人物卡</button>
+                <button class="btn hero-btn ghost" @click="switchView('rolls')">🎲 立即掷骰</button>
+              </div>
+            </div>
+            <div class="hero-dice">🎲</div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card s-purple" @click="switchView('characters')">
+              <div class="stat-icon">📇</div>
+              <div class="stat-num">{{ stats.characters }}</div>
+              <div class="stat-label">人物卡</div>
+            </div>
+            <div class="stat-card s-blue" @click="switchView('stories')">
+              <div class="stat-icon">📖</div>
+              <div class="stat-num">{{ stats.stories }}</div>
+              <div class="stat-label">故事线</div>
+            </div>
+            <div class="stat-card s-green" @click="switchView('maids')">
+              <div class="stat-icon">🧝</div>
+              <div class="stat-num">{{ stats.maids }}</div>
+              <div class="stat-label">骰娘</div>
+            </div>
+            <div class="stat-card s-orange" @click="switchView('rolls')">
+              <div class="stat-icon">🎲</div>
+              <div class="stat-num">{{ stats.rolls }}</div>
+              <div class="stat-label">掷骰次数</div>
+            </div>
+          </div>
+
+          <div class="home-grid">
+            <div class="card home-panel">
+              <div class="card-head">
+                <h2>最近掷骰</h2>
+                <button class="link-btn" @click="switchView('rolls')">查看全部 →</button>
+              </div>
+              <div v-if="!rollHistory.length" class="inline-empty">还没有掷骰记录,去骰一场吧 🎲</div>
+              <div v-for="r in rollHistory.slice(0, 5)" :key="r.id" class="recent-row">
+                <span class="badge">{{ r.expression }} = {{ r.total }}</span>
+                <span v-if="r.judgement" :class="['judge-badge', r.judgement.code]">{{ r.judgement.level }}</span>
+                <span class="muted recent-time">{{ fmtTime(r.created_at) }}</span>
+              </div>
+            </div>
+
+            <div class="card home-panel">
+              <div class="card-head">
+                <h2>最近剧情</h2>
+                <button class="link-btn" @click="switchView('stories')">全部故事线 →</button>
+              </div>
+              <div v-if="!stories.length" class="inline-empty">还没有故事线,开一篇吧 📖</div>
+              <div v-for="s in stories.slice(0, 5)" :key="s.id" class="recent-row clickable" @click="openStory(s)">
+                <span class="recent-icon">📖</span>
+                <span class="recent-name">{{ s.title }}</span>
+                <span class="muted recent-time">{{ fmtTime(s.created_at) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card tip-card">
+            <h2>💡 安科玩法小贴士</h2>
+            <p>安科的核心是<strong>"用骰子决定剧情走向"</strong>。先创建人物卡 → 开一条故事线 → 在剧情的关键抉择处掷一个 <code>1d100</code>。
+            大成功 / 大失败往往带来最意想不到的展开。你的骰娘可以设定自己的性格与判定阈值,让每一次掷骰都有"她"的风格。</p>
+          </div>
+        </section>
+
+
+
+        <!-- ==================== 人物卡 ==================== -->
+        <section v-else-if="view === 'characters'" class="view">
+          <div v-if="!characters.length" class="empty-state">
+            <div class="empty-icon">📇</div>
+            <h3>还没有人物卡</h3>
+            <p>创建你的第一位角色,开启安科之旅。</p>
+            <button class="btn primary" @click="openCharModal()">＋ 创建人物卡</button>
+          </div>
+
+          <div v-else class="grid-cards">
+            <div v-for="c in characters" :key="c.id" class="card c-card" @click="openCharDetail(c)">
+              <div class="c-card-top">
+                <div class="avatar" :style="avatarColor(c.name)">{{ c.name[0] }}</div>
+                <div class="c-card-actions" @click.stop>
+                  <button class="icon-btn" title="编辑" @click="openCharModal(c)">✏️</button>
+                  <button class="icon-btn danger" title="删除" @click="deleteChar(c)">🗑️</button>
+                </div>
+              </div>
+              <div class="c-card-title">{{ c.name }}</div>
+              <div class="c-card-sub">{{ c.title || '未设称号' }}</div>
+              <div v-if="Object.keys(c.attributes).length" class="c-card-attrs">
+                <span v-for="(v, k) in topAttrs(c, 3)" :key="k" class="attr-pill">{{ k }} {{ v }}</span>
+              </div>
+              <div v-if="c.tags.length" class="tag-row">
+                <span v-for="t in c.tags.slice(0, 3)" :key="t" class="tag">{{ t }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== 剧情(故事线列表) ==================== -->
+        <section v-else-if="view === 'stories'" class="view">
+          <div v-if="!stories.length" class="empty-state">
+            <div class="empty-icon">📖</div>
+            <h3>还没有故事线</h3>
+            <p>开一条串,写下你的第一段安科剧情。</p>
+            <button class="btn primary" @click="openStoryModal()">＋ 新建故事线</button>
+          </div>
+
+          <div v-else class="grid-cards">
+            <div v-for="s in stories" :key="s.id" class="card s-card" @click="openStory(s)">
+              <div class="s-card-icon">📖</div>
+              <div class="s-card-title">{{ s.title }}</div>
+              <div v-if="s.description" class="s-card-desc">{{ truncate(s.description, 60) }}</div>
+              <div class="tag-row">
+                <span v-for="t in s.tags.slice(0, 3)" :key="t" class="tag">{{ t }}</span>
+                <span v-if="!s.tags.length" class="muted">无标签</span>
+              </div>
+              <div class="s-card-foot">
+                <span class="muted">{{ fmtTime(s.created_at) }}</span>
+                <span class="link-text">继续创作 →</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== 剧情详情 ==================== -->
+        <section v-else-if="view === 'storyDetail'" class="view">
+          <button class="btn back-btn" @click="switchView('stories')">← 返回故事线</button>
+          <div class="story-header">
+            <h1 class="story-h1">📖 {{ currentStory.title }}</h1>
+            <p v-if="currentStory.description" class="muted">{{ currentStory.description }}</p>
+          </div>
+
+          <div class="story-layout">
+            <!-- 时间线 -->
+            <div class="story-feed">
+              <div v-if="!entries.length" class="card inline-empty">剧情还是空的,写下第一段吧 ✍️</div>
+              <div v-for="e in entries" :key="e.id" class="entry">
+                <div class="entry-dot"></div>
+                <div class="entry-body">
+                  <div class="entry-head">
+                    <span class="chapter">📌 {{ e.chapter || '未命名章节' }}</span>
+                    <span class="muted">{{ fmtTime(e.created_at) }}</span>
+                  </div>
+                  <div class="entry-content">{{ e.content }}</div>
+                  <div v-if="e.character_ids.length" class="entry-chars">
+                    登场:
+                    <span v-for="cid in e.character_ids" :key="cid" class="tag">{{ charName(cid) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 追加表单(sticky) -->
+            <aside class="card compose-card">
+              <h2 class="compose-title">✍️ 追加剧情</h2>
+              <form @submit.prevent="addEntry">
+                <label>章节
+                  <input v-model="entryForm.chapter" placeholder="如:第一章 · 麦田" />
+                </label>
+                <label>正文 <span class="req">*</span>
+                  <textarea v-model="entryForm.content" rows="7" required placeholder="写下这一段剧情……"></textarea>
+                </label>
+                <div class="label-text">登场人物</div>
+                <div class="chips">
+                  <span v-for="c in characters" :key="c.id"
+                        :class="['chip', {on: entryForm.character_ids.includes(c.id)}]"
+                        @click="toggleEntryChar(c.id)">{{ c.name }}</span>
+                  <span v-if="!characters.length" class="muted">(暂无人物卡)</span>
+                </div>
+                <button type="submit" class="btn primary full">保存剧情</button>
+              </form>
+            </aside>
+          </div>
+        </section>
+
+        <!-- ==================== 骰娘 ==================== -->
+        <section v-else-if="view === 'maids'" class="view">
+          <div v-if="!maids.length" class="empty-state">
+            <div class="empty-icon">🧝</div>
+            <h3>还没有骰娘</h3>
+            <p>召唤一位专属骰娘,让她替你掷出命运。</p>
+            <button class="btn primary" @click="openMaidModal()">＋ 召唤骰娘</button>
+          </div>
+
+          <div v-else class="grid-cards">
+            <div v-for="m in maids" :key="m.id" class="card m-card" @click="openMaidModal(m)">
+              <div class="m-card-top">
+                <div class="maid-orb">🧝</div>
+                <div class="m-card-actions" @click.stop>
+                  <button class="icon-btn" title="编辑" @click="openMaidModal(m)">✏️</button>
+                  <button v-if="!m.is_system" class="icon-btn danger" title="删除" @click="deleteMaid(m)">🗑️</button>
+                </div>
+              </div>
+              <div class="m-card-title">{{ m.name }}
+                <span v-if="m.is_system" class="tag system">系统</span>
+              </div>
+              <div class="m-card-sub">{{ m.personality || '暂无设定' }}</div>
+              <div class="m-card-meta">
+                <span class="meta-item">🎲 {{ m.default_expression }}</span>
+                <span class="meta-item">阈 {{ m.settings.threshold }}</span>
+                <span class="meta-item">大成功 ≥{{ m.settings.crit_success }}</span>
+                <span class="meta-item">大失败 ≤{{ m.settings.crit_fail }}</span>
+              </div>
+              <button class="btn small full" @click.stop="rollWithMaid(m)">用她掷一把 🎲</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ==================== 掷骰台 ==================== -->
+        <section v-else-if="view === 'rolls'" class="view">
+          <div class="roll-layout">
+            <div class="card roll-stage">
+              <h2 class="compose-title">🎲 掷骰台</h2>
+              <label>选择骰娘
+                <select v-model="rollMaidId">
+                  <option v-for="m in maids" :key="m.id" :value="m.id">{{ m.name }}</option>
+                </select>
+              </label>
+              <label>掷骰表达式
+                <input v-model="rollExpr" placeholder="1d100 / 2d6+3 / (1d6+1)*2" @keyup.enter="doRoll" />
+              </label>
+              <div class="quick-dice">
+                <button v-for="q in quickDice" :key="q" class="chip dice-chip" @click="quickRoll(q)">{{ q }}</button>
+              </div>
+              <label class="checkline">
+                <input type="checkbox" v-model="rollSave" /> 保存到历史记录
+              </label>
+              <button class="btn primary big roll-btn" @click="doRoll">🎲 掷骰!</button>
+
+              <div v-if="rollResult" :class="['roll-result', rollResult.judgement ? 'judge-' + rollResult.judgement.code : '']">
+                <div class="roll-total">{{ rollResult.total }}</div>
+                <div class="roll-expr">{{ rollResult.expression }}</div>
+                <div v-if="rollResult.judgement" class="roll-judgement">{{ rollResult.judgement.level }}</div>
+                <div class="roll-desc">{{ rollResult.description }}</div>
+              </div>
+            </div>
+
+            <div class="card roll-history-card">
+              <div class="card-head">
+                <h2>历史记录</h2>
+                <span class="muted">{{ rollHistory.length }} 次</span>
+              </div>
+              <div v-if="!rollHistory.length" class="inline-empty">还没有掷骰记录</div>
+              <div v-for="r in rollHistory" :key="r.id" class="roll-history-item">
+                <span class="badge">{{ r.expression }} = {{ r.total }}</span>
+                <span v-if="r.judgement" :class="['judge-badge', r.judgement.code]">{{ r.judgement.level }}</span>
+                <span class="muted recent-time">{{ fmtTime(r.created_at) }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- ==================== 人物卡 创建/编辑 模态框 ==================== -->
+  <div v-if="charModal.open" class="modal-mask" @click.self="closeCharModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>{{ charModal.editing ? '编辑人物卡' : '创建人物卡' }}</h2>
+        <button class="icon-btn" @click="closeCharModal()">✕</button>
+      </div>
+      <form class="modal-body" @submit.prevent="saveChar">
+        <!-- 🤖 AI 快速建档 -->
+        <div class="ai-panel">
+          <div class="ai-head">
+            <span class="ai-title">🤖 AI 快速建档</span>
+            <span class="muted">粘贴一段角色描述,AI 自动拆分填入</span>
+          </div>
+          <textarea v-model="aiText" rows="4" class="ai-textarea"
+                    placeholder="粘贴角色的介绍文本,例如:&#10;来自边境小镇的炼金术士菲利斯,16 岁,智慧超群,擅长制作各种药剂,性格冷静沉稳,随身带着一只会说话的猫,梦想是造出贤者之石……"></textarea>
+          <button type="button" class="btn ai-btn" :disabled="aiLoading" @click="aiParse">
+            <span v-if="!aiLoading">⚡ AI 解析</span>
+            <span v-else>⏳ AI 解析中…</span>
+          </button>
+          <div v-if="aiError" class="ai-error">{{ aiError }}</div>
+          <div v-if="aiDraft" class="ai-result">
+            <div class="ai-result-head">
+              <b>✅ 解析结果</b>
+              <div class="ai-result-actions">
+                <button type="button" class="btn small primary" @click="aiApply">✔ 填入表单</button>
+                <button type="button" class="btn small" @click="aiDraft = null">✕ 忽略</button>
+              </div>
+            </div>
+            <div class="ai-preview">
+              <div><b>名字:</b> {{ aiDraft.name }}<span v-if="aiDraft.title">  <b>称号:</b> {{ aiDraft.title }}</span></div>
+              <div v-if="Object.keys(aiDraft.attributes).length"><b>属性:</b> {{ attrsPreview(aiDraft.attributes) }}</div>
+              <div v-if="aiDraft.tags.length"><b>标签:</b> {{ aiDraft.tags.join(' · ') }}</div>
+              <div v-if="aiDraft.bio" class="ai-bio"><b>背景:</b> {{ truncate(aiDraft.bio, 120) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ai-divider"><span>或手动填写</span></div>
+
+        <label>名字 <span class="req">*</span>
+          <input v-model="charForm.name" required placeholder="人物名" />
+        </label>
+        <div class="form-row">
+          <label>称号
+            <input v-model="charForm.title" placeholder="如:黄昏的旅人" />
+          </label>
+          <label>头像 URL
+            <input v-model="charForm.avatar" placeholder="https://…(可选)" />
+          </label>
+        </div>
+        <label>人物背景
+          <textarea v-model="charForm.bio" rows="3" placeholder="这个人是谁?"></textarea>
+        </label>
+
+        <div class="label-text">属性组(自定义)</div>
+        <div v-for="(row, i) in charForm.attrRows" :key="i" class="kv-row">
+          <input v-model="row.key" placeholder="属性名(如 力量)" />
+          <input v-model="row.value" placeholder="值(如 18)" />
+          <button type="button" class="icon-btn danger" @click="charForm.attrRows.splice(i, 1)">✕</button>
+        </div>
+        <button type="button" class="btn small dashed" @click="charForm.attrRows.push({key:'', value:''})">＋ 添加属性</button>
+
+        <label>标签
+          <input v-model="charForm.tagsText" placeholder="逗号分隔,如:主角, 魔法" />
+        </label>
+
+        <div class="modal-foot">
+          <button type="button" class="btn" @click="closeCharModal()">取消</button>
+          <button type="submit" class="btn primary">{{ charModal.editing ? '保存修改' : '创建' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 故事线 创建 模态框 ==================== -->
+  <div v-if="storyModal.open" class="modal-mask" @click.self="closeStoryModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>新建故事线</h2>
+        <button class="icon-btn" @click="closeStoryModal()">✕</button>
+      </div>
+      <form class="modal-body" @submit.prevent="createStory">
+        <label>标题 <span class="req">*</span>
+          <input v-model="storyForm.title" required placeholder="故事名" />
+        </label>
+        <label>简介
+          <textarea v-model="storyForm.description" rows="3" placeholder="这是一个怎样的世界?"></textarea>
+        </label>
+        <label>标签
+          <input v-model="storyForm.tagsText" placeholder="逗号分隔,如:奇幻, 冒险" />
+        </label>
+        <label>默认骰娘
+          <select v-model="storyForm.maid_id">
+            <option :value="null">不指定</option>
+            <option v-for="m in maids" :key="m.id" :value="m.id">{{ m.name }}</option>
+          </select>
+        </label>
+        <div class="modal-foot">
+          <button type="button" class="btn" @click="closeStoryModal()">取消</button>
+          <button type="submit" class="btn primary">创建故事线</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 骰娘 创建/编辑 模态框 ==================== -->
+  <div v-if="maidModal.open" class="modal-mask" @click.self="closeMaidModal()">
+    <div class="modal">
+      <div class="modal-head">
+        <h2>{{ maidModal.editing ? '编辑骰娘' : '召唤骰娘' }}</h2>
+        <button class="icon-btn" @click="closeMaidModal()">✕</button>
+      </div>
+      <form class="modal-body" @submit.prevent="saveMaid">
+        <label>名字 <span class="req">*</span>
+          <input v-model="maidForm.name" required placeholder="骰娘名" />
+        </label>
+        <label>人设 / 性格
+          <textarea v-model="maidForm.personality" rows="2" placeholder="她是个什么样的存在?"></textarea>
+        </label>
+        <label>开场白
+          <input v-model="maidForm.greeting" placeholder="比如:哼,要掷就快说!" />
+        </label>
+        <div class="form-row">
+          <label>默认骰子
+            <input v-model="maidForm.default_expression" placeholder="1d100" />
+          </label>
+          <label>命运加值
+            <input type="number" v-model.number="maidForm.modifierAdd" placeholder="0" />
+          </label>
+        </div>
+        <div class="kv-row">
+          <label>成功阈值 &gt;
+            <input type="number" v-model.number="maidForm.settings.threshold" />
+          </label>
+          <label>大成功 ≥
+            <input type="number" v-model.number="maidForm.settings.crit_success" />
+          </label>
+          <label>大失败 ≤
+            <input type="number" v-model.number="maidForm.settings.crit_fail" />
+          </label>
+        </div>
+        <div class="modal-foot">
+          <button type="button" class="btn" @click="closeMaidModal()">取消</button>
+          <button type="submit" class="btn primary">{{ maidModal.editing ? '保存修改' : '召唤' }}</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== 人物卡详情抽屉 ==================== -->
+  <div v-if="charDetail" class="drawer-mask" @click.self="charDetail = null">
+    <aside class="drawer">
+      <div class="drawer-head">
+        <div class="avatar big" :style="avatarColor(charDetail.name)">{{ charDetail.name[0] }}</div>
+        <div class="drawer-titles">
+          <h2>{{ charDetail.name }}</h2>
+          <p class="muted">{{ charDetail.title || '未设称号' }}</p>
+        </div>
+        <button class="icon-btn" @click="charDetail = null">✕</button>
+      </div>
+
+      <div v-if="charDetail.tags.length" class="tag-row">
+        <span v-for="t in charDetail.tags" :key="t" class="tag">{{ t }}</span>
+      </div>
+
+      <div v-if="Object.keys(charDetail.attributes).length" class="attr-block">
+        <h3>属性</h3>
+        <div class="attr-grid">
+          <div v-for="(v, k) in charDetail.attributes" :key="k" class="attr-cell">
+            <div class="attr-key">{{ k }}</div>
+            <div class="attr-val">{{ v }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="charDetail.bio" class="bio-block">
+        <h3>背景</h3>
+        <p>{{ charDetail.bio }}</p>
+      </div>
+
+      <button class="btn primary full" @click="openCharModal(charDetail); charDetail=null">编辑这张卡</button>
+    </aside>
+  </div>
+
+  <!-- ==================== 全局提示 ==================== -->
+  <div v-if="toast" :class="['toast', toastType]">{{ toast }}</div>
+</div>
+
+<script src="/static/vendor/vue.global.prod.js"></script>
+<script src="/static/js/api.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>

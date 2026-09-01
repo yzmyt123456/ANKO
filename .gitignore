@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 本地数据库与运行时产物
+*.db
+*.sqlite3
+data/
+logs/
+
+# 测试与工具
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# 前端校验用 npm 依赖
+scripts/vendor/node_modules/
+scripts/vendor/package-lock.json

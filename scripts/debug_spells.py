@@ -1,4 +1,4 @@
-"""调试:检查 parse_spells 能否匹配"修复术"等戏法格式。"""
+"""精确调试:完整正则分段拼接。"""
 
 import re
 import sys
@@ -6,37 +6,30 @@ import sys
 sys.path.insert(0, ".")
 from pathlib import Path
 
-from pypdf import PdfReader
-
-from scripts.import_dnd_rules import _SPELL_RE, _NAME_RE, extract_pages
+from scripts.import_dnd_rules import _SPELL_RE, extract_pages
 
 PH = "D:/bdxiazi/DND 5E 规则包/DND_5E_玩家手册CN.pdf"
 pages = extract_pages(Path(PH), 210, 313)
 text = "\n".join(pages)
+pos = text.find("唤起死灵 Create Undead \n6 环 死灵")
 
-# 找"修复术"附近的原始文本
-idx = text.find("修复术")
-print("修复术附近原始文本:")
-print(repr(text[idx - 10:idx + 200]))
-print()
+p1 = r"(?m)^[ \t]*([^\n]{2,60}?)[ \t]*\n"
+p2 = r"[ \t]*((?:\d+) 环[^\n]*|[\u4e00-\u9fff·]+ 戏法[^\n]*)[ \t]*\n"
+p3 = r"施法时间[:：]([^\n]*)\n"
+p4 = r"施法距离[:：]([^\n]*)\n"
+p5 = r"法术成分[:：]([^\n]*)\n"
+p6 = r"持续时间[:：]([^\n]*)"
 
-# 测试正则是否能匹配修复术
-for m in _SPELL_RE.finditer(text):
-    name_line = m.group(1).strip()
-    if "修复术" in name_line:
-        print("匹配到修复术!环阶行:", m.group(2).strip())
-        break
-else:
-    print("正则未匹配到修复术!")
+for name, pat in [
+    ("p1", p1),
+    ("p1p2", p1 + p2),
+    ("p1p2p3", p1 + p2 + p3),
+    ("p1p2p3p4", p1 + p2 + p3 + p4),
+    ("full", p1 + p2 + p3 + p4 + p5 + p6),
+]:
+    m = re.match(pat, text[pos:])
+    print(f"{name}: {'OK' if m else 'FAIL'}")
 
-# 统计匹配到的法术数量
-matches = list(_SPELL_RE.finditer(text))
-print("正则匹配法术数:", len(matches))
-
-# 检查舞光术(Dancing Lights)
-for m in _SPELL_RE.finditer(text):
-    if "舞光术" in m.group(1):
-        print("舞光术匹配,环阶行:", m.group(2).strip())
-        break
-else:
-    print("舞光术未匹配!")
+starts = [m.start() for m in _SPELL_RE.finditer(text)]
+print("匹配数量:", len(starts))
+print("34222 附近匹配起点:", [s for s in starts if abs(s - pos) < 500])

@@ -35,10 +35,13 @@ _SPELL_RE = re.compile(
     r"[ \t]*((?:\d+) 环[^\n]*|[\u4e00-\u9fff·]+ 戏法[^\n]*)[ \t]*\n"
     r"施法时间[:：]([^\n]*)\n"
     r"施法距离[:：]([^\n]*)\n"
-    r"法术成分[:：]([^\n]*)\n"
+    r"法术成分[:：]([\s\S]*?)\n"
     r"持续时间[:：]([^\n]*)"
 )
-_NAME_RE = re.compile(r"^([\u4e00-\u9fff·\-'’\s]{1,20}?)\s+([A-Za-z][A-Za-z'’\-\s]{1,60})$")
+_NAME_RE = re.compile(
+    r"^([\u4e00-\u9fff·/\-&，、／'’\s]{1,24}?)\s+"
+    r"([A-Za-z][A-Za-z'’\-\/\s]{1,60})$"
+)
 
 
 def extract_pages(path: Path, start: int, end: int) -> list[str]:

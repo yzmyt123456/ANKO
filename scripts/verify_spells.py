@@ -1,21 +1,20 @@
-"""验证法术解析修复:检查马友夫强酸箭等是否独立、描述正确。"""
+"""验证造水/枯水术、唤起死灵、带斜杠法术。"""
 
 import sqlite3
 
 conn = sqlite3.connect("data/anko.db")
-
 rows = conn.execute(
-    "select name, level, school, casting_time, substr(description, 1, 60) "
-    "from rule_spells where name = '马友夫强酸箭'"
+    "select id, name, level, school from rule_spells "
+    "where name like '%造水%' or name like '%唤起死灵%' "
+    "or name like '%变巨%' or name like '%目盲%' or name like '%嫌恶%'"
 ).fetchall()
-print("马友夫强酸箭:", rows)
+for r in rows:
+    print(r)
 
-rows2 = conn.execute(
-    "select name, level, school from rule_spells "
-    "where name in ('修复术', '传讯术', '舞光术', '德鲁伊伎俩')"
-).fetchall()
-print("独立法术:", rows2)
-
-n = conn.execute("select count(*) from rule_spells").fetchone()[0]
-print("法术总数:", n)
+row = conn.execute(
+    "select description from rule_spells where name = '造水/枯水术'"
+).fetchone()
+if row:
+    print("造水描述含'唤起死灵':", "唤起死灵" in row[0])
+    print("造水描述结尾:", row[0][-40:])
 conn.close()

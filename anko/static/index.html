@@ -686,7 +686,7 @@
 
       <div v-if="charDetail.extra && charDetail.extra.creation_log" class="dnd-section creation-log">
         <h3>📜 创建过程</h3>
-        <pre class="creation-log-text">{{ charDetail.extra.creation_log }}</pre>
+        <pre class="creation-log-text" v-html="renderProcess(charDetail.extra.creation_log)"></pre>
       </div>
 
       </div>
@@ -742,7 +742,7 @@
             <b>📜 创建过程(安科骰点)</b>
             <button class="btn small" @click="copyGenProcess">📋 复制</button>
           </div>
-          <pre>{{ genProcess }}</pre>
+          <pre class="gen-process-text" v-html="renderProcess(genProcess)"></pre>
         </div>
 
         <div v-if="genDraft" class="gen-result">

@@ -764,6 +764,11 @@ input[type="checkbox"] { width: auto; margin: 0; }
   font-size: 12.5px; line-height: 1.7; color: var(--text-2);
   font-family: "Microsoft YaHei", sans-serif; margin: 0;
 }
+.gen-process pre strong, .creation-log-text strong {
+  font-weight: 800; color: var(--primary-dark);
+  background: var(--primary-soft);
+  padding: 0 4px; border-radius: 4px;
+}
 .creation-log { margin-top: 14px; }
 
 }

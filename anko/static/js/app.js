@@ -593,6 +593,14 @@ createApp({
       }
     },
 
+    renderProcess(text) {
+      // 把过程文本中的 **选中项** 渲染为加粗(先转义再替换)
+      if (!text) return '';
+      let s = this._escHtml(text);
+      s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      return s;
+    },
+
     async saveGeneratedChar() {
       if (!this.genDraft) return;
       try {

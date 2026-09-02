@@ -54,9 +54,9 @@ PH_PAGE_CATS: list[tuple[int, int, str]] = [
     (311, 313, "附录"),
 ]
 
-# 条目切块锚点:种族/职业/背景的条目名,以及对应分类。
+# 条目切块锚点:职业/背景 的条目名与对应分类。
+# (种族改为 ph_race_hierarchy 分层卡片,不走此处)
 PH_ENTRY_CATS: list[tuple[int, int, str, list[str]]] = [
-    (17, 44, "种族", ["矮人", "精灵", "半身人", "人类", "龙裔", "侏儒", "半精灵", "半兽人", "提夫林"]),
     (45, 120, "职业", ["野蛮人", "吟游诗人", "牧师", "德鲁伊", "战士", "武僧", "圣武士", "游侠", "游荡者", "术士", "邪术师", "法师"]),
     (126, 142, "背景", ["侍僧", "骗子", "罪犯", "艺人", "平民英雄", "公会工匠", "隐士", "贵族", "化外之民", "智者", "水手", "士兵", "流浪儿"]),
 ]
@@ -328,22 +328,120 @@ def ph_entry_pieces(
     return pieces
 
 
+PH_RACE_NAMES = ["矮人", "精灵", "半身人", "人类", "龙裔", "侏儒", "半精灵", "半兽人", "提夫林"]
+
+
+def ph_race_hierarchy(
+    pdf_path: Path, start: int, end: int, names: list[str]
+) -> tuple[list[dict], list[dict]]:
+    """种族章 → 分层卡片。
+
+    父卡(kind='race'):content 含 §故事(引文)/§简介 段;
+    子卡(kind='race_part'):种族内小节(大族谱/人类特质/各人种/…)。
+    返回 (parents, children),children 带 parent_title 便于回填 parent_id。
+    """
+    anchors = {n: re.compile(rf"^{re.escape(n)}( [A-Za-z][A-Za-z'’\-/ ]*)?$") for n in names}
+    parents: list[dict] = []
+    cur: dict | None = None
+    for pno, y, size, txt in _iter_pdf_lines(pdf_path, start, end):
+        if size <= 7.5:
+            continue
+        matched = next((n for n, rx in anchors.items() if rx.match(txt)), None)
+        if matched:
+            if cur and (cur["lead"] or cur["sections"]):
+                parents.append(cur)
+            cur = {
+                "name": matched,
+                "title": txt,
+                "pno": pno,
+                "lead": [],
+                "sections": [],
+                "sec": None,
+            }
+            continue
+        if cur is None:
+            continue
+        if size >= 9.5 and len(txt) <= 60 and not txt.startswith("§"):
+            # 相邻的标题行(中文/英文两行)合并为同一标题
+            if cur["sec"] is not None and abs(y - cur["sec"]["ty"]) <= 22:
+                cur["sec"]["title"] = f'{cur["sec"]["title"]} {txt}'
+                cur["sec"]["ty"] = y
+            else:
+                cur["sections"].append({"title": txt, "pno": pno, "lines": [], "ty": y})
+                cur["sec"] = cur["sections"][-1]
+        elif cur["sec"] is not None:
+            cur["sec"]["lines"].append(txt)
+        else:
+            cur["lead"].append(txt)
+    if cur and (cur["lead"] or cur["sections"]):
+        parents.append(cur)
+
+    out_parents: list[dict] = []
+    out_children: list[dict] = []
+    for p in parents:
+        lead = clean_cn_spaces("\n".join(x.strip() for x in p["lead"] if x.strip()))
+        story = None
+        intro = lead
+        lines = lead.split("\n")
+        for i, ln in enumerate(lines):
+            ls = ln.strip()
+            if ls.startswith(("——", "—", "–")) and len(ls) < 90:
+                story = clean_cn_spaces("\n".join(lines[: i + 1]))
+                rest = "\n".join(lines[i + 1 :])
+                intro = clean_cn_spaces(rest.strip())
+                break
+        parts = []
+        if story:
+            parts.append(f"§故事\n{story}")
+        if intro:
+            parts.append(f"§简介\n{intro}")
+        out_parents.append(
+            {
+                "title": p["title"],
+                "page": p["pno"] + 1,
+                "kind": "race",
+                "content": "\n\n".join(parts),
+                "parent_title": p["name"],
+            }
+        )
+        for sec in p["sections"]:
+            body = clean_cn_spaces(
+                "\n".join(x.strip() for x in sec["lines"] if x.strip())
+            )
+            body = "\n".join(x for x in body.split("\n") if x)
+            if not body:
+                continue
+            out_children.append(
+                {
+                    "title": clean_cn_spaces(sec["title"]),
+                    "page": sec["pno"] + 1,
+                    "kind": "race_part",
+                    "content": body,
+                    "parent_title": p["name"],
+                }
+            )
+    return out_parents, out_children
+
+
 def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> None:
     """全量导入:核心规则 + 冒险模组 → 知识库;地图 → 地图素材库。"""
     engine = create_engine(db_url, future=True)
     Base.metadata.create_all(engine)
-    # SQLite 旧表补充 category 列(幂等)
+    # SQLite 旧表补充新列(幂等)
     try:
         with engine.connect() as conn:
             cols = [
                 r[1]
                 for r in conn.exec_driver_sql("PRAGMA table_info(rule_knowledge)")
             ]
-            if "category" not in cols:
-                conn.exec_driver_sql(
-                    "ALTER TABLE rule_knowledge ADD COLUMN category VARCHAR(50)"
-                )
-                conn.commit()
+            for col, ddl in (
+                ("category", "ALTER TABLE rule_knowledge ADD COLUMN category VARCHAR(50)"),
+                ("kind", "ALTER TABLE rule_knowledge ADD COLUMN kind VARCHAR(20)"),
+                ("parent_id", "ALTER TABLE rule_knowledge ADD COLUMN parent_id INTEGER"),
+            ):
+                if col not in cols:
+                    conn.exec_driver_sql(ddl)
+            conn.commit()
     except Exception:  # noqa: BLE001
         pass
     Session = sessionmaker(bind=engine, expire_on_commit=False)
@@ -387,6 +485,30 @@ def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> Non
                         )
                     )
                     knowledge_count += 1
+            # 种族章 → 分层知识卡(父卡 kind=race + 子卡 kind=race_part)
+            race_parents, race_children = ph_race_hierarchy(
+                pdf, 17, 44, PH_RACE_NAMES
+            )
+            parent_ids: dict[str, int] = {}
+            for rp in race_parents:
+                rec = RuleKnowledge(
+                    book=stem, page=rp["page"], title=rp["title"],
+                    category="种族", kind="race", content=rp["content"],
+                )
+                session.add(rec)
+                session.flush()
+                parent_ids[rp["parent_title"]] = rec.id
+                knowledge_count += 1
+            for rc in race_children:
+                session.add(
+                    RuleKnowledge(
+                        book=stem, page=rc["page"], title=rc["title"],
+                        category="种族", kind="race_part",
+                        parent_id=parent_ids.get(rc["parent_title"]),
+                        content=rc["content"],
+                    )
+                )
+                knowledge_count += 1
             for start, end, cat, names in PH_ENTRY_CATS:
                 for title, pno, pcat, content in ph_entry_pieces(
                     pages, start, end, cat, names

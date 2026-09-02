@@ -905,6 +905,45 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-related { margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 12px; }
 .kb-related-label { font-size: 13px; color: var(--text-2); margin-bottom: 10px; font-weight: 600; }
 
+/* ---- 种族知识卡 ---- */
+.kb-race-guide { margin-bottom: 18px; }
+.kb-race-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 12px; margin-top: 4px;
+}
+.kb-race-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 12px; cursor: pointer; transition: all .15s; box-shadow: var(--shadow);
+  text-align: center;
+}
+.kb-race-card:hover { border-color: var(--primary); background: var(--primary-soft); transform: translateY(-2px); }
+.kb-race-name { font-size: 20px; font-weight: 700; color: var(--primary-dark); }
+.kb-race-en { font-size: 11px; color: var(--text-3, #98a2b3); margin-top: 2px; word-break: break-all; }
+.kb-race-preview {
+  font-size: 12px; color: var(--text-2); margin: 8px 0 4px; line-height: 1.7;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.kb-story { margin: 4px 0 12px; border: 1px dashed var(--border); border-radius: 10px; background: var(--card); }
+.kb-story summary, .kb-race-sub summary { cursor: pointer; padding: 9px 12px; font-weight: 600; color: var(--primary-dark); font-size: 13px; list-style: none; }
+.kb-story summary::before { content: '▸ '; }
+.kb-story[open] summary::before { content: '▾ '; }
+.kb-story-body { padding: 4px 14px 12px; font-size: 13.5px; color: var(--text-2); line-height: 2; white-space: pre-wrap; }
+.kb-race-intro { font-size: 14px; color: var(--text); line-height: 2.05; white-space: pre-wrap; text-indent: 2em; margin: 6px 0 4px; }
+.kb-race-block { margin-top: 18px; border-top: 1px dashed var(--border); padding-top: 12px; }
+.kb-race-block-label { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.kb-trait-item {
+  background: var(--primary-soft); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 8px;
+}
+.kb-trait-title { font-size: 14px; font-weight: 700; color: var(--primary-dark); }
+.kb-trait-item p { font-size: 13.5px; color: var(--text); margin: 4px 0 0; line-height: 1.95; white-space: pre-wrap; }
+.kb-race-sub { margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); overflow: hidden; }
+.kb-race-sub summary { font-weight: 600; font-size: 14px; color: var(--text); }
+.kb-race-sub summary::before { content: '▸ '; color: var(--text-3, #98a2b3); }
+.kb-race-sub[open] summary::before { content: '▾ '; color: var(--text-3, #98a2b3); }
+.kb-race-sub summary .kb-chip { margin-left: 8px; }
+.kb-race-sub p { padding: 0 14px 12px; font-size: 13.5px; color: var(--text-2); line-height: 2; white-space: pre-wrap; }
+
 
 .rule-stat span { font-size: 12px; color: var(--muted); }
 .rule-import-tip { margin-top: 8px; font-size: 12.5px; }

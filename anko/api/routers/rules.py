@@ -76,11 +76,12 @@ def list_categories(
 def list_knowledge_items(
     book: Optional[str] = Query(None, description="按书籍过滤"),
     category: Optional[str] = Query(None, description="按分类过滤"),
+    kind: Optional[str] = Query(None, description="按卡片类型过滤"),
     limit: int = Query(60, ge=1, le=200),
     request: Request = None,
 ) -> list[dict]:
     """按书籍/分类列出知识片段(轻量列表)。"""
-    return _svc(request).list_knowledge(book, category, limit)
+    return _svc(request).list_knowledge(book, category, kind, limit)
 
 
 @router.get("/knowledge/{kid}")

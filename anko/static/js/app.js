@@ -102,6 +102,8 @@ createApp({
       kbSpells: [],
       kbMonsters: [],
       kbKnowledge: [],
+      kbRaces: [],
+      kbRaceResults: [],
       kbMaps: [],
       kbBooks: [],
       kbBook: '',
@@ -127,7 +129,7 @@ createApp({
       return this.templateById('dnd5e') || { groups: [], checks: [] };
     },
     kbTabLabel() {
-      return ({ spells: '法术', monsters: '怪物', knowledge: '规则', maps: '地图' })[this.kbTab] || '';
+      return ({ spells: '法术', races: '种族', monsters: '怪物', knowledge: '规则', maps: '地图' })[this.kbTab] || '';
     },
     kbLevels() {
       return ['', '戏法', '1 环', '2 环', '3 环', '4 环', '5 环', '6 环', '7 环', '8 环', '9 环'];
@@ -429,6 +431,53 @@ createApp({
       this.kbSchool = '';
       this.kbCategory = '';
       if (tab === 'knowledge' && !this.kbKnowledge.length) this.loadKbKnowledge();
+      if (tab === 'races' && !this.kbRaces.length) this.loadKbRaces();
+    },
+
+    async loadKbRaces() {
+      // 玩家手册种族 → 分层知识卡列表
+      try {
+        if (!this.kbBooks.length) {
+          this.kbBooks = await API.get('/rules/books');
+        }
+        const book = this.kbBooks.includes('DND_5E_玩家手册CN') ? 'DND_5E_玩家手册CN' : '';
+        const q = book ? `&book=${encodeURIComponent(book)}` : '';
+        const [parents, intro] = await Promise.all([
+          API.get(`/rules/knowledge?category=${encodeURIComponent('种族')}&kind=race${q}&limit=50`),
+          API.get(`/rules/knowledge?category=${encodeURIComponent('种族')}&kind=none${q}&limit=50`),
+        ]);
+        this.kbRaces = { parents, intro };
+      } catch (e) { /* 静默 */ }
+    },
+
+    async openKbRace(r) {
+      try {
+        const data = await API.get(`/rules/knowledge/${r.id}`);
+        this.kbDetail = { type: 'race', data };
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    raceParts(content) {
+      // 解析父卡 content:§故事 / §简介
+      const out = { story: '', intro: '' };
+      const map = { 故事: 'story', 简介: 'intro' };
+      let cur = null;
+      for (const line of String(content || '').split('\n')) {
+        const m = line.match(/^§(故事|简介)$/);
+        if (m) { cur = map[m[1]]; continue; }
+        if (cur && out[cur] !== undefined) out[cur] += (out[cur] ? '\n' : '') + line;
+      }
+      return out;
+    },
+    raceTraits(children) {
+      // 基础特质子卡(人类特质/变体人类特质等),直接展示为字段
+      if (!children) return [];
+      return children.filter(c => /特质|Traits?$/.test(c.title || ''));
+    },
+    raceSubs(children) {
+      // 其余细分 → 下级知识卡
+      if (!children) return [];
+      return children.filter(c => !/特质|Traits?$/.test(c.title || ''));
     },
 
     async loadKbKnowledge() {
@@ -456,6 +505,8 @@ createApp({
           this.kbSpells = await API.get(`/rules/spells?q=${encodeURIComponent(q)}&limit=200`);
         } else if (this.kbTab === 'monsters') {
           this.kbMonsters = await API.get(`/rules/monsters?q=${encodeURIComponent(q)}&limit=200`);
+        } else if (this.kbTab === 'races') {
+          this.kbRaceResults = await API.get(`/rules/search?q=${encodeURIComponent(q)}&category=${encodeURIComponent('种族')}&limit=40`);
         } else if (this.kbTab === 'knowledge') {
           const bookParam = this.kbBook ? `&book=${encodeURIComponent(this.kbBook)}` : '';
           const catParam = this.kbCategory ? `&category=${encodeURIComponent(this.kbCategory)}` : '';
@@ -500,12 +551,14 @@ createApp({
     },
 
     async openKbKnowledge(k) {
+      if (k.kind === 'race') { this.openKbRace(k); return; }
       if (k.content) {
         this.kbDetail = { type: 'knowledge', data: [k] };
         return;
       }
       try {
         const full = await API.get(`/rules/knowledge/${k.id}`);
+        if (full.kind === 'race') { this.kbDetail = { type: 'race', data: full }; return; }
         this.kbDetail = { type: 'knowledge', data: [full] };
       } catch (e) { this.showToast(e.message, 'error'); }
     },
@@ -519,7 +572,12 @@ createApp({
         this.kbDetail = { type: 'monster', data };
       } else {
         const data = await API.get(`/rules/search?q=${encodeURIComponent(name)}&limit=3`);
-        this.kbDetail = { type: 'knowledge', data };
+        if (data.length && data[0].kind === 'race') {
+          const full = await API.get(`/rules/knowledge/${data[0].id}`);
+          this.kbDetail = { type: 'race', data: full };
+        } else {
+          this.kbDetail = { type: 'knowledge', data };
+        }
       }
     },
 

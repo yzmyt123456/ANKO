@@ -208,15 +208,20 @@ class RuleService:
         self,
         book: Optional[str] = None,
         category: Optional[str] = None,
+        kind: Optional[str] = None,
         limit: int = 60,
     ) -> list[dict]:
         """按书籍/分类列出知识片段(轻量,不含全文)。"""
         with self._session() as s:
-            stmt = select(RuleKnowledge).order_by(RuleKnowledge.page)
+            stmt = select(RuleKnowledge).order_by(RuleKnowledge.page, RuleKnowledge.id)
             if book:
                 stmt = stmt.where(RuleKnowledge.book == book)
             if category:
                 stmt = stmt.where(RuleKnowledge.category == category)
+            if kind == "none":
+                stmt = stmt.where(RuleKnowledge.kind.is_(None))
+            elif kind:
+                stmt = stmt.where(RuleKnowledge.kind == kind)
             stmt = stmt.limit(limit)
             return [
                 {
@@ -225,25 +230,47 @@ class RuleService:
                     "page": x.page,
                     "title": x.title,
                     "category": x.category,
-                    "preview": (x.content or "")[:180],
+                    "kind": x.kind,
+                    "parent_id": x.parent_id,
+                    "preview": (x.content or "")[:160],
                 }
                 for x in s.execute(stmt).scalars().all()
             ]
 
     def get_knowledge(self, kid: int) -> Optional[dict]:
-        """单条知识片段全文。"""
+        """单条知识片段全文(父卡附 children 子卡)。"""
         with self._session() as s:
             x = s.get(RuleKnowledge, kid)
             if x is None:
                 return None
-            return {
+            data = {
                 "id": x.id,
                 "book": x.book,
                 "page": x.page,
                 "title": x.title,
                 "category": x.category,
+                "kind": x.kind,
+                "parent_id": x.parent_id,
                 "content": x.content,
             }
+            if x.kind and x.kind != "race_part":
+                kids = s.execute(
+                    select(RuleKnowledge)
+                    .where(RuleKnowledge.parent_id == x.id)
+                    .order_by(RuleKnowledge.id)
+                ).scalars().all()
+                data["children"] = [
+                    {
+                        "id": c.id,
+                        "title": c.title,
+                        "page": c.page,
+                        "kind": c.kind,
+                        "content": c.content,
+                        "book": c.book,
+                    }
+                    for c in kids
+                ]
+            return data
 
     def search_knowledge(
         self,
@@ -264,10 +291,12 @@ class RuleService:
             stmt = stmt.limit(limit)
             return [
                 {
+                    "id": x.id,
                     "book": x.book,
                     "page": x.page,
                     "title": x.title,
                     "category": x.category,
+                    "kind": x.kind,
                     "content": x.content,
                 }
                 for x in s.execute(stmt).scalars().all()

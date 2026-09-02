@@ -33,9 +33,11 @@ class TestGeneratePrompt:
         assert "剑湾的冒险" in p
         assert "要一个神秘的角色" in p
         assert '"strength"' in p
-        # 选项列表与选中项加粗要求
-        assert "列出全部选项" in p
+        # 楼主风格:引导语 / 选项列表 / 骰点结果行 / 选中项加粗 / 选中项详解
+        assert "引导语" in p
+        assert "1D8=2" in p
         assert "**" in p
+        assert "人类 Human" in p
 
     def test_default_prompt(self) -> None:
         p = build_generate_prompt("", "", "default")

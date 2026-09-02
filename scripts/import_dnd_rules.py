@@ -345,8 +345,10 @@ _CN_TRAIT_NAMES = ("年龄", "阵营", "体型", "速度", "语言", "亚种", "
 
 
 def _is_trait_start(s: str, has_bold: bool) -> bool:
-    """特质起点:带加粗英文名('中文名 英文。'),或白名单纯中文短名('年龄。')。"""
-    if has_bold and re.match(r"^[\u4e00-\u9fff·（）()]{2,12}\s+[A-Za-z]", s):
+    """特质起点:带加粗英文名且以句号结束('中文名 英文。描述'),或白名单纯中文短名。"""
+    if has_bold and re.match(
+        r"^[\u4e00-\u9fff·（）()]{2,12}\s+[A-Za-z][A-Za-z'’\-\s/]*?。", s
+    ):
         return True
     for n in _CN_TRAIT_NAMES:
         if s.startswith(n + "。"):
@@ -417,8 +419,18 @@ def ph_race_hierarchy(
     if cur and (cur["lead"] or cur["sections"]):
         parents.append(cur)
 
+    def make_trait(tr: dict, page: int) -> dict:
+        """特质条目(title=名称,content=去除名称前缀后的描述)。"""
+        lines_clean = [clean_cn_spaces(x.strip()) for x in tr["lines"]]
+        first = lines_clean[0] if lines_clean else ""
+        name = tr.get("name") or ""
+        if name and first.startswith(name + "。"):
+            rest = first[len(name) + 1 :].strip()
+            lines_clean = ([rest] if rest else []) + lines_clean[1:]
+        body = "\n".join(x for x in lines_clean if x)
+        return {"title": name, "page": page, "kind": "trait", "content": body, "children": []}
+
     out_parents: list[dict] = []
-    out_children: list[dict] = []
     for p in parents:
         lead = clean_cn_spaces("\n".join(x.strip() for x in p["lead"] if x.strip()))
         story = None
@@ -436,66 +448,55 @@ def ph_race_hierarchy(
             parts.append(f"§故事\n{story}")
         if intro:
             parts.append(f"§简介\n{intro}")
-        out_parents.append(
-            {
-                "title": p["title"],
-                "page": p["pno"] + 1,
-                "kind": "race",
-                "content": "\n\n".join(parts),
-                "parent_title": p["name"],
-            }
-        )
+        parent = {
+            "title": p["title"],
+            "page": p["pno"] + 1,
+            "kind": "race",
+            "content": "\n\n".join(parts),
+            "parent_title": p["name"],
+            "children": [],
+        }
         for sec in p["sections"]:
             title = clean_cn_spaces(sec["title"])
+            spage = sec["pno"] + 1
             if re.search(r"特质|Traits", title):
                 # 特质小节 → 按每条特质拆成独立知识卡(kind=trait)
                 for tr in _split_trait_lines(sec["lines"]):
-                    lines_clean = [clean_cn_spaces(x.strip()) for x in tr["lines"]]
-                    first = lines_clean[0] if lines_clean else ""
-                    if tr["name"] and first.startswith(tr["name"] + "。"):
-                        rest = first[len(tr["name"]) + 1 :].strip()
-                        lines_clean = ([rest] if rest else []) + lines_clean[1:]
-                    body = "\n".join(x for x in lines_clean if x)
-                    if not body:
+                    if tr.get("name") is None:
                         continue
-                    if tr["name"] is None:
-                        # 无名称的导语行:直接以小节标题展示
-                        out_children.append(
-                            {
-                                "title": title,
-                                "page": sec["pno"] + 1,
-                                "kind": "race_part",
-                                "content": body,
-                                "parent_title": p["name"],
-                            }
-                        )
-                    else:
-                        out_children.append(
-                            {
-                                "title": tr["name"],
-                                "page": sec["pno"] + 1,
-                                "kind": "trait",
-                                "content": body,
-                                "parent_title": p["name"],
-                            }
-                        )
+                    body = make_trait(tr, spage)["content"]
+                    if body:
+                        parent["children"].append(make_trait(tr, spage))
                 continue
-            body = clean_cn_spaces(
-                "\n".join(x[0].strip() for x in sec["lines"] if x[0].strip())
-            )
-            body = "\n".join(x for x in body.split("\n") if x)
-            if not body:
-                continue
-            out_children.append(
-                {
-                    "title": title,
-                    "page": sec["pno"] + 1,
-                    "kind": "race_part",
-                    "content": body,
-                    "parent_title": p["name"],
+            # 亚种/文化小节:内含"属性值加成"特质 → 亚种,拆分;否则整块
+            split_parts = _split_trait_lines(sec["lines"])
+            named = [t for t in split_parts if t.get("name")]
+            is_subrace = any(t["name"].startswith("属性值加成") for t in named)
+            if named and is_subrace:
+                sub_desc = ""
+                if split_parts and split_parts[0].get("name") is None:
+                    sub_desc = clean_cn_spaces(
+                        "\n".join(x.strip() for x in split_parts[0]["lines"] if x.strip())
+                    )
+                sub = {
+                    "title": title, "page": spage, "kind": "race_part",
+                    "content": sub_desc, "children": [],
                 }
-            )
-    return out_parents, out_children
+                for tr in named:
+                    sub["children"].append(make_trait(tr, spage))
+                parent["children"].append(sub)
+            else:
+                body = clean_cn_spaces(
+                    "\n".join(x[0].strip() for x in sec["lines"] if x[0].strip())
+                )
+                body = "\n".join(x for x in body.split("\n") if x)
+                if body:
+                    parent["children"].append(
+                        {"title": title, "page": spage, "kind": "race_part",
+                         "content": body, "children": []}
+                    )
+        out_parents.append(parent)
+    return out_parents
 
 
 def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> None:
@@ -560,30 +561,22 @@ def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> Non
                         )
                     )
                     knowledge_count += 1
-            # 种族章 → 分层知识卡(父卡 kind=race + 子卡 kind=race_part)
-            race_parents, race_children = ph_race_hierarchy(
-                pdf, 17, 44, PH_RACE_NAMES
-            )
-            parent_ids: dict[str, int] = {}
-            for rp in race_parents:
+            # 种族章 → 分层知识卡树(race 父卡 / race_part 亚种与小节 / trait 特质)
+            def _add_race_tree(node: dict, pid=None) -> None:  # noqa: ANN001
+                nonlocal knowledge_count
                 rec = RuleKnowledge(
-                    book=stem, page=rp["page"], title=rp["title"],
-                    category="种族", kind="race", content=rp["content"],
+                    book=stem, page=node["page"], title=node["title"],
+                    category="种族", kind=node["kind"], parent_id=pid,
+                    content=node["content"],
                 )
                 session.add(rec)
                 session.flush()
-                parent_ids[rp["parent_title"]] = rec.id
                 knowledge_count += 1
-            for rc in race_children:
-                session.add(
-                    RuleKnowledge(
-                        book=stem, page=rc["page"], title=rc["title"],
-                        category="种族", kind=rc["kind"],
-                        parent_id=parent_ids.get(rc["parent_title"]),
-                        content=rc["content"],
-                    )
-                )
-                knowledge_count += 1
+                for ch in node.get("children") or []:
+                    _add_race_tree(ch, rec.id)
+
+            for rp in ph_race_hierarchy(pdf, 17, 44, PH_RACE_NAMES):
+                _add_race_tree(rp)
             for start, end, cat, names in PH_ENTRY_CATS:
                 for title, pno, pcat, content in ph_entry_pieces(
                     pages, start, end, cat, names

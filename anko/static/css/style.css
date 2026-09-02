@@ -943,6 +943,8 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-race-sub[open] summary::before { content: '▾ '; color: var(--text-3, #98a2b3); }
 .kb-race-sub summary .kb-chip { margin-left: 8px; }
 .kb-race-sub p { padding: 0 14px 12px; font-size: 13.5px; color: var(--text-2); line-height: 2; white-space: pre-wrap; }
+.kb-race-sub .kb-subtraits { padding: 0 12px 12px; }
+.kb-race-sub .kb-subtraits .kb-trait-item { margin-bottom: 6px; }
 
 
 .rule-stat span { font-size: 12px; color: var(--muted); }

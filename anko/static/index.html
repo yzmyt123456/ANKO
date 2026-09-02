@@ -1002,7 +1002,13 @@
             <div v-for="s in raceSubs(kbDetail.data.children)" :key="s.id" class="kb-race-sub">
               <details>
                 <summary>{{ s.title }}<span class="kb-chip">第{{ s.page }}页</span></summary>
-                <p>{{ s.content }}</p>
+                <p v-if="s.content">{{ s.content }}</p>
+                <div v-if="s.children && s.children.length" class="kb-subtraits">
+                  <div v-for="t in s.children" :key="t.id" class="kb-trait-item">
+                    <div class="kb-trait-title">{{ t.title }}</div>
+                    <p>{{ t.content }}</p>
+                  </div>
+                </div>
               </details>
             </div>
           </div>

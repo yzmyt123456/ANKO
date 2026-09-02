@@ -238,7 +238,7 @@ class RuleService:
             ]
 
     def get_knowledge(self, kid: int) -> Optional[dict]:
-        """单条知识片段全文(父卡附 children 子卡)。"""
+        """单条知识片段全文(race/亚种卡附 children 子卡)。"""
         with self._session() as s:
             x = s.get(RuleKnowledge, kid)
             if x is None:
@@ -253,24 +253,31 @@ class RuleService:
                 "parent_id": x.parent_id,
                 "content": x.content,
             }
-            if x.kind and x.kind != "race_part":
-                kids = s.execute(
-                    select(RuleKnowledge)
-                    .where(RuleKnowledge.parent_id == x.id)
-                    .order_by(RuleKnowledge.id)
-                ).scalars().all()
-                data["children"] = [
-                    {
-                        "id": c.id,
-                        "title": c.title,
-                        "page": c.page,
-                        "kind": c.kind,
-                        "content": c.content,
-                        "book": c.book,
-                    }
-                    for c in kids
-                ]
+            if x.kind in ("race", "race_part"):
+                data["children"] = self._collect_children(s, x.id)
             return data
+
+    def _collect_children(self, s, parent_id: int) -> list[dict]:
+        """收集子卡;亚种(race_part)再展开其特质卡,最多两层。"""
+        kids = s.execute(
+            select(RuleKnowledge)
+            .where(RuleKnowledge.parent_id == parent_id)
+            .order_by(RuleKnowledge.id)
+        ).scalars().all()
+        out = []
+        for c in kids:
+            d = {
+                "id": c.id,
+                "title": c.title,
+                "page": c.page,
+                "kind": c.kind,
+                "content": c.content,
+                "book": c.book,
+            }
+            if c.kind == "race_part":
+                d["children"] = self._collect_children(s, c.id)
+            out.append(d)
+        return out
 
     def search_knowledge(
         self,
@@ -282,7 +289,8 @@ class RuleService:
         with self._session() as s:
             like = f"%{q}%"
             stmt = select(RuleKnowledge).where(
-                RuleKnowledge.content.like(like)
+                (RuleKnowledge.content.like(like))
+                | (RuleKnowledge.title.like(like))
             )
             if book:
                 stmt = stmt.where(RuleKnowledge.book == book)

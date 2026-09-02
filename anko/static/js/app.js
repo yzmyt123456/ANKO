@@ -520,7 +520,10 @@ createApp({
       const feats = this.classFeats(data);
       const names = String(row.feats || '').split(/[，,、/]/).map(s => s.trim()).filter(Boolean);
       return names
-        .map(n => feats.find(f => this.classZh(f.title) === n || f.title.includes(n)))
+        .map(n => feats.find(f => {
+          const zh = this.classZh(f.title);
+          return n === zh || n.includes(zh) || zh.includes(n);
+        }))
         .filter(Boolean)
         .slice(0, 6);
     },

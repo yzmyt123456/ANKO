@@ -36,14 +36,14 @@ const modal = doc.querySelector('.kb-modal');
 console.log('弹窗打开:', !!modal);
 if (modal) {
   console.log('标题:', modal.querySelector('h2') ? modal.querySelector('h2').textContent.trim() : '无');
-  const lvRows = modal.querySelectorAll('.kb-lv-row').length;
-  const featRows = modal.querySelectorAll('.kb-race-block:nth-of-type(3) .kb-race-sub summary, .kb-race-sub summary').length;
-  console.log('等级表行数:', lvRows);
+  const mainRows = (modal.querySelectorAll('.kb-lv-table')[0] || { querySelectorAll: () => [] })
+    .querySelectorAll('tbody tr').length;
+  const subTables = modal.querySelectorAll('.kb-subclass-card table').length;
+  console.log('主能力表行数:', mainRows);
+  console.log('子职业表数:', subTables);
   console.log('含职业设定折叠:', !!modal.querySelector('.kb-story'));
-  console.log('含子职(狂战士/图腾):', modal.textContent.includes('狂战士道途'), modal.textContent.includes('图腾武者道途'));
-  console.log('含狂暴:', modal.textContent.includes('狂暴 Rage'), '含属性值提升:', modal.textContent.includes('属性值提升 Ability'));
-  const subChips = [...modal.querySelectorAll('.kb-chip')].map(e => e.textContent.trim());
-  console.log('等级徽章样例:', subChips.slice(0, 6).join(' '));
+  console.log('含狂战士/图腾:', modal.textContent.includes('狂战士道途'), modal.textContent.includes('图腾武者道途'));
+  console.log('含狂暴:', modal.textContent.includes('狂暴 Rage'));
 }
 console.log('errors:', errors.length ? errors : '无');
 process.exit(0);

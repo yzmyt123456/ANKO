@@ -965,6 +965,24 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-guide-block .kb-trait-item { background: var(--card); }
 .kb-guide-tip { font-size: 12.5px; color: var(--text-2); margin-top: 8px; line-height: 1.8; }
 
+/* ---- 职业/子职能力表格 ---- */
+.kb-lv-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 4px 0 6px; background: var(--card); }
+.kb-lv-table th { background: var(--primary-soft); color: var(--primary-dark); text-align: left; padding: 6px 10px; font-size: 12.5px; border-bottom: 2px solid var(--primary); }
+.kb-lv-table td { border-bottom: 1px solid var(--border); padding: 5px 10px; vertical-align: middle; }
+.kb-lv-table tbody tr:hover { background: var(--primary-soft); }
+.kb-lv-table tbody tr:last-child td { border-bottom: none; }
+.kb-lv-badge-td { width: 54px; text-align: center; font-weight: 700; color: var(--primary-dark); white-space: nowrap; }
+.kb-lv-feats { color: var(--text-2); }
+.kb-lv-detail { width: 74px; text-align: right; }
+.kb-lv-detail summary { cursor: pointer; font-size: 12.5px; color: var(--primary-dark); text-align: right; }
+.kb-lv-detail summary::before { content: '▸ '; }
+.kb-lv-detail[open] summary::before { content: '▾ '; }
+.kb-lv-detail .kb-trait-item { text-align: left; margin-top: 6px; }
+.kb-lv-note { font-size: 12px; color: var(--text-2); margin: 6px 0 2px; line-height: 1.9; }
+.kb-subclass-card { margin: 12px 0; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; background: var(--card); box-shadow: var(--shadow); }
+.kb-subclass-name { font-weight: 700; color: var(--primary-dark); margin-bottom: 4px; font-size: 14px; }
+.kb-subclass-intro { font-size: 12.5px; color: var(--text-2); line-height: 1.9; margin: 0 0 6px; }
+
 
 .rule-stat span { font-size: 12px; color: var(--muted); }
 .rule-import-tip { margin-top: 8px; font-size: 12.5px; }

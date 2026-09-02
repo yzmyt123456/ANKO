@@ -56,10 +56,222 @@ PH_PAGE_CATS: list[tuple[int, int, str]] = [
 
 # 条目切块锚点:职业/背景 的条目名与对应分类。
 # (种族改为 ph_race_hierarchy 分层卡片,不走此处)
+PH_CLASS_NAMES = ["野蛮人", "吟游诗人", "牧师", "德鲁伊", "战士", "武僧",
+                  "圣武士", "游侠", "游荡者", "术士", "邪术师", "法师"]
+
+# 背景条目切块(职业改为 ph_class_hierarchy 职业知识树)
 PH_ENTRY_CATS: list[tuple[int, int, str, list[str]]] = [
-    (45, 120, "职业", ["野蛮人", "吟游诗人", "牧师", "德鲁伊", "战士", "武僧", "圣武士", "游侠", "游荡者", "术士", "邪术师", "法师"]),
     (126, 142, "背景", ["侍僧", "骗子", "罪犯", "艺人", "平民英雄", "公会工匠", "隐士", "贵族", "化外之民", "智者", "水手", "士兵", "流浪儿"]),
 ]
+
+
+def ph_class_hierarchy(
+    pdf_path: Path, start: int, end: int, names: list[str]
+) -> list[dict]:
+    """职业章 → 职业知识树。
+
+    class 父:§故事(引导 lore + 创建提示);children 含:
+    - class_levels:1-20 级职业表(等级→特性 JSON)
+    - class_feature:核心职业特性(12pt 标题)/信息小节(10pt)
+    - subclass:子职业(12pt 标题),其 children 为各级能力(10pt)
+    """
+    import json
+
+    anchors = {n: re.compile(rf"^{re.escape(n)}( [A-Za-z][A-Za-z'’\- ]*)?$") for n in names}
+    classes: list[dict] = []
+    cur: dict | None = None
+    for pno, y, size, txt, _bold, _x in _iter_pdf_lines(pdf_path, start, end):
+        if size <= 7.5:
+            continue
+        matched = next((n for n, rx in anchors.items() if rx.match(txt)), None)
+        if matched and size >= 13.5:
+            if cur:
+                classes.append(cur)
+            cur = {"name": matched, "title": txt, "pno": pno, "lines": []}
+            continue
+        if cur is not None:
+            cur["lines"].append((pno, round(y), size, txt, _x))
+
+    out: list[dict] = []
+    for c in classes:
+        out.append(_build_class(c))
+    if cur:
+        out.append(_build_class(cur))
+    return out
+
+
+_GRADE_RE = re.compile(r"^(\d+)(?:st|nd|rd|th)$")
+_LV_TEXT_RE = re.compile(r"第\s*(\d{1,2})\s*级")
+
+
+def _class_feature_level(feats_map: dict[str, int], title: str, body: str) -> int | None:
+    """特性等级:表匹配优先,否则正文'第 N 级'。"""
+    m = _LV_TEXT_RE.search(body)
+    if m:
+        return int(m.group(1))
+    zh = title.split(" ")[0].strip()
+    if zh in feats_map:
+        return feats_map[zh]
+    return None
+
+
+def _build_class(c: dict) -> dict:
+    """解析单个职业的行流 → 树节点。"""
+    import json
+
+    lines = c["lines"]
+    # ---- 等级表:按页把行按 y 贪心聚组(gap<=3),组内按 x 排序,定位等级行 ----
+    by_page: dict[int, list] = {}
+    for pno, y, sz, txt, x in lines:
+        if sz >= 11:  # 标题级文本不参与表格
+            continue
+        by_page.setdefault(pno, []).append((y, txt, x))
+    table_cells: set = set()
+    level_rows: list[tuple[int, str]] = []
+    for pno, items in by_page.items():
+        items.sort()
+        y_rows: list[list] = []
+        cur: list | None = None
+        prev = None
+        for it in items:
+            if cur is None or (prev is not None and it[0] - prev > 6):
+                if cur:
+                    y_rows.append(cur)
+                cur = []
+            cur.append(it)
+            prev = it[0]
+        if cur:
+            y_rows.append(cur)
+        for grp in y_rows:
+            grp.sort(key=lambda t: t[2])  # x 排序
+            gi = None
+            for i, (_y, txt, _x) in enumerate(grp):
+                if _GRADE_RE.match(txt.strip()):
+                    gi = i
+                    break
+            if gi is None:
+                continue
+            grade = int(_GRADE_RE.match(grp[gi][1].strip()).group(1))  # type: ignore[union-attr]
+            seg = [grp[gi]]
+            for k in range(gi + 1, len(grp)):
+                if grp[k][2] - seg[-1][2] <= 120:
+                    seg.append(grp[k])
+                else:
+                    break
+            feat = None
+            for _y, txt, _x in seg:
+                ts = txt.strip()
+                if re.search(r"[\u4e00-\u9fff]", ts) and not _GRADE_RE.match(ts):
+                    feat = ts
+                    break
+            if feat is None:
+                continue
+            for y, _txt, x in seg:
+                table_cells.add((pno, round(y), x))
+            level_rows.append((grade, feat))
+    level_rows.sort(key=lambda x: x[0])
+    # 特性→等级映射(表权威)
+    feats_map: dict[str, int] = {}
+    for lv, fs in level_rows:
+        for f in re.split(r"[，,、/]", fs):
+            f = f.strip()
+            if f and f not in feats_map:
+                feats_map[f] = lv
+
+    # ---- 标题小节流 ----
+    sections: list[dict] = []
+    cur_sec: dict | None = None
+    for pno, y, size, txt, x in lines:
+        if (pno, y, x) in table_cells or size <= 7.5 or "职业表" in txt[:6]:
+            continue
+        if size >= 9.5 and len(txt) <= 60:
+            if cur_sec is not None and abs(y - (cur_sec.get("ty") or 0)) <= 22:
+                cur_sec["title"] = f"{cur_sec['title']} {txt}"
+                cur_sec["ty"] = y
+                continue
+            sections.append({"title": txt, "size": size, "pno": pno, "ty": y, "lines": []})
+            cur_sec = sections[-1]
+        elif cur_sec is not None:
+            cur_sec["lines"].append(txt)
+    # 无标题正文归入 story 前导(职业名后 lore 段)
+
+    def feat_kind(title: str) -> str:
+        return "class_base" if title.split(" ")[0] in ("生命值", "熟练项", "装备") else "class_feature"
+
+    def make_feat(s: dict) -> dict:
+        body = clean_cn_spaces(
+            "\n".join(x.strip() for x in s["lines"] if x.strip())
+        )
+        body = "\n".join(x for x in body.split("\n") if x)
+        lv = _class_feature_level(feats_map, s["title"], body)
+        extra = {}
+        if lv is not None:
+            extra["lv"] = lv
+        return {
+            "title": clean_cn_spaces(s["title"]),
+            "page": s["pno"] + 1,
+            "kind": feat_kind(s["title"]),
+            "content": body,
+            "children": [],
+            **extra,
+        }
+
+    node = {
+        "title": c["title"],
+        "page": c["pno"] + 1,
+        "kind": "class",
+        "content": "",
+        "parent_title": c["name"],
+        "children": [],
+    }
+    # 等级表卡
+    rows_json = json.dumps(
+        [{"lv": lv, "feats": fs} for lv, fs in level_rows], ensure_ascii=False
+    )
+    node["children"].append(
+        {"title": "职业等级表", "page": node["page"], "kind": "class_levels",
+         "content": rows_json, "children": []}
+    )
+
+    # 分区域:pre(story/创建)、core(Class Features 后到子职分区)、sub
+    phase = "pre"
+    story_parts: list[str] = []
+    sub: dict | None = None
+    for s in sections:
+        title = s["title"]
+        if s["size"] >= 13.5 and "职业特性" in title:
+            phase = "core"
+            continue
+        if s["size"] >= 13.5:
+            phase = "sub"
+            sub = None
+            continue
+        if phase == "pre":
+            if "创建" in title or title.startswith("快速建卡"):
+                node["children"].append(make_feat(s))
+            else:
+                part = clean_cn_spaces(
+                    "\n".join([title] + [x.strip() for x in s["lines"] if x.strip()])
+                )
+                if part:
+                    story_parts.append(part)
+            continue
+        if phase == "core":
+            node["children"].append(make_feat(s))
+            continue
+        # sub 区域
+        if s["size"] >= 11.5:
+            sub = make_feat(s)
+            sub["kind"] = "subclass"
+            node["children"].append(sub)
+        elif sub is not None:
+            sub["children"].append(make_feat(s))
+        else:
+            node["children"].append(make_feat(s))
+
+    if story_parts:
+        node["content"] = f"§故事\n{chr(10).join(story_parts)}"
+    return node
 
 _ENTRY_ANCHOR_CACHE: dict[tuple, re.Pattern] = {}
 
@@ -228,7 +440,7 @@ def _fix_cn_en_space(text: str) -> str:
 
 
 def _iter_pdf_lines(pdf_path: Path, start: int, end: int):
-    """遍历玩家手册页范围的文本行 (pno, y, size, text, has_bold),按 PDF 内容流顺序。"""
+    """遍历页范围文本行 (pno, y, size, text, has_bold, x)。"""
     doc = pymupdf.open(str(pdf_path))
     try:
         for pno in range(start, min(end, doc.page_count)):
@@ -255,7 +467,14 @@ def _iter_pdf_lines(pdf_path: Path, start: int, end: int):
                     txt = _fix_cn_en_space("".join(parts)).strip()
                     if not txt:
                         continue
-                    yield pno, l["bbox"][1], max(s["size"] for s in spans), txt, has_bold
+                    yield (
+                        pno,
+                        round(l["bbox"][1]),
+                        max(s["size"] for s in spans),
+                        txt,
+                        has_bold,
+                        round(l["bbox"][0]),
+                    )
     finally:
         doc.close()
 
@@ -280,7 +499,7 @@ def ph_section_pieces(
                 pieces.append((clean_cn_spaces(title), (cur_pno or 0) + 1, cat, content))
         cur_title, cur_pno, cur_lines, last_title_y = None, None, [], None  # noqa: F824
 
-    for pno, y, size, txt, _bold in _iter_pdf_lines(pdf_path, start, end):
+    for pno, y, size, txt, _bold, _x in _iter_pdf_lines(pdf_path, start, end):
         if size <= 7.5:  # 页码
             continue
         if size >= 9.5 and len(txt) <= 60:
@@ -389,7 +608,7 @@ def ph_race_hierarchy(
     anchors = {n: re.compile(rf"^{re.escape(n)}( [A-Za-z][A-Za-z'’\-/ ]*)?$") for n in names}
     parents: list[dict] = []
     cur: dict | None = None
-    for pno, y, size, txt, has_bold in _iter_pdf_lines(pdf_path, start, end):
+    for pno, y, size, txt, has_bold, _x in _iter_pdf_lines(pdf_path, start, end):
         if size <= 7.5:
             continue
         matched = next((n for n, rx in anchors.items() if rx.match(txt)), None)
@@ -566,22 +785,24 @@ def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> Non
                         )
                     )
                     knowledge_count += 1
-            # 种族章 → 分层知识卡树(race 父卡 / race_part 亚种与小节 / trait 特质)
-            def _add_race_tree(node: dict, pid=None) -> None:  # noqa: ANN001
+            # 种族/职业 → 分层知识卡树;背景 → 条目
+            def _add_tree(node: dict, cat: str, pid=None) -> None:  # noqa: ANN001
                 nonlocal knowledge_count
                 rec = RuleKnowledge(
                     book=stem, page=node["page"], title=node["title"],
-                    category="种族", kind=node["kind"], parent_id=pid,
+                    category=cat, kind=node["kind"], parent_id=pid,
                     content=node["content"],
                 )
                 session.add(rec)
                 session.flush()
                 knowledge_count += 1
                 for ch in node.get("children") or []:
-                    _add_race_tree(ch, rec.id)
+                    _add_tree(ch, cat, rec.id)
 
             for rp in ph_race_hierarchy(pdf, 17, 44, PH_RACE_NAMES):
-                _add_race_tree(rp)
+                _add_tree(rp, "种族")
+            for cls in ph_class_hierarchy(pdf, 45, 120, PH_CLASS_NAMES):
+                _add_tree(cls, "职业")
             for start, end, cat, names in PH_ENTRY_CATS:
                 for title, pno, pcat, content in ph_entry_pieces(
                     pages, start, end, cat, names

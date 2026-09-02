@@ -253,12 +253,12 @@ class RuleService:
                 "parent_id": x.parent_id,
                 "content": x.content,
             }
-            if x.kind in ("race", "race_part"):
+            if x.kind in ("race", "race_part", "class", "subclass"):
                 data["children"] = self._collect_children(s, x.id)
             return data
 
     def _collect_children(self, s, parent_id: int) -> list[dict]:
-        """收集子卡;亚种(race_part)再展开其特质卡,最多两层。"""
+        """收集子卡;亚种(race_part)/子职业(subclass)再展开其下层能力。"""
         kids = s.execute(
             select(RuleKnowledge)
             .where(RuleKnowledge.parent_id == parent_id)
@@ -274,7 +274,7 @@ class RuleService:
                 "content": c.content,
                 "book": c.book,
             }
-            if c.kind == "race_part":
+            if c.kind in ("race_part", "subclass"):
                 d["children"] = self._collect_children(s, c.id)
             out.append(d)
         return out

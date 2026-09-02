@@ -335,7 +335,7 @@
         <!-- ==================== 知识库 ==================== -->
         <section v-else-if="view === 'knowledge'" class="view">
           <div class="kb-tabs">
-            <button v-for="t in [{id:'spells',icon:'🪄',label:'法术'},{id:'races',icon:'🧝',label:'种族'},{id:'monsters',icon:'👹',label:'怪物'},{id:'knowledge',icon:'📖',label:'规则'},{id:'maps',icon:'🗺️',label:'地图'}]"
+            <button v-for="t in [{id:'spells',icon:'🪄',label:'法术'},{id:'races',icon:'🧝',label:'种族'},{id:'classes',icon:'⚔️',label:'职业'},{id:'monsters',icon:'👹',label:'怪物'},{id:'knowledge',icon:'📖',label:'规则'},{id:'maps',icon:'🗺️',label:'地图'}]"
                     :key="t.id" :class="['kb-tab', {on: kbTab === t.id}]" @click="kbSwitch(t.id)">
               {{ t.icon }} {{ t.label }}
             </button>
@@ -392,6 +392,19 @@
               </div>
             </div>
             <div v-if="!kbRaces.parents || !kbRaces.parents.length" class="inline-empty">暂未导入种族数据,请先在设置中导入规则包。</div>
+          </div>
+
+          <!-- 职业:知识卡 -->
+          <div v-else-if="kbTab === 'classes'">
+            <div class="kb-race-grid">
+              <div v-for="c in kbClasses" :key="c.id" class="kb-race-card" @click="openKbClass(c)">
+                <div class="kb-race-name">{{ classZh(c.title) }}</div>
+                <div class="kb-race-en">{{ c.title }}</div>
+                <p class="kb-race-preview">{{ truncate(c.preview, 60) }}</p>
+                <span class="kb-chip">第{{ c.page }}页</span>
+              </div>
+            </div>
+            <div v-if="!kbClasses.length" class="inline-empty">暂未导入职业数据,请先在设置中导入规则包。</div>
           </div>
 
           <!-- 怪物:按类型分组 -->
@@ -922,7 +935,7 @@
   <div v-if="kbDetail" class="modal-mask" @click.self="kbDetail = null">
     <div class="modal kb-modal">
       <div class="modal-head">
-        <h2>{{ kbDetail.type === 'race' ? kbDetail.data.title : (kbDetail.type === 'spell' || kbDetail.type === 'monster' || kbDetail.type === 'map' ? kbDetail.data.name : '规则知识') }}</h2>
+        <h2>{{ (kbDetail.type === 'race' || kbDetail.type === 'class') ? kbDetail.data.title : (kbDetail.type === 'spell' || kbDetail.type === 'monster' || kbDetail.type === 'map' ? kbDetail.data.name : '规则知识') }}</h2>
         <button class="icon-btn" @click="kbDetail = null">✕</button>
       </div>
       <div class="modal-body">
@@ -978,6 +991,82 @@
           <div v-for="(k, i) in kbDetail.data" :key="i" class="kb-kno-item">
             <b>{{ k.book }} · 第{{ k.page }}页</b>
             <p v-html="linkify(nice(k.content))"></p>
+          </div>
+        </template>
+
+        <!-- 职业详情(等级表可视化 + 特性卡 + 子职树) -->
+        <template v-else-if="kbDetail.type === 'class' && kbDetail.data">
+          <div class="kb-meta">
+            <span class="tag">职业</span>
+            <span class="tag">玩家手册 · 第{{ kbDetail.data.page }}页</span>
+            <span class="tag" v-if="classLevelRows(kbDetail.data).length">1-20 级</span>
+          </div>
+
+          <div v-if="classLevelRows(kbDetail.data).length" class="kb-race-block">
+            <div class="kb-race-block-label">⚡ 等级能力表(点开查看该级特性)</div>
+            <div v-for="r in classLevelRows(kbDetail.data)" :key="r.lv" class="kb-lv-row">
+              <details>
+                <summary>
+                  <span class="kb-lv-badge">Lv {{ r.lv }}</span>
+                  <span class="kb-lv-feats">{{ r.feats }}</span>
+                </summary>
+                <div v-if="classLevelFeats(r.lv, kbDetail.data).length" class="kb-subtraits">
+                  <div v-for="f in classLevelFeats(r.lv, kbDetail.data)" :key="f.id" class="kb-trait-item">
+                    <div class="kb-trait-title">{{ f.title }}</div>
+                    <p>{{ nice(f.content) }}</p>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <details v-if="raceParts(kbDetail.data.content).story" class="kb-story">
+            <summary>📜 职业设定</summary>
+            <div class="kb-story-body">{{ nice(raceParts(kbDetail.data.content).story) }}</div>
+          </details>
+
+          <div v-if="classBases(kbDetail.data).length" class="kb-race-block">
+            <div class="kb-race-block-label">🛡 职业基础</div>
+            <div v-for="b in classBases(kbDetail.data)" :key="b.id" class="kb-race-sub">
+              <details>
+                <summary>{{ b.title }}</summary>
+                <p>{{ nice(b.content) }}</p>
+              </details>
+            </div>
+          </div>
+
+          <div v-if="sortedClassFeats(kbDetail.data).length" class="kb-race-block">
+            <div class="kb-race-block-label">⚔️ 职业特性(按获得等级)</div>
+            <div v-for="f in sortedClassFeats(kbDetail.data)" :key="f.id" class="kb-race-sub">
+              <details>
+                <summary>
+                  {{ f.title }}
+                  <span v-if="classFeatLv(f, kbDetail.data)" class="kb-chip">Lv{{ classFeatLv(f, kbDetail.data) }}</span>
+                </summary>
+                <p>{{ nice(f.content) }}</p>
+              </details>
+            </div>
+          </div>
+
+          <div v-if="classSubs(kbDetail.data).length" class="kb-race-block">
+            <div class="kb-race-block-label">🌳 子职业(3/6/10/14 级获得)</div>
+            <div v-for="s in classSubs(kbDetail.data)" :key="s.id" class="kb-race-sub">
+              <details>
+                <summary>{{ s.title }}</summary>
+                <p v-if="s.content">{{ nice(s.content) }}</p>
+                <div v-if="s.children && s.children.length" class="kb-subtraits">
+                  <div v-for="c in s.children" :key="c.id" class="kb-race-sub kb-sub-sub">
+                    <details>
+                      <summary>
+                        {{ c.title }}
+                        <span v-if="classFeatLv(c, { children: s.children })" class="kb-chip">Lv{{ classFeatLv(c, { children: s.children }) }}</span>
+                      </summary>
+                      <p>{{ nice(c.content) }}</p>
+                    </details>
+                  </div>
+                </div>
+              </details>
+            </div>
           </div>
         </template>
 

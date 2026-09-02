@@ -104,6 +104,7 @@ createApp({
       kbKnowledge: [],
       kbRaces: [],
       kbRaceResults: [],
+      kbClasses: [],
       kbMaps: [],
       kbBooks: [],
       kbBook: '',
@@ -129,7 +130,7 @@ createApp({
       return this.templateById('dnd5e') || { groups: [], checks: [] };
     },
     kbTabLabel() {
-      return ({ spells: '法术', races: '种族', monsters: '怪物', knowledge: '规则', maps: '地图' })[this.kbTab] || '';
+      return ({ spells: '法术', races: '种族', classes: '职业', monsters: '怪物', knowledge: '规则', maps: '地图' })[this.kbTab] || '';
     },
     kbLevels() {
       return ['', '戏法', '1 环', '2 环', '3 环', '4 环', '5 环', '6 环', '7 环', '8 环', '9 环'];
@@ -432,6 +433,86 @@ createApp({
       this.kbCategory = '';
       if (tab === 'knowledge' && !this.kbKnowledge.length) this.loadKbKnowledge();
       if (tab === 'races' && !this.kbRaces.length) this.loadKbRaces();
+      if (tab === 'classes' && !this.kbClasses.length) this.loadKbClasses();
+    },
+
+    async loadKbClasses() {
+      // 玩家手册职业 → 职业知识卡列表
+      try {
+        if (!this.kbBooks.length) {
+          this.kbBooks = await API.get('/rules/books');
+        }
+        const book = this.kbBooks.includes('DND_5E_玩家手册CN') ? 'DND_5E_玩家手册CN' : '';
+        const q = book ? `&book=${encodeURIComponent(book)}` : '';
+        this.kbClasses = await API.get(`/rules/knowledge?category=${encodeURIComponent('职业')}&kind=class${q}&limit=30`);
+      } catch (e) { /* 静默 */ }
+    },
+
+    async openKbClass(k) {
+      try {
+        const data = await API.get(`/rules/knowledge/${k.id}`);
+        this.kbDetail = { type: 'class', data };
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    classZh(t) {
+      // '野蛮人 Barbarian' → 野蛮人
+      return String(t || '').split(' ')[0].trim();
+    },
+    classLevelRows(data) {
+      const lv = (data && data.children || []).find(c => c.kind === 'class_levels');
+      if (!lv) return [];
+      try {
+        const parsed = JSON.parse(lv.content);
+        const arr = Array.isArray(parsed) ? parsed : (parsed.levels || []);
+        return arr.filter(r => r.lv >= 1 && r.lv <= 20);
+      } catch (e) { return []; }
+    },
+    classBases(data) {
+      return (data && data.children || []).filter(c => c.kind === 'class_base');
+    },
+    classFeats(data) {
+      // 核心职业特性(含等级排序)
+      return (data && data.children || []).filter(c => c.kind === 'class_feature');
+    },
+    sortedClassFeats(data) {
+      const lvOf = c => this.classFeatLv(c, data);
+      const list = this.classFeats(data).slice();
+      list.sort((a, b) => {
+        const la = lvOf(a), lb = lvOf(b);
+        if (la == null && lb == null) return 0;
+        if (la == null) return 1;
+        if (lb == null) return -1;
+        return la - lb;
+      });
+      return list;
+    },
+    classSubs(data) {
+      return (data && data.children || []).filter(c => c.kind === 'subclass');
+    },
+    classFeatLv(feat, data) {
+      // 特性等级:表匹配 → 正文'第 N 级'
+      if (!feat) return null;
+      const zh = this.classZh(feat.title);
+      const rows = this.classLevelRows(data);
+      for (const r of rows) {
+        for (const f of String(r.feats || '').split(/[，,、/]/)) {
+          if (f.trim() === zh) return r.lv;
+        }
+      }
+      const m = String(feat.content || '').match(/第\s*(\d{1,2})\s*级/);
+      return m ? +m[1] : null;
+    },
+    classLevelFeats(lv, data) {
+      // 某等级获得的特性卡(表名匹配)
+      const row = this.classLevelRows(data).find(r => r.lv === lv);
+      if (!row) return [];
+      const feats = this.classFeats(data);
+      const names = String(row.feats || '').split(/[，,、/]/).map(s => s.trim()).filter(Boolean);
+      return names
+        .map(n => feats.find(f => this.classZh(f.title) === n || f.title.includes(n)))
+        .filter(Boolean)
+        .slice(0, 6);
     },
 
     async loadKbRaces() {

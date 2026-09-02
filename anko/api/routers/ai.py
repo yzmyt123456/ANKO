@@ -123,12 +123,31 @@ async def generate_character_stream(
 
     async def event_stream():
         buffer = payload.partial or ""
+        # 检索本地规则参考
+        extra_rules = ""
+        try:
+            rule_svc = request.app.state.rule_service
+            refs = []
+            for kw in ("六项属性", "种族", "阵营", "职业", "属性值"):
+                refs += rule_svc.search_knowledge(kw, limit=1)
+            seen = set()
+            parts = []
+            for r in refs:
+                key = r["page"]
+                if key in seen:
+                    continue
+                seen.add(key)
+                parts.append(f"[玩家手册 p{r['page']}]{r['content'][:220]}")
+            extra_rules = "\n".join(parts[:4])
+        except Exception:  # noqa: BLE001
+            extra_rules = ""
         try:
             async for delta in service.generate_character_stream(
                 story_context=payload.story_context or "",
                 hint=payload.hint or "",
                 template=payload.template,
                 partial=buffer,
+                extra_rules=extra_rules,
             ):
                 buffer += delta
                 yield f"data: {json.dumps({'type': 'delta', 'text': delta}, ensure_ascii=False)}\n\n"

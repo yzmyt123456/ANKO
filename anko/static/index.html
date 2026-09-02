@@ -381,6 +381,34 @@
                 即可自动拆分填入名字 / 称号 / 背景 / 属性 / 标签(选 DND 5e 模板时支持精细字段)。
               </div>
             </div>
+
+            <div class="card settings-card rule-lib">
+              <h2>📚 本地 DND 规则库</h2>
+              <p class="muted">从官方规则包导入(玩家手册 / 怪物图鉴),AI 生成角色时自动参考;数据仅存本地。</p>
+              <div class="rule-stats">
+                <div class="rule-stat"><b>{{ ruleStats.spells || 0 }}</b><span>法术</span></div>
+                <div class="rule-stat"><b>{{ ruleStats.monsters || 0 }}</b><span>怪物</span></div>
+                <div class="rule-stat"><b>{{ ruleStats.knowledge || 0 }}</b><span>知识片段</span></div>
+              </div>
+              <p v-if="ruleStats.imported === false" class="muted rule-import-tip">
+                ⚠️ 尚未导入规则数据。运行:<code>python scripts/import_dnd_rules.py</code>
+                (需在电脑上有 DND 5E 规则包 PDF)
+              </p>
+              <div class="rule-query">
+                <input v-model="ruleQuery" placeholder="搜索法术/怪物/规则,如:火球术" @keyup.enter="searchRules" />
+                <button class="btn small" @click="searchRules">搜索</button>
+              </div>
+              <div v-if="ruleResults && ruleResults.length" class="rule-results">
+                <div v-for="(r, i) in ruleResults" :key="i" class="rule-item">
+                  <b>{{ r.name }}</b>
+                  <span class="muted">{{ r.level ? r.level + ' 环 · ' + (r.school || '') : (r.meta || '') }}</span>
+                  <span v-if="r.level && r.level > 0" class="rule-meta muted">{{ r.casting_time }} · {{ r.range }}</span>
+                  <span v-if="r.ac" class="rule-meta muted">AC {{ r.ac }} · HP {{ r.hp }}</span>
+                  <p v-if="r.description">{{ r.description }}</p>
+                </div>
+              </div>
+              <div v-else-if="ruleSearched" class="muted rule-import-tip">未找到匹配结果</div>
+            </div>
           </div>
         </section>
       </main>

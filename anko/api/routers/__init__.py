@@ -6,6 +6,7 @@ from anko.api.routers.ai import router as ai_router
 from anko.api.routers.characters import router as characters_router
 from anko.api.routers.dice import maid_router, roll_router
 from anko.api.routers.glossary import router as glossary_router
+from anko.api.routers.rules import router as rules_router
 from anko.api.routers.stories import router as stories_router
 from anko.api.routers.templates import router as templates_router
 
@@ -18,3 +19,4 @@ api_router.include_router(roll_router)
 api_router.include_router(ai_router)
 api_router.include_router(templates_router)
 api_router.include_router(glossary_router)
+api_router.include_router(rules_router)

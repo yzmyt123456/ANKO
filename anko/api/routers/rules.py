@@ -1,0 +1,67 @@
+"""本地 DND 规则库 API。"""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from fastapi import APIRouter, HTTPException, Query, Request
+
+router = APIRouter(prefix="/rules", tags=["DND 规则库"])
+
+
+def _svc(request: Request):
+    return request.app.state.rule_service
+
+
+@router.get("/status")
+def rules_status(request: Request) -> dict:
+    """规则库导入状态。"""
+    return _svc(request).stats()
+
+
+@router.get("/spells")
+def list_spells(
+    q: Optional[str] = Query(None, description="按名称搜索"),
+    limit: int = Query(20, ge=1, le=100),
+    request: Request = None,
+) -> list[dict]:
+    """法术查询。"""
+    return _svc(request).search_spells(q, limit)
+
+
+@router.get("/spells/{name}")
+def get_spell(name: str, request: Request) -> dict:
+    """法术详情(按名称)。"""
+    obj = _svc(request).get_spell(name)
+    if obj is None:
+        raise HTTPException(status_code=404, detail="未找到该法术")
+    return obj
+
+
+@router.get("/monsters")
+def list_monsters(
+    q: Optional[str] = Query(None, description="按名称搜索"),
+    limit: int = Query(20, ge=1, le=100),
+    request: Request = None,
+) -> list[dict]:
+    """怪物查询。"""
+    return _svc(request).search_monsters(q, limit)
+
+
+@router.get("/monsters/{name}")
+def get_monster(name: str, request: Request) -> dict:
+    """怪物详情(按名称)。"""
+    obj = _svc(request).get_monster(name)
+    if obj is None:
+        raise HTTPException(status_code=404, detail="未找到该怪物")
+    return obj
+
+
+@router.get("/search")
+def search_knowledge(
+    q: str = Query(..., min_length=1),
+    limit: int = Query(5, ge=1, le=20),
+    request: Request = None,
+) -> list[dict]:
+    """全文检索玩家手册知识片段。"""
+    return _svc(request).search_knowledge(q, limit)

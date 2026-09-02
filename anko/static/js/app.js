@@ -87,6 +87,12 @@ createApp({
       genPartial: '',
       genController: null,
       genProcess: '',
+
+      // 本地规则库
+      ruleStats: { spells: 0, monsters: 0, knowledge: 0, imported: false },
+      ruleQuery: '',
+      ruleResults: null,
+      ruleSearched: false,
     };
   },
 
@@ -117,6 +123,7 @@ createApp({
     this.loadTemplates();
     this.loadGlossary();
     this.loadAiConfig();
+    this.loadRuleStats();
   },
 
   methods: {
@@ -340,6 +347,26 @@ createApp({
     },
 
     closeCharModal() { this.charModal.open = false; },
+
+    /* ---------------- 本地规则库 ---------------- */
+    async loadRuleStats() {
+      try {
+        this.ruleStats = await API.get('/rules/status');
+      } catch (e) { /* 静默 */ }
+    },
+
+    async searchRules() {
+      const q = this.ruleQuery.trim();
+      if (!q) { this.showToast('请输入要搜索的内容', 'error'); return; }
+      try {
+        const [spells, monsters] = await Promise.all([
+          API.get(`/rules/spells?q=${encodeURIComponent(q)}&limit=5`),
+          API.get(`/rules/monsters?q=${encodeURIComponent(q)}&limit=5`),
+        ]);
+        this.ruleResults = [...spells, ...monsters];
+        this.ruleSearched = true;
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
 
     /* ---------------- AI 配置 ---------------- */
     async loadAiConfig() {

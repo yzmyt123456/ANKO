@@ -460,13 +460,20 @@ class AIService:
         hint: str = "",
         template: str = "dnd5e",
         partial: str = "",
+        extra_rules: str = "",
     ):
         """流式生成角色:逐块产出增量文本(供 SSE 推送)。
 
         支持 partial:从已生成(可能被中断)的文本处继续补全。
+        extra_rules:本地规则库检索到的规则参考片段。
         """
         client = AIClient(self._current())
         prompt = build_generate_prompt(story_context, hint, template, partial)
+        if extra_rules.strip():
+            prompt += (
+                "\n\n【本地规则参考(创建角色时请参考并尽量符合)】\n"
+                f"{extra_rules.strip()[:2500]}"
+            )
         async for delta in client.chat_stream(
             [{"role": "user", "content": prompt}]
         ):

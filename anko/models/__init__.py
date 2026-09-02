@@ -7,6 +7,7 @@ from anko.models.base import Base, TimestampMixin
 from anko.models.character import CharacterCard
 from anko.models.config import SystemConfig
 from anko.models.dice import DiceMaid, DiceRoll
+from anko.models.rules import RuleKnowledge, RuleMonster, RuleSpell
 from anko.models.story import Story, StoryEntry
 
 __all__ = [
@@ -18,5 +19,8 @@ __all__ = [
     "DiceMaid",
     "DiceRoll",
     "SystemConfig",
+    "RuleSpell",
+    "RuleMonster",
+    "RuleKnowledge",
 ]
 

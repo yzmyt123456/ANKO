@@ -74,6 +74,11 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         "/static", StaticFiles(directory=STATIC_DIR), name="static"
     )
 
+    # ---- 地图素材库静态目录 ----
+    maps_dir = Path("data/maps")
+    maps_dir.mkdir(parents=True, exist_ok=True)
+    app.mount("/maps", StaticFiles(directory=maps_dir), name="maps")
+
     # ---- 插件 ----
     _load_plugins(app, settings, dice_engine)
 

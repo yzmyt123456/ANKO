@@ -137,53 +137,128 @@ def parse_monsters(pages: list[str]) -> list[dict]:
 
 
 def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> None:
+    """全量导入:核心规则 + 冒险模组 → 知识库;地图 → 地图素材库。"""
     engine = create_engine(db_url, future=True)
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     session = Session()
 
     # 清空旧数据
-    for model in (RuleSpell, RuleMonster, RuleKnowledge):
+    for model in (RuleSpell, RuleMonster, RuleKnowledge, RuleMap):
         session.query(model).delete()
     session.commit()
 
-    ph = pdf_dir / PH_NAME
-    mm = pdf_dir / MM_NAME
+    maps_dir = Path("data/maps")
+    maps_dir.mkdir(parents=True, exist_ok=True)
 
-    # ---- 玩家手册:知识切块 ----
-    if ph.exists():
-        print(f"提取玩家手册({ph.name})…")
-        pages = extract_pages(ph, 0, 400)
+    spells_count = monsters_count = knowledge_count = maps_count = 0
+
+    # ---- 遍历顶层 PDF ----
+    for pdf in sorted(pdf_dir.glob("*.pdf")):
+        stem = pdf.stem
+        try:
+            reader = PdfReader(str(pdf))
+        except Exception as exc:  # noqa: BLE001
+            print(f"  跳过 {pdf.name}: {exc}")
+            continue
+        total = len(reader.pages)
+        print(f"[{stem}] {total} 页")
+
+        # 知识切块(每本书最多 400 页)
+        pages = []
+        for i in range(min(total, 400)):
+            pages.append(reader.pages[i].extract_text() or "")
         for i, page_text in enumerate(pages):
-            page_text = re.sub(r"\s+", " ", page_text).strip()
-            if len(page_text) > 40:
+            cleaned = re.sub(r"\s+", " ", page_text).strip()
+            if len(cleaned) > 40:
                 session.add(
                     RuleKnowledge(
-                        book="玩家手册", page=i + 1,
-                        title=page_text[:40], content=page_text,
+                        book=stem, page=i + 1,
+                        title=cleaned[:40], content=cleaned,
                     )
                 )
-        # ---- 法术 ----
-        print("解析法术条目…")
-        spell_pages = extract_pages(ph, SPELL_START_PAGE, SPELL_END_PAGE)
-        spells = parse_spells(spell_pages)
-        for s in spells:
-            session.add(RuleSpell(**s))
-        session.commit()
-        print(f"  法术 {len(spells)} 个,知识片段 {len(pages)} 段")
+                knowledge_count += 1
 
-    # ---- 怪物图鉴 ----
-    if mm.exists():
-        print(f"提取怪物图鉴({mm.name})…")
-        m_pages = extract_pages(mm, 0, 400)
-        monsters = parse_monsters(m_pages)
-        for m in monsters:
-            session.add(RuleMonster(**m))
+        # 玩家手册 → 法术
+        if "玩家手册" in stem:
+            spell_pages = extract_pages(pdf, SPELL_START_PAGE, SPELL_END_PAGE)
+            spells = parse_spells(spell_pages)
+            for s in spells:
+                session.add(RuleSpell(**s))
+            spells_count = len(spells)
+
+        # 怪物图鉴 → 怪物
+        if "怪物图鉴" in stem:
+            m_pages = []
+            for i in range(min(total, 400)):
+                m_pages.append(reader.pages[i].extract_text() or "")
+            monsters = parse_monsters(m_pages)
+            for m in monsters:
+                session.add(RuleMonster(**m))
+            monsters_count = len(monsters)
+
         session.commit()
-        print(f"  怪物 {len(monsters)} 个")
+
+    # ---- 冒险模组文件夹 → 知识库 ----
+    module_dir = pdf_dir / "冒险模组"
+    if module_dir.is_dir():
+        for pdf in sorted(module_dir.glob("*.pdf")):
+            stem = pdf.stem
+            try:
+                reader = PdfReader(str(pdf))
+            except Exception as exc:  # noqa: BLE001
+                print(f"  跳过 {pdf.name}: {exc}")
+                continue
+            total = len(reader.pages)
+            print(f"[冒险模组/{stem}] {total} 页")
+            for i in range(min(total, 400)):
+                page_text = reader.pages[i].extract_text() or ""
+                cleaned = re.sub(r"\s+", " ", page_text).strip()
+                if len(cleaned) > 40:
+                    session.add(
+                        RuleKnowledge(
+                            book=stem, page=i + 1,
+                            title=cleaned[:40], content=cleaned,
+                        )
+                    )
+                    knowledge_count += 1
+            session.commit()
+
+    # ---- 地图包 → 地图素材库 ----
+    import pymupdf
+
+    map_dir = pdf_dir / "地图包"
+    if map_dir.is_dir():
+        for pdf in sorted(map_dir.glob("*.pdf")):
+            stem = pdf.stem
+            try:
+                doc = pymupdf.open(str(pdf))
+            except Exception as exc:  # noqa: BLE001
+                print(f"  跳过地图 {pdf.name}: {exc}")
+                continue
+            for pno in range(len(doc)):
+                page = doc[pno]
+                pix = page.get_pixmap(dpi=150)
+                out = maps_dir / f"{stem}_p{pno + 1}.png"
+                pix.save(str(out))
+                session.add(
+                    RuleMap(
+                        name=f"{stem} (第{pno + 1}页)",
+                        source=f"地图包/{pdf.name}",
+                        file=f"/maps/{out.name}",
+                        width=pix.width,
+                        height=pix.height,
+                    )
+                )
+                maps_count += 1
+            doc.close()
+            session.commit()
 
     session.close()
-    print("导入完成 ✅")
+    print(
+        f"导入完成 ✅ 法术 {spells_count} · 怪物 {monsters_count} · "
+        f"知识片段 {knowledge_count} · 地图 {maps_count}"
+    )
 
 
 def main() -> None:
@@ -196,6 +271,11 @@ def main() -> None:
 
 if __name__ == "__main__":
     # 循环导入避免模型未定义
-    from anko.models.rules import RuleKnowledge, RuleMonster, RuleSpell  # noqa: F401
+    from anko.models.rules import (  # noqa: F401
+        RuleKnowledge,
+        RuleMap,
+        RuleMonster,
+        RuleSpell,
+    )
 
     main()

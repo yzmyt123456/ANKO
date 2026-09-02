@@ -57,6 +57,12 @@ def get_monster(name: str, request: Request) -> dict:
     return obj
 
 
+@router.get("/maps")
+def list_maps(request: Request) -> list[dict]:
+    """地图素材列表。"""
+    return _svc(request).list_maps()
+
+
 @router.get("/search")
 def search_knowledge(
     q: str = Query(..., min_length=1),

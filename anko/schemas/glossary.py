@@ -14,6 +14,8 @@ class GlossaryEntryRead(BaseModel):
     category: str
     category_label: str
     url: str
+    local: bool = Field(False, description="本地知识库是否收录")
+    local_type: Optional[str] = Field(None, description="本地类型: spell/monster/knowledge")
 
 
 class LinkifyRequest(BaseModel):

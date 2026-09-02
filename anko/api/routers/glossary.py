@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 
 from anko.glossary import find_entries, linkify, list_entries
 from anko.schemas.glossary import (
@@ -23,12 +23,22 @@ def glossary(
         None, description="按分类过滤: attribute/skill/spell/class/rule/equipment"
     ),
     q: Optional[str] = Query(None, description="按名称搜索"),
+    request: Request = None,
 ) -> list[GlossaryEntryRead]:
-    """内置 DND 词条列表。"""
+    """内置 DND 词条列表(标注本地知识库命中)。"""
     entries = list_entries(category)
     if q:
         entries = [e for e in entries if q in e["name"]]
-    return [GlossaryEntryRead(**e) for e in entries]
+    rule_svc = request.app.state.rule_service
+    result = []
+    for e in entries:
+        hit = rule_svc.resolve_term(e["name"])
+        result.append(
+            GlossaryEntryRead(
+                **e, local=hit["local"], local_type=hit["type"]
+            )
+        )
+    return result
 
 
 @router.post("/linkify", response_model=LinkifyResponse)

@@ -56,10 +56,26 @@ class RuleKnowledge(Base):
     __tablename__ = "rule_knowledge"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    book: Mapped[str] = mapped_column(String(50), index=True)
+    book: Mapped[str] = mapped_column(String(100), index=True)
     page: Mapped[int] = mapped_column(Integer, index=True)
     title: Mapped[Optional[str]] = mapped_column(String(200), default=None)
     content: Mapped[str] = mapped_column(Text, default="")
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<RuleKnowledge {self.book} p{self.page}>"
+
+
+class RuleMap(Base):
+    """地图素材(渲染自规则包地图 PDF)。"""
+
+    __tablename__ = "rule_maps"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
+    source: Mapped[Optional[str]] = mapped_column(String(200), default=None)
+    file: Mapped[str] = mapped_column(String(300), nullable=False)
+    width: Mapped[int] = mapped_column(Integer, default=0)
+    height: Mapped[int] = mapped_column(Integer, default=0)
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<RuleMap {self.name!r}>"

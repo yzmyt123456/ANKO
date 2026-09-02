@@ -788,6 +788,64 @@ input[type="checkbox"] { width: auto; margin: 0; }
   font-size: 13px; color: var(--text-2); margin-top: 8px;
   white-space: pre-wrap; line-height: 1.7;
 
+
+/* ============================================================
+   知识库
+   ============================================================ */
+.kb-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.kb-tab {
+  padding: 8px 18px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card); cursor: pointer; font-size: 13.5px; color: var(--text-2);
+  transition: all .15s;
+}
+.kb-tab:hover { border-color: var(--primary); color: var(--primary-dark); }
+.kb-tab.on { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+.kb-toolbar { display: flex; gap: 8px; margin-bottom: 16px; }
+.kb-toolbar input { flex: 1; }
+
+.kb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.kb-item {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; cursor: pointer; transition: all .15s;
+}
+.kb-item:hover { border-color: var(--primary); background: var(--primary-soft); transform: translateY(-2px); }
+.kb-item b { display: block; font-size: 14px; }
+.kb-item .muted { font-size: 12px; }
+
+.kb-knowledge-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; cursor: pointer; transition: all .15s;
+}
+.kb-knowledge-card:hover { border-color: var(--primary); background: var(--primary-soft); }
+.kb-knowledge-card p { font-size: 12.5px; color: var(--text-2); margin: 4px 0; }
+
+/* 地图 */
+.map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.map-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; cursor: pointer; transition: all .15s;
+}
+.map-card:hover { border-color: var(--primary); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(109,90,224,.12); }
+.map-card img { width: 100%; display: block; }
+.map-name { padding: 8px 12px; font-size: 12.5px; color: var(--text-2); }
+
+/* 知识详情弹窗 */
+.kb-modal { width: 620px; max-width: 94vw; }
+.kb-meta { margin-bottom: 10px; }
+.kb-rows { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
+.kb-rows > div { display: flex; gap: 10px; font-size: 13px; }
+.kb-rows b { color: var(--text-2); width: 74px; flex-shrink: 0; }
+.kb-desc { font-size: 13.5px; color: var(--text-2); line-height: 1.8; margin-top: 8px; white-space: pre-wrap; }
+.kb-abilities { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.kb-ability {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 4px 10px; font-size: 12.5px;
+}
+.kb-kno-item { margin-bottom: 12px; }
+.kb-kno-item b { font-size: 12.5px; color: var(--primary-dark); }
+.kb-kno-item p { font-size: 13px; color: var(--text-2); line-height: 1.8; margin-top: 4px; }
+.kb-map-img { width: 100%; border-radius: 8px; }
+
 /* ============================================================
    本地规则库
    ============================================================ */

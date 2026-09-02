@@ -7,7 +7,7 @@ from typing import Optional
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from anko.models import RuleKnowledge, RuleMonster, RuleSpell
+from anko.models import RuleKnowledge, RuleMap, RuleMonster, RuleSpell
 
 
 class RuleService:
@@ -29,6 +29,7 @@ class RuleService:
                 "spells": spells,
                 "monsters": monsters,
                 "knowledge": knowledge,
+                "maps": s.scalar(select(func.count(RuleMap.id))) or 0,
                 "imported": spells > 0,
             }
 
@@ -119,6 +120,65 @@ class RuleService:
             "abilities": m.abilities,
             "description": m.description,
         }
+
+    # ---------------- 地图 ----------------
+    def list_maps(self, limit: int = 100) -> list[dict]:
+        with self._session() as s:
+            stmt = select(RuleMap).order_by(RuleMap.id).limit(limit)
+            return [
+                {
+                    "id": m.id,
+                    "name": m.name,
+                    "source": m.source,
+                    "file": m.file,
+                    "width": m.width,
+                    "height": m.height,
+                }
+                for m in s.execute(stmt).scalars().all()
+            ]
+
+    # ---------------- 词条本地命中 ----------------
+    def resolve_term(self, name: str) -> Optional[dict]:
+        """判断一个名词在本地知识库是否有收录(法术/怪物/规则)。"""
+        spell = self.get_spell(name)
+        if spell:
+            return {
+                "local": True,
+                "type": "spell",
+                "name": spell["name"],
+                "url": f"/api/rules/spells/{spell['name']}",
+            }
+        monster = self.get_monster(name)
+        if monster:
+            return {
+                "local": True,
+                "type": "monster",
+                "name": monster["name"],
+                "url": f"/api/rules/monsters/{monster['name']}",
+            }
+        # 知识片段命中(标题包含该词)
+        with self._session() as s:
+            like = f"%{name}%"
+            hit = (
+                s.execute(
+                    select(RuleKnowledge)
+                    .where(
+                        (RuleKnowledge.title.like(like))
+                        | (RuleKnowledge.content.like(like))
+                    )
+                    .limit(1)
+                )
+                .scalars()
+                .first()
+            )
+            if hit:
+                return {
+                    "local": True,
+                    "type": "knowledge",
+                    "name": name,
+                    "url": f"/api/rules/search?q={name}",
+                }
+        return {"local": False, "type": None, "name": name, "url": None}
 
     # ---------------- 知识片段 ----------------
     def search_knowledge(

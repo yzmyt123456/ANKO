@@ -9,6 +9,7 @@ const PAGE_META = {
   stories: ['剧情', '创作与管理安科故事线'],
   maids: ['骰娘', '召唤与定制你的专属骰娘'],
   rolls: ['掷骰台', '让命运之骰为你发声'],
+  knowledge: ['知识库', '本地 DND 规则:法术 / 怪物 / 规则 / 地图'],
   settings: ['设置', 'AI 助手等系统配置'],
 };
 
@@ -22,6 +23,7 @@ createApp({
         { id: 'stories', icon: '📖', label: '剧情', badge: 'stories' },
         { id: 'maids', icon: '🧝', label: '骰娘', badge: 'maids' },
         { id: 'rolls', icon: '🎲', label: '掷骰台' },
+        { id: 'knowledge', icon: '📚', label: '知识库' },
         { id: 'settings', icon: '⚙️', label: '设置' },
       ],
 
@@ -93,6 +95,16 @@ createApp({
       ruleQuery: '',
       ruleResults: null,
       ruleSearched: false,
+
+      // 知识库
+      kbTab: 'spells',
+      kbQuery: '',
+      kbSpells: [],
+      kbMonsters: [],
+      kbKnowledge: [],
+      kbMaps: [],
+      kbLoading: false,
+      kbDetail: null,
     };
   },
 
@@ -107,6 +119,9 @@ createApp({
     },
     dndTemplate() {
       return this.templateById('dnd5e') || { groups: [], checks: [] };
+    },
+    kbTabLabel() {
+      return ({ spells: '法术', monsters: '怪物', knowledge: '规则', maps: '地图' })[this.kbTab] || '';
     },
     pageTitle() {
       if (this.view === 'storyDetail') return this.currentStory ? this.currentStory.title : '剧情详情';
@@ -124,6 +139,15 @@ createApp({
     this.loadGlossary();
     this.loadAiConfig();
     this.loadRuleStats();
+    this.loadKnowledge();
+    // 词条点击事件委托:本地词条打开内部详情
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest('.term-link');
+      if (a) {
+        e.preventDefault();
+        this.openLocalTerm(a.dataset.term, a.dataset.type);
+      }
+    });
   },
 
   methods: {
@@ -284,8 +308,15 @@ createApp({
         });
       }
       for (const p of placeholders) {
-        s = s.replace(p.token,
-          `<a class="wiki-link" href="${p.entry.url}" target="_blank" rel="noopener">${p.entry.name}</a>`);
+        const e = p.entry;
+        if (e.local) {
+          // 本地知识库收录:点击打开内部详情
+          s = s.replace(p.token,
+            `<a class="wiki-link term-link" href="#" data-term="${this._escHtml(e.name)}" data-type="${this._escHtml(e.local_type || '')}">${e.name}</a>`);
+        } else {
+          s = s.replace(p.token,
+            `<a class="wiki-link" href="${e.url}" target="_blank" rel="noopener">${e.name}</a>`);
+        }
       }
       return s;
     },
@@ -347,6 +378,75 @@ createApp({
     },
 
     closeCharModal() { this.charModal.open = false; },
+
+    /* ---------------- 知识库 ---------------- */
+    async loadKnowledge() {
+      this.kbLoading = true;
+      try {
+        const [spells, monsters, maps] = await Promise.all([
+          API.get('/rules/spells?limit=500'),
+          API.get('/rules/monsters?limit=500'),
+          API.get('/rules/maps'),
+        ]);
+        this.kbSpells = spells;
+        this.kbMonsters = monsters;
+        this.kbMaps = maps;
+        this.kbTab = 'spells';
+      } catch (e) { this.showToast(e.message, 'error'); } finally {
+        this.kbLoading = false;
+      }
+    },
+
+    kbSwitch(tab) {
+      this.kbTab = tab;
+      this.kbQuery = '';
+      if (tab === 'knowledge' && !this.kbKnowledge.length) this.loadKbKnowledge();
+    },
+
+    async loadKbKnowledge() {
+      try {
+        // 预加载一些常用规则片段(搜索功能会动态查询)
+        this.kbKnowledge = await API.get('/rules/search?q=规则&limit=20');
+      } catch (e) { /* 静默 */ }
+    },
+
+    async kbSearch() {
+      const q = this.kbQuery.trim();
+      if (!q) return;
+      this.kbLoading = true;
+      try {
+        if (this.kbTab === 'spells') {
+          this.kbSpells = await API.get(`/rules/spells?q=${encodeURIComponent(q)}&limit=200`);
+        } else if (this.kbTab === 'monsters') {
+          this.kbMonsters = await API.get(`/rules/monsters?q=${encodeURIComponent(q)}&limit=200`);
+        } else if (this.kbTab === 'knowledge') {
+          this.kbKnowledge = await API.get(`/rules/search?q=${encodeURIComponent(q)}&limit=30`);
+        }
+      } catch (e) { this.showToast(e.message, 'error'); } finally {
+        this.kbLoading = false;
+      }
+    },
+
+    async openLocalTerm(name, type) {
+      if (type === 'spell') {
+        const data = await API.get(`/rules/spells/${encodeURIComponent(name)}`);
+        this.kbDetail = { type: 'spell', data };
+      } else if (type === 'monster') {
+        const data = await API.get(`/rules/monsters/${encodeURIComponent(name)}`);
+        this.kbDetail = { type: 'monster', data };
+      } else {
+        const data = await API.get(`/rules/search?q=${encodeURIComponent(name)}&limit=3`);
+        this.kbDetail = { type: 'knowledge', data };
+      }
+    },
+
+    openKbItem(item) {
+      if (item.level !== undefined) {
+        this.kbDetail = { type: 'spell', data: item };
+      } else {
+        this.kbDetail = { type: 'monster', data: item };
+      }
+    },
 
     /* ---------------- 本地规则库 ---------------- */
     async loadRuleStats() {

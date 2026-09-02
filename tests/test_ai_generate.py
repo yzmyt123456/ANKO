@@ -153,9 +153,10 @@ class TestGenerateStreamAPI:
 
     async def test_stream_ok(self, client: TestClient, monkeypatch) -> None:
         async def fake_chat_stream(self, messages):
-            yield '{"name": "'
-            yield "雷恩"
-            yield '", "stats": {"strength": 18, "charisma": 14}}'
+            yield "【创建过程】\n"
+            yield "[力量] 两次1d16+2:7+2=9、10+2=12 → 取高12\n"
+            yield "【最终人物卡】\n"
+            yield '{"name": "雷恩", "stats": {"strength": 18, "charisma": 14}}'
 
         monkeypatch.setattr(
             "anko.ai.service.AIClient.chat_stream", fake_chat_stream
@@ -172,6 +173,9 @@ class TestGenerateStreamAPI:
         assert '"type": "done"' in body
         assert "雷恩" in body
         assert '"name": "雷恩"' in body
+        # 创建过程文本被正确拆分并返回
+        assert '"process"' in body
+        assert "1d16+2" in body
 
     async def test_stream_error(self, client: TestClient, monkeypatch) -> None:
         async def fake_chat_stream(self, messages):

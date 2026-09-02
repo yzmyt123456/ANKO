@@ -750,6 +750,22 @@ input[type="checkbox"] { width: auto; margin: 0; }
   border-radius: 10px; padding: 12px 14px;
   max-height: 220px; overflow-y: auto;
   font-size: 12.5px; line-height: 1.6;
+
+.gen-process {
+  margin-top: 14px; background: #fbfbfe; border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px;
+}
+.gen-process-head {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+}
+.gen-process-head b { font-size: 13px; color: var(--primary-dark); }
+.gen-process pre, .creation-log-text {
+  white-space: pre-wrap; word-break: break-word;
+  font-size: 12.5px; line-height: 1.7; color: var(--text-2);
+  font-family: "Microsoft YaHei", sans-serif; margin: 0;
+}
+.creation-log { margin-top: 14px; }
+
 }
 .gen-text-label { display: block; color: #8f96b8; margin-bottom: 6px; font-size: 12px; }
 .gen-text pre {

@@ -86,6 +86,7 @@ createApp({
       genText: '',
       genPartial: '',
       genController: null,
+      genProcess: '',
     };
   },
 
@@ -479,6 +480,7 @@ createApp({
       this.genError = '';
       this.genText = '';
       this.genPartial = '';
+      this.genProcess = '';
     },
 
     closeGenCharModal() {
@@ -546,6 +548,7 @@ createApp({
               this.genText += obj.text;
             } else if (obj.type === 'done') {
               this.genDraft = obj.draft;
+              this.genProcess = obj.process || '';
               this.genPartial = '';
             } else if (obj.type === 'error') {
               this.genError = obj.message;
@@ -575,6 +578,19 @@ createApp({
       this.genText = '';
       this.genDraft = null;
       this.genError = '';
+      this.genProcess = '';
+    },
+
+    async copyGenProcess() {
+      const text = this.genProcess || this.genText;
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        this.showToast('创建过程已复制 📋');
+      } catch (e) {
+        // 降级:选中文本
+        this.showToast('复制失败,可手动选择文本', 'error');
+      }
     },
 
     async saveGeneratedChar() {
@@ -588,7 +604,9 @@ createApp({
           stats: this.genDraft.stats || {},
           attributes: this.genDraft.attributes || {},
           tags: this.genDraft.tags || [],
+          extra: {},
         };
+        if (this.genProcess) body.extra.creation_log = this.genProcess;
         const created = await API.post('/characters', body);
         // 自动加入当前剧情条目的登场人物
         if (!this.entryForm.character_ids.includes(created.id)) {

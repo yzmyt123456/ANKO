@@ -132,14 +132,16 @@ async def generate_character_stream(
             ):
                 buffer += delta
                 yield f"data: {json.dumps({'type': 'delta', 'text': delta}, ensure_ascii=False)}\n\n"
-            # 结束后解析完整文本为草稿
+            # 结束后拆分过程文本与 JSON,解析为草稿
             from anko.ai.service import (
                 extract_json,
                 normalize_character_draft,
                 normalize_dnd_draft,
+                split_process_and_json,
             )
 
-            data = extract_json(buffer)
+            process_text, json_part = split_process_and_json(buffer)
+            data = extract_json(json_part or buffer)
             draft = (
                 normalize_dnd_draft(data)
                 if payload.template == "dnd5e"
@@ -148,7 +150,7 @@ async def generate_character_stream(
             if not draft.get("name"):
                 raise ValueError("AI 未能生成角色名,请重试")
             yield (
-                f"data: {json.dumps({'type': 'done', 'draft': draft}, ensure_ascii=False)}\n\n"
+                f"data: {json.dumps({'type': 'done', 'draft': draft, 'process': process_text}, ensure_ascii=False)}\n\n"
             )
         except (ValueError, AIError) as exc:
             yield (

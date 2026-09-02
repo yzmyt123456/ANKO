@@ -684,6 +684,11 @@
         <p>{{ charDetail.bio }}</p>
       </div>
 
+      <div v-if="charDetail.extra && charDetail.extra.creation_log" class="dnd-section creation-log">
+        <h3>📜 创建过程</h3>
+        <pre class="creation-log-text">{{ charDetail.extra.creation_log }}</pre>
+      </div>
+
       </div>
 
       <div class="modal-foot">
@@ -729,6 +734,15 @@
         <div v-if="genText" class="gen-text" ref="genTextBox">
           <span class="muted gen-text-label">{{ genLoading ? '⏳ AI 正在骰点创作…' : (genDraft ? '✅ 生成完成' : '⏸ 已暂停,可继续或重新生成') }}</span>
           <pre>{{ genText }}</pre>
+        </div>
+
+        <!-- 创建过程(完成后展示,可复制) -->
+        <div v-if="genDraft && genProcess" class="gen-process">
+          <div class="gen-process-head">
+            <b>📜 创建过程(安科骰点)</b>
+            <button class="btn small" @click="copyGenProcess">📋 复制</button>
+          </div>
+          <pre>{{ genProcess }}</pre>
         </div>
 
         <div v-if="genDraft" class="gen-result">

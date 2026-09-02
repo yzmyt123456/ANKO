@@ -1114,7 +1114,7 @@
                 <div class="kb-race-sub">
                   <details v-for="c in s.children" :key="c.id" class="kb-sub-feat">
                     <summary>
-                      <span class="kb-lv-feat-chip">{{ classFeatLv(c, { children: s.children }) ? 'Lv' + classFeatLv(c, { children: s.children }) : '基础' }}</span>
+                      <span class="kb-lv-feat-chip">{{ subFeatLv(c, s.children) ? 'Lv' + subFeatLv(c, s.children) : '基础' }}</span>
                       {{ c.title }}
                     </summary>
                     <template v-if="featOptions(c.content)">

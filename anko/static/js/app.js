@@ -519,6 +519,18 @@ createApp({
       const m = String(feat.content || '').match(/第\s*(\d{1,2})\s*级/);
       return m ? +m[1] : null;
     },
+    subFeatLv(c, children) {
+      // 子职业能力等级:文本'第 N 级'优先;无标注(如狂野魔法浪涌)向后取首个已定级兄弟的最小级
+      const m = String(c && c.content || '').match(/第\s*(\d{1,2})\s*级/);
+      if (m) return +m[1];
+      const arr = children || [];
+      const i = arr.indexOf(c);
+      const later = arr.slice(i + 1).map(x => {
+        const mm = String(x && x.content || '').match(/第\s*(\d{1,2})\s*级/);
+        return mm ? +mm[1] : null;
+      }).filter(n => n != null);
+      return later.length ? Math.min(...later) : null;
+    },
     classViews(data) {
       // 视图切换:原职业 + 各子职业
       const out = [{ id: 'base', name: this.classZh(data.title), sub: false }];
@@ -543,14 +555,14 @@ createApp({
         };
       }
       const s = this.classSubs(data).find(x => 's' + x.id === viewId);
-      const cards = (s && s.children || []).filter(c => this.classFeatLv(c, { children: s.children }) === lv);
+      const cards = (s && s.children || []).filter(c => this.subFeatLv(c, s.children) === lv);
       return { names: cards.map(c => this.classZh(c.title)), cards };
     },
     classNextSubLv(data, viewId, lv) {
       const s = this.classSubs(data).find(x => 's' + x.id === viewId);
       if (!s) return null;
       const lvs = (s.children || [])
-        .map(c => this.classFeatLv(c, { children: s.children }))
+        .map(c => this.subFeatLv(c, s.children))
         .filter(n => n && n > lv);
       return lvs.length ? Math.min(...lvs) : null;
     },
@@ -559,7 +571,7 @@ createApp({
       return this.classSubs(data)
         .map(s => ({
           s,
-          cards: (s.children || []).filter(c => this.classFeatLv(c, { children: s.children }) === lv),
+          cards: (s.children || []).filter(c => this.subFeatLv(c, s.children) === lv),
         }))
         .filter(o => o.cards.length);
     },

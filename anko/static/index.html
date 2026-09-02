@@ -383,16 +383,6 @@
                 <span class="muted">{{ k.book }} · 第{{ k.page }}页</span>
               </div>
             </div>
-            <div class="kb-race-guide" v-if="kbRaces.intro && kbRaces.intro.length">
-              <div class="kb-group-head">种族总览</div>
-              <div class="kb-kno-list">
-                <div v-for="g in kbRaces.intro" :key="g.id" class="kb-kno-card" @click="openKbKnowledge(g)">
-                  <b>{{ g.title }}</b>
-                  <p v-html="linkify(truncate(g.preview, 120))"></p>
-                  <span class="muted">{{ g.book }} · 第{{ g.page }}页</span>
-                </div>
-              </div>
-            </div>
             <div class="kb-race-grid">
               <div v-for="r in kbRaces.parents" :key="r.id" class="kb-race-card" @click="openKbRace(r)">
                 <div class="kb-race-name">{{ r.title.split(' ')[0] }}</div>
@@ -991,18 +981,12 @@
           </div>
         </template>
 
-        <!-- 种族知识卡(分层) -->
+        <!-- 种族知识卡(分层):特质与亚种优先,小故事在底部折叠 -->
         <template v-else-if="kbDetail.type === 'race' && kbDetail.data">
           <div class="kb-meta">
             <span class="tag">种族</span>
             <span class="tag">玩家手册 · 第{{ kbDetail.data.page }}页</span>
           </div>
-          <template v-if="raceParts(kbDetail.data.content).story">
-            <details class="kb-story">
-              <summary>📜 背景故事</summary>
-              <div class="kb-story-body">{{ raceParts(kbDetail.data.content).story }}</div>
-            </details>
-          </template>
           <p v-if="raceParts(kbDetail.data.content).intro" class="kb-race-intro">{{ raceParts(kbDetail.data.content).intro }}</p>
 
           <div v-if="raceTraits(kbDetail.data.children).length" class="kb-race-block">
@@ -1014,13 +998,20 @@
           </div>
 
           <div v-if="raceSubs(kbDetail.data.children).length" class="kb-race-block">
-            <div class="kb-race-block-label">🗂 种族细分</div>
+            <div class="kb-race-block-label">🗂 下级种族与细分</div>
             <div v-for="s in raceSubs(kbDetail.data.children)" :key="s.id" class="kb-race-sub">
               <details>
                 <summary>{{ s.title }}<span class="kb-chip">第{{ s.page }}页</span></summary>
                 <p>{{ s.content }}</p>
               </details>
             </div>
+          </div>
+
+          <div v-if="raceParts(kbDetail.data.content).story" class="kb-race-block">
+            <details class="kb-story">
+              <summary>📜 背景故事</summary>
+              <div class="kb-story-body">{{ raceParts(kbDetail.data.content).story }}</div>
+            </details>
           </div>
         </template>
 

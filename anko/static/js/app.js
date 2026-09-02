@@ -435,18 +435,15 @@ createApp({
     },
 
     async loadKbRaces() {
-      // 玩家手册种族 → 分层知识卡列表
+      // 玩家手册种族 → 分层知识卡列表(仅父卡)
       try {
         if (!this.kbBooks.length) {
           this.kbBooks = await API.get('/rules/books');
         }
         const book = this.kbBooks.includes('DND_5E_玩家手册CN') ? 'DND_5E_玩家手册CN' : '';
         const q = book ? `&book=${encodeURIComponent(book)}` : '';
-        const [parents, intro] = await Promise.all([
-          API.get(`/rules/knowledge?category=${encodeURIComponent('种族')}&kind=race${q}&limit=50`),
-          API.get(`/rules/knowledge?category=${encodeURIComponent('种族')}&kind=none${q}&limit=50`),
-        ]);
-        this.kbRaces = { parents, intro };
+        const parents = await API.get(`/rules/knowledge?category=${encodeURIComponent('种族')}&kind=race${q}&limit=50`);
+        this.kbRaces = { parents };
       } catch (e) { /* 静默 */ }
     },
 

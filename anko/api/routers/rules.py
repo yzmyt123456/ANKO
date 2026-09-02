@@ -22,7 +22,7 @@ def rules_status(request: Request) -> dict:
 @router.get("/spells")
 def list_spells(
     q: Optional[str] = Query(None, description="按名称搜索"),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=2000),
     request: Request = None,
 ) -> list[dict]:
     """法术查询。"""
@@ -41,7 +41,7 @@ def get_spell(name: str, request: Request) -> dict:
 @router.get("/monsters")
 def list_monsters(
     q: Optional[str] = Query(None, description="按名称搜索"),
-    limit: int = Query(20, ge=1, le=100),
+    limit: int = Query(20, ge=1, le=2000),
     request: Request = None,
 ) -> list[dict]:
     """怪物查询。"""

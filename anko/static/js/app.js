@@ -129,28 +129,6 @@ createApp({
     kbLevels() {
       return ['', '戏法', '1 环', '2 环', '3 环', '4 环', '5 环', '6 环', '7 环', '8 环', '9 环'];
     },
-    kbSpellsGrouped() {
-      // 按环阶分组(可选过滤)
-      const groups = {};
-      for (const s of this.kbSpells) {
-        if (this.kbLevel && ((s.level === 0 ? '戏法' : `${s.level} 环`) !== this.kbLevel)) continue;
-        const key = s.level === 0 ? '戏法' : `${s.level} 环`;
-        (groups[key] = groups[key] || []).push(s);
-      }
-      return Object.entries(groups).sort((a, b) => {
-        const n = k => (k === '戏法' ? 0 : parseInt(k));
-        return n(a[0]) - n(b[0]);
-      });
-    },
-    kbMonsterTypes() {
-      // 怪物类型列表(去重)
-      const types = new Set();
-      for (const m of this.kbMonsters) {
-        const t = (m.meta || '').split(/[,，]/)[0].trim();
-        if (t) types.add(t);
-      }
-      return [...types].sort();
-    },
     pageTitle() {
       if (this.view === 'storyDetail') return this.currentStory ? this.currentStory.title : '剧情详情';
       return (PAGE_META[this.view] || ['', ''])[0];
@@ -484,6 +462,30 @@ createApp({
       } else {
         this.kbDetail = { type: 'monster', data: item };
       }
+    },
+
+    kbSpellsGrouped() {
+      // 按环阶分组(可选过滤)
+      const groups = {};
+      for (const s of this.kbSpells) {
+        if (this.kbLevel && ((s.level === 0 ? '戏法' : `${s.level} 环`) !== this.kbLevel)) continue;
+        const key = s.level === 0 ? '戏法' : `${s.level} 环`;
+        (groups[key] = groups[key] || []).push(s);
+      }
+      return Object.entries(groups).sort((a, b) => {
+        const n = k => (k === '戏法' ? 0 : parseInt(k));
+        return n(a[0]) - n(b[0]);
+      });
+    },
+
+    kbMonsterTypes() {
+      // 怪物类型列表(去重)
+      const types = new Set();
+      for (const m of this.kbMonsters) {
+        const t = (m.meta || '').split(/[,，]/)[0].trim();
+        if (t) types.add(t);
+      }
+      return [...types].sort();
     },
 
     // Wiki 交叉链接:相关词条

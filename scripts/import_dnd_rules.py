@@ -474,7 +474,7 @@ def ph_race_hierarchy(
             # 亚种/文化小节:内含"属性值加成"特质 → 亚种,拆分;否则整块
             split_parts = _split_trait_lines(sec["lines"])
             named = [t for t in split_parts if t.get("name")]
-            is_subrace = any(t["name"].startswith("属性值加成") for t in named)
+            is_subrace = any(t["name"].startswith("属性值") for t in named)
             if named and is_subrace:
                 sub_desc = ""
                 if split_parts and split_parts[0].get("name") is None:

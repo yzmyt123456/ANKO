@@ -38,6 +38,9 @@ createApp({
       aiError: '',
       // DND 词条词典
       glossary: [],
+      // DND 六属性键与中文名(响应式,供模板渲染)
+      dndStatKeys: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'],
+      dndStatLabels: { strength: '力量', dexterity: '敏捷', constitution: '体质', intelligence: '智力', wisdom: '感知', charisma: '魅力' },
 
       // 剧情
       stories: [],
@@ -148,9 +151,6 @@ createApp({
     },
 
     /* ---------------- 人物卡模板 ---------------- */
-    dndStatKeys: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'],
-    dndStatLabels: { strength: '力量', dexterity: '敏捷', constitution: '体质', intelligence: '智力', wisdom: '感知', charisma: '魅力' },
-
     async loadTemplates() {
       try {
         this.templates = await API.get('/templates');

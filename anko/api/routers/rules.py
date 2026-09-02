@@ -57,6 +57,12 @@ def get_monster(name: str, request: Request) -> dict:
     return obj
 
 
+@router.get("/books")
+def list_books(request: Request) -> list[str]:
+    """知识库包含的书籍列表。"""
+    return _svc(request).list_books()
+
+
 @router.get("/maps")
 def list_maps(request: Request) -> list[dict]:
     """地图素材列表。"""
@@ -66,8 +72,9 @@ def list_maps(request: Request) -> list[dict]:
 @router.get("/search")
 def search_knowledge(
     q: str = Query(..., min_length=1),
+    book: Optional[str] = Query(None, description="按书籍过滤"),
     limit: int = Query(5, ge=1, le=20),
     request: Request = None,
 ) -> list[dict]:
     """全文检索玩家手册知识片段。"""
-    return _svc(request).search_knowledge(q, limit)
+    return _svc(request).search_knowledge(q, limit, book)

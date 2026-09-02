@@ -181,16 +181,30 @@ class RuleService:
         return {"local": False, "type": None, "name": name, "url": None}
 
     # ---------------- 知识片段 ----------------
+    def list_books(self) -> list[str]:
+        """知识库包含的书籍列表。"""
+        with self._session() as s:
+            rows = s.execute(
+                select(RuleKnowledge.book)
+                .distinct()
+                .order_by(RuleKnowledge.book)
+            ).scalars().all()
+            return [b for b in rows if b]
+
     def search_knowledge(
-        self, q: str, limit: int = 10
+        self,
+        q: str,
+        limit: int = 10,
+        book: Optional[str] = None,
     ) -> list[dict]:
         with self._session() as s:
             like = f"%{q}%"
-            stmt = (
-                select(RuleKnowledge)
-                .where(RuleKnowledge.content.like(like))
-                .limit(limit)
+            stmt = select(RuleKnowledge).where(
+                RuleKnowledge.content.like(like)
             )
+            if book:
+                stmt = stmt.where(RuleKnowledge.book == book)
+            stmt = stmt.limit(limit)
             return [
                 {
                     "book": x.book,

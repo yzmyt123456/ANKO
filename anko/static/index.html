@@ -343,32 +343,51 @@
             <button class="btn small" @click="kbSearch">搜索</button>
           </div>
 
-          <!-- 法术 -->
-          <div v-if="kbTab === 'spells'" class="kb-grid">
-            <div v-for="s in kbSpells" :key="s.id" class="kb-item" @click="openKbItem(s)">
-              <b>{{ s.name }}</b>
-              <span class="muted">{{ s.level }} 环 · {{ s.school }}</span>
+          <!-- 法术:按环阶分组 -->
+          <div v-if="kbTab === 'spells'">
+            <div class="kb-filters">
+              <span class="kb-filter-label">环阶</span>
+              <button v-for="l in kbLevels" :key="l" :class="['kb-tab small-tab', {on: kbLevel === l}]" @click="kbLevel = l">
+                {{ l === '' ? '全部' : l }}
+              </button>
+            </div>
+            <div v-for="g in kbSpellsGrouped()" :key="g[0]" class="kb-group">
+              <div class="kb-group-head">{{ g[0] }} <span class="muted">{{ g[1].length }}</span></div>
+              <div class="kb-chips">
+                <span v-for="s in g[1]" :key="s.id" class="kb-chip" @click="openKbItem(s)">{{ s.name }}</span>
+              </div>
             </div>
             <div v-if="!kbSpells.length" class="inline-empty">没有找到法术</div>
           </div>
 
-          <!-- 怪物 -->
-          <div v-else-if="kbTab === 'monsters'" class="kb-grid">
-            <div v-for="m in kbMonsters" :key="m.id" class="kb-item" @click="openKbItem(m)">
-              <b>{{ m.name }}</b>
-              <span class="muted">{{ m.meta }}</span>
+          <!-- 怪物:按类型分组 -->
+          <div v-else-if="kbTab === 'monsters'">
+            <div v-for="type in kbMonsterTypes()" :key="type" class="kb-group">
+              <div class="kb-group-head">{{ type }} <span class="muted">{{ kbMonstersGrouped(type).length }}</span></div>
+              <div class="kb-chips">
+                <span v-for="m in kbMonstersGrouped(type)" :key="m.id" class="kb-chip" @click="openKbItem(m)">{{ m.name }}</span>
+              </div>
             </div>
             <div v-if="!kbMonsters.length" class="inline-empty">没有找到怪物</div>
           </div>
 
-          <!-- 规则 -->
-          <div v-else-if="kbTab === 'knowledge'" class="kb-grid">
-            <div v-for="(k, i) in kbKnowledge" :key="i" class="kb-knowledge-card" @click="kbDetail = {type:'knowledge', data:[k]}">
-              <b>{{ k.title }}</b>
-              <p>{{ truncate(k.content, 120) }}</p>
-              <span class="muted">{{ k.book }} · 第{{ k.page }}页</span>
+          <!-- 规则:按书籍浏览 -->
+          <div v-else-if="kbTab === 'knowledge'">
+            <div class="kb-filters">
+              <span class="kb-filter-label">书籍</span>
+              <select v-model="kbBook" class="kb-book-select" @change="browseBook">
+                <option value="">全部书籍</option>
+                <option v-for="b in kbBooks" :key="b" :value="b">{{ b }}</option>
+              </select>
             </div>
-            <div v-if="!kbKnowledge.length" class="inline-empty">搜索规则知识,如"属性""战斗""检定"</div>
+            <div class="kb-kno-list">
+              <div v-for="(k, i) in kbKnowledge" :key="i" class="kb-kno-card" @click="kbDetail = {type:'knowledge', data:[k]}">
+                <b>{{ k.title }}</b>
+                <p v-html="linkify(truncate(k.content, 150))"></p>
+                <span class="muted">{{ k.book }} · 第{{ k.page }}页</span>
+              </div>
+            </div>
+            <div v-if="!kbKnowledge.length" class="inline-empty">选择书籍浏览,或搜索规则关键词(如"属性""战斗""检定")</div>
           </div>
 
           <!-- 地图 -->
@@ -862,23 +881,29 @@
         <button class="icon-btn" @click="kbDetail = null">✕</button>
       </div>
       <div class="modal-body">
-        <!-- 法术详情 -->
+        <!-- 法术详情(Wiki 式) -->
         <template v-if="kbDetail.type === 'spell'">
           <div class="kb-meta">
-            <span class="tag">{{ kbDetail.data.level }} 环</span>
+            <span class="tag">{{ kbDetail.data.level === 0 ? '戏法' : kbDetail.data.level + ' 环' }}</span>
             <span class="tag">{{ kbDetail.data.school }}</span>
             <span v-if="kbDetail.data.ritual" class="tag">仪式</span>
           </div>
           <div class="kb-rows">
             <div><b>施法时间</b><span>{{ kbDetail.data.casting_time }}</span></div>
             <div><b>施法距离</b><span>{{ kbDetail.data.range }}</span></div>
-            <div><b>法术成分</b><span>{{ kbDetail.data.components }}</span></div>
+            <div><b>法术成分</b><span v-html="linkify(kbDetail.data.components)"></span></div>
             <div><b>持续时间</b><span>{{ kbDetail.data.duration }}</span></div>
           </div>
-          <p class="kb-desc">{{ kbDetail.data.description }}</p>
+          <p class="kb-desc" v-html="linkify(kbDetail.data.description)"></p>
+          <div v-if="relatedSpells(kbDetail.data).length" class="kb-related">
+            <div class="kb-related-label">相关·{{ kbDetail.data.school }}系法术</div>
+            <div class="kb-chips">
+              <span v-for="s in relatedSpells(kbDetail.data)" :key="s.id" class="kb-chip" @click="openKbItem(s)">{{ s.name }}</span>
+            </div>
+          </div>
         </template>
 
-        <!-- 怪物详情 -->
+        <!-- 怪物详情(Wiki 式) -->
         <template v-else-if="kbDetail.type === 'monster'">
           <div class="kb-meta"><span class="tag">{{ kbDetail.data.meta }}</span></div>
           <div class="kb-rows">
@@ -889,13 +914,19 @@
           <div v-if="Object.keys(kbDetail.data.abilities).length" class="kb-abilities">
             <span v-for="(v, k) in kbDetail.data.abilities" :key="k" class="kb-ability">{{ k }} {{ v }}</span>
           </div>
+          <div v-if="relatedMonsters(kbDetail.data).length" class="kb-related">
+            <div class="kb-related-label">相关·同类怪物</div>
+            <div class="kb-chips">
+              <span v-for="m in relatedMonsters(kbDetail.data)" :key="m.id" class="kb-chip" @click="openKbItem(m)">{{ m.name }}</span>
+            </div>
+          </div>
         </template>
 
-        <!-- 规则知识 -->
+        <!-- 规则知识(Wiki 式) -->
         <template v-else-if="kbDetail.type === 'knowledge'">
           <div v-for="(k, i) in kbDetail.data" :key="i" class="kb-kno-item">
             <b>{{ k.book }} · 第{{ k.page }}页</b>
-            <p>{{ k.content }}</p>
+            <p v-html="linkify(k.content)"></p>
           </div>
         </template>
 

@@ -856,6 +856,33 @@ input[type="checkbox"] { width: auto; margin: 0; }
   text-align: center; padding: 10px;
 }
 .rule-stat b { display: block; font-size: 24px; color: var(--primary-dark); }
+
+/* Wiki 式索引 */
+.small-tab { padding: 4px 12px; font-size: 12.5px; }
+.kb-filters { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.kb-filter-label { font-size: 12.5px; color: var(--muted); }
+.kb-book-select { width: auto; max-width: 300px; margin-top: 0; }
+.kb-group { margin-bottom: 16px; }
+.kb-group-head {
+  font-size: 14px; font-weight: 700; color: var(--primary-dark);
+  border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 8px;
+}
+.kb-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.kb-chip {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+  padding: 4px 13px; font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.kb-chip:hover { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-dark); }
+.kb-kno-list { display: flex; flex-direction: column; gap: 10px; }
+.kb-kno-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; cursor: pointer; transition: all .15s;
+}
+.kb-kno-card:hover { border-color: var(--primary); background: var(--primary-soft); }
+.kb-kno-card p { font-size: 12.5px; color: var(--text-2); margin: 4px 0; }
+.kb-related { margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 12px; }
+.kb-related-label { font-size: 12.5px; color: var(--text-2); margin-bottom: 8px; font-weight: 600; }
+
 .rule-stat span { font-size: 12px; color: var(--muted); }
 .rule-import-tip { margin-top: 8px; font-size: 12.5px; }
 .rule-query { display: flex; gap: 8px; margin: 10px 0; }

@@ -103,6 +103,9 @@ createApp({
       kbMonsters: [],
       kbKnowledge: [],
       kbMaps: [],
+      kbBooks: [],
+      kbBook: '',
+      kbLevel: '',
       kbLoading: false,
       kbDetail: null,
     };
@@ -122,6 +125,31 @@ createApp({
     },
     kbTabLabel() {
       return ({ spells: '法术', monsters: '怪物', knowledge: '规则', maps: '地图' })[this.kbTab] || '';
+    },
+    kbLevels() {
+      return ['', '戏法', '1 环', '2 环', '3 环', '4 环', '5 环', '6 环', '7 环', '8 环', '9 环'];
+    },
+    kbSpellsGrouped() {
+      // 按环阶分组(可选过滤)
+      const groups = {};
+      for (const s of this.kbSpells) {
+        if (this.kbLevel && ((s.level === 0 ? '戏法' : `${s.level} 环`) !== this.kbLevel)) continue;
+        const key = s.level === 0 ? '戏法' : `${s.level} 环`;
+        (groups[key] = groups[key] || []).push(s);
+      }
+      return Object.entries(groups).sort((a, b) => {
+        const n = k => (k === '戏法' ? 0 : parseInt(k));
+        return n(a[0]) - n(b[0]);
+      });
+    },
+    kbMonsterTypes() {
+      // 怪物类型列表(去重)
+      const types = new Set();
+      for (const m of this.kbMonsters) {
+        const t = (m.meta || '').split(/[,，]/)[0].trim();
+        if (t) types.add(t);
+      }
+      return [...types].sort();
     },
     pageTitle() {
       if (this.view === 'storyDetail') return this.currentStory ? this.currentStory.title : '剧情详情';
@@ -383,14 +411,16 @@ createApp({
     async loadKnowledge() {
       this.kbLoading = true;
       try {
-        const [spells, monsters, maps] = await Promise.all([
+        const [spells, monsters, maps, books] = await Promise.all([
           API.get('/rules/spells?limit=500'),
           API.get('/rules/monsters?limit=500'),
           API.get('/rules/maps'),
+          API.get('/rules/books'),
         ]);
         this.kbSpells = spells;
         this.kbMonsters = monsters;
         this.kbMaps = maps;
+        this.kbBooks = books;
         this.kbTab = 'spells';
       } catch (e) { this.showToast(e.message, 'error'); } finally {
         this.kbLoading = false;
@@ -405,7 +435,6 @@ createApp({
 
     async loadKbKnowledge() {
       try {
-        // 预加载一些常用规则片段(搜索功能会动态查询)
         this.kbKnowledge = await API.get('/rules/search?q=规则&limit=20');
       } catch (e) { /* 静默 */ }
     },
@@ -420,11 +449,20 @@ createApp({
         } else if (this.kbTab === 'monsters') {
           this.kbMonsters = await API.get(`/rules/monsters?q=${encodeURIComponent(q)}&limit=200`);
         } else if (this.kbTab === 'knowledge') {
-          this.kbKnowledge = await API.get(`/rules/search?q=${encodeURIComponent(q)}&limit=30`);
+          const bookParam = this.kbBook ? `&book=${encodeURIComponent(this.kbBook)}` : '';
+          this.kbKnowledge = await API.get(`/rules/search?q=${encodeURIComponent(q)}${bookParam}&limit=30`);
         }
       } catch (e) { this.showToast(e.message, 'error'); } finally {
         this.kbLoading = false;
       }
+    },
+
+    async browseBook() {
+      // 按书籍浏览规则
+      if (!this.kbBook) { this.kbKnowledge = []; return; }
+      try {
+        this.kbKnowledge = await API.get(`/rules/search?q=的&book=${encodeURIComponent(this.kbBook)}&limit=40`);
+      } catch (e) { this.showToast(e.message, 'error'); }
     },
 
     async openLocalTerm(name, type) {
@@ -446,6 +484,27 @@ createApp({
       } else {
         this.kbDetail = { type: 'monster', data: item };
       }
+    },
+
+    // Wiki 交叉链接:相关词条
+    relatedSpells(spell) {
+      return this.kbSpells
+        .filter(s => s.school === spell.school && s.name !== spell.name)
+        .slice(0, 6);
+    },
+    relatedMonsters(mon) {
+      const type = (mon.meta || '').split(/[,，]/)[0].trim();
+      if (!type) return [];
+      return this.kbMonsters
+        .filter(x => x.meta && x.meta.split(/[,，]/)[0].trim() === type && x.name !== mon.name)
+        .slice(0, 6);
+    },
+    spellSchoolList() {
+      const schools = new Set(this.kbSpells.map(s => s.school).filter(Boolean));
+      return [...schools].sort();
+    },
+    kbMonstersGrouped(type) {
+      return this.kbMonsters.filter(m => (m.meta || '').split(/[,，]/)[0].trim() === type);
     },
 
     /* ---------------- 本地规则库 ---------------- */

@@ -352,9 +352,12 @@
               </button>
             </div>
             <div v-for="g in kbSpellsGrouped()" :key="g[0]" class="kb-group">
-              <div class="kb-group-head">{{ g[0] }} <span class="muted">{{ g[1].length }}</span></div>
-              <div class="kb-chips">
-                <span v-for="s in g[1]" :key="s.id" class="kb-chip" @click="openKbItem(s)">{{ s.name }}</span>
+              <div class="kb-group-head">{{ g[0] }} <span class="kb-count">{{ g[1].length }}</span></div>
+              <div class="kb-grid-list">
+                <div v-for="s in g[1]" :key="s.id" class="kb-entry" @click="openKbItem(s)">
+                  <b>{{ s.name }}</b>
+                  <span class="kb-sub">{{ s.level }} 环 · {{ s.school }}<span v-if="s.ritual"> · 仪式</span></span>
+                </div>
               </div>
             </div>
             <div v-if="!kbSpells.length" class="inline-empty">没有找到法术</div>
@@ -363,9 +366,12 @@
           <!-- 怪物:按类型分组 -->
           <div v-else-if="kbTab === 'monsters'">
             <div v-for="type in kbMonsterTypes()" :key="type" class="kb-group">
-              <div class="kb-group-head">{{ type }} <span class="muted">{{ kbMonstersGrouped(type).length }}</span></div>
-              <div class="kb-chips">
-                <span v-for="m in kbMonstersGrouped(type)" :key="m.id" class="kb-chip" @click="openKbItem(m)">{{ m.name }}</span>
+              <div class="kb-group-head">{{ type }} <span class="kb-count">{{ kbMonstersGrouped(type).length }}</span></div>
+              <div class="kb-grid-list">
+                <div v-for="m in kbMonstersGrouped(type)" :key="m.id" class="kb-entry" @click="openKbItem(m)">
+                  <b>{{ m.name }}</b>
+                  <span class="kb-sub">{{ m.ac ? 'AC ' + m.ac + ' · HP ' + m.hp : m.meta }}</span>
+                </div>
               </div>
             </div>
             <div v-if="!kbMonsters.length" class="inline-empty">没有找到怪物</div>

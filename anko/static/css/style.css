@@ -3,23 +3,23 @@
    风格:现代管理后台(Notion / Linear / Trello 式排布)
    ============================================================ */
 :root {
-  /* 色彩系统 */
-  --primary: #6d5ae0;
-  --primary-dark: #5744cf;
-  --primary-soft: #efecff;
+  /* 色彩系统(提高对比度,增强可读性) */
+  --primary: #5b47d0;
+  --primary-dark: #4536a8;
+  --primary-soft: #ede9ff;
   --sidebar-bg: #1d2033;
   --sidebar-hover: rgba(255, 255, 255, .06);
   --bg: #f4f5fa;
   --card: #ffffff;
-  --text: #23253a;
-  --text-2: #6b7085;
-  --muted: #9aa0b4;
-  --border: #e8eaf2;
+  --text: #1c1e2e;
+  --text-2: #43485e;
+  --muted: #6d748c;
+  --border: #dde0ea;
   --danger: #e05263;
   --danger-soft: #fdeef0;
   --success: #2e9e6b;
   --success-soft: #e7f6ef;
-  --warn: #d4a017;
+  --warn: #b8860b;
   --warn-soft: #fff7e0;
   --crit-fail: #c0392b;
   --crit-fail-soft: #fdeceb;
@@ -27,8 +27,8 @@
   /* 几何 */
   --radius: 14px;
   --radius-sm: 9px;
-  --shadow: 0 1px 2px rgba(35, 37, 58, .04), 0 4px 16px rgba(35, 37, 58, .06);
-  --shadow-lg: 0 8px 40px rgba(35, 37, 58, .16);
+  --shadow: 0 1px 2px rgba(28, 30, 46, .05), 0 4px 16px rgba(28, 30, 46, .07);
+  --shadow-lg: 0 8px 40px rgba(28, 30, 46, .18);
 
   --sidebar-w: 232px;
   --topbar-h: 74px;
@@ -40,8 +40,8 @@ body {
   font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
   background: var(--bg);
   color: var(--text);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 14.5px;
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -129,7 +129,7 @@ body {
 .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .card-head h2 { font-size: 15px; }
 
-.muted { color: var(--muted); font-size: 12px; }
+.muted { color: var(--muted); font-size: 12.5px; }
 .req { color: var(--danger); }
 code {
   background: var(--primary-soft); color: var(--primary-dark);
@@ -179,8 +179,8 @@ code {
 .back-btn { margin-bottom: 16px; }
 
 /* ---------------- 表单 ---------------- */
-label { font-size: 12.5px; color: var(--text-2); display: block; }
-.label-text { font-size: 12.5px; color: var(--text-2); margin: 2px 0; }
+label { font-size: 13px; color: var(--text-2); display: block; }
+.label-text { font-size: 13px; color: var(--text-2); margin: 2px 0; }
 input, textarea, select {
   width: 100%; margin-top: 5px; padding: 9px 12px;
   border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -200,7 +200,7 @@ input[type="checkbox"] { width: auto; margin: 0; }
 /* ---------------- 标签 / 徽章 ---------------- */
 .tag {
   display: inline-block; background: var(--primary-soft); color: var(--primary-dark);
-  font-size: 11px; padding: 2px 10px; border-radius: 20px; margin-right: 4px;
+  font-size: 12px; padding: 2px 11px; border-radius: 20px; margin-right: 4px;
 }
 .tag.system { background: #ffe9d6; color: #c57b1f; }
 .tag-row { margin-top: 8px; }
@@ -746,11 +746,11 @@ input[type="checkbox"] { width: auto; margin: 0; }
 
 .gen-actions { margin-top: 8px; }
 .gen-text {
-  margin-top: 12px; background: #1d2033; color: #cdd3ea;
-  border-radius: 10px; padding: 12px 14px;
-  max-height: 220px; overflow-y: auto;
-  font-size: 12.5px; line-height: 1.6;
-
+  margin-top: 12px; background: #1d2033; color: #d5daf0;
+  border-radius: 10px; padding: 14px 16px;
+  max-height: 240px; overflow-y: auto;
+  font-size: 13px; line-height: 1.7;
+}
 .gen-process {
   margin-top: 14px; background: #fbfbfe; border: 1px solid var(--border);
   border-radius: 12px; padding: 14px;
@@ -761,7 +761,7 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .gen-process-head b { font-size: 13px; color: var(--primary-dark); }
 .gen-process pre, .creation-log-text {
   white-space: pre-wrap; word-break: break-word;
-  font-size: 12.5px; line-height: 1.7; color: var(--text-2);
+  font-size: 13px; line-height: 1.8; color: var(--text-2);
   font-family: "Microsoft YaHei", sans-serif; margin: 0;
 }
 .gen-process pre strong, .creation-log-text strong {
@@ -771,14 +771,13 @@ input[type="checkbox"] { width: auto; margin: 0; }
 }
 .creation-log { margin-top: 14px; }
 
-}
 .gen-text-label { display: block; color: #8f96b8; margin-bottom: 6px; font-size: 12px; }
 .gen-text pre {
   white-space: pre-wrap; word-break: break-word;
   font-family: Consolas, "Microsoft YaHei", monospace;
   margin: 0;
 }
-
+.gen-stat {
   background: #fff; border: 1px solid var(--border); border-radius: 8px;
   text-align: center; padding: 6px 2px; font-size: 12px; color: var(--text-2);
 }
@@ -787,15 +786,15 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .gen-bio {
   font-size: 13px; color: var(--text-2); margin-top: 8px;
   white-space: pre-wrap; line-height: 1.7;
-
+}
 
 /* ============================================================
    知识库
    ============================================================ */
 .kb-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
 .kb-tab {
-  padding: 8px 18px; border-radius: 10px; border: 1px solid var(--border);
-  background: var(--card); cursor: pointer; font-size: 13.5px; color: var(--text-2);
+  padding: 8px 20px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--card); cursor: pointer; font-size: 14px; color: var(--text-2);
   transition: all .15s;
 }
 .kb-tab:hover { border-color: var(--primary); color: var(--primary-dark); }
@@ -830,20 +829,20 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .map-name { padding: 8px 12px; font-size: 12.5px; color: var(--text-2); }
 
 /* 知识详情弹窗 */
-.kb-modal { width: 620px; max-width: 94vw; }
-.kb-meta { margin-bottom: 10px; }
-.kb-rows { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; }
-.kb-rows > div { display: flex; gap: 10px; font-size: 13px; }
-.kb-rows b { color: var(--text-2); width: 74px; flex-shrink: 0; }
-.kb-desc { font-size: 13.5px; color: var(--text-2); line-height: 1.8; margin-top: 8px; white-space: pre-wrap; }
-.kb-abilities { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.kb-modal { width: 680px; max-width: 94vw; }
+.kb-meta { margin-bottom: 12px; }
+.kb-rows { display: flex; flex-direction: column; gap: 7px; margin: 12px 0; }
+.kb-rows > div { display: flex; gap: 12px; font-size: 14px; }
+.kb-rows b { color: var(--text-2); width: 80px; flex-shrink: 0; }
+.kb-desc { font-size: 14px; color: var(--text-2); line-height: 2; margin-top: 10px; white-space: pre-wrap; }
+.kb-abilities { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0; }
 .kb-ability {
   background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
-  padding: 4px 10px; font-size: 12.5px;
+  padding: 5px 12px; font-size: 13px;
 }
-.kb-kno-item { margin-bottom: 12px; }
-.kb-kno-item b { font-size: 12.5px; color: var(--primary-dark); }
-.kb-kno-item p { font-size: 13px; color: var(--text-2); line-height: 1.8; margin-top: 4px; }
+.kb-kno-item { margin-bottom: 14px; }
+.kb-kno-item b { font-size: 13px; color: var(--primary-dark); }
+.kb-kno-item p { font-size: 13.5px; color: var(--text-2); line-height: 2; margin-top: 5px; }
 .kb-map-img { width: 100%; border-radius: 8px; }
 
 /* ============================================================
@@ -858,30 +857,47 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .rule-stat b { display: block; font-size: 24px; color: var(--primary-dark); }
 
 /* Wiki 式索引 */
-.small-tab { padding: 4px 12px; font-size: 12.5px; }
-.kb-filters { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-.kb-filter-label { font-size: 12.5px; color: var(--muted); }
-.kb-book-select { width: auto; max-width: 300px; margin-top: 0; }
-.kb-group { margin-bottom: 16px; }
+.small-tab { padding: 5px 14px; font-size: 13px; }
+.kb-filters { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.kb-filter-label { font-size: 13px; color: var(--text-2); font-weight: 600; }
+.kb-book-select { width: auto; max-width: 320px; margin-top: 0; }
+
+.kb-group {
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 18px; margin-bottom: 16px; box-shadow: var(--shadow);
+}
 .kb-group-head {
-  font-size: 14px; font-weight: 700; color: var(--primary-dark);
-  border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 8px;
+  font-size: 16px; font-weight: 700; color: var(--text);
+  border-bottom: 2px solid var(--primary-soft); padding-bottom: 8px; margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
 }
-.kb-chips { display: flex; flex-wrap: wrap; gap: 7px; }
-.kb-chip {
-  background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-  padding: 4px 13px; font-size: 13px; cursor: pointer; transition: all .15s;
+.kb-count {
+  background: var(--primary-soft); color: var(--primary-dark);
+  font-size: 12px; padding: 1px 10px; border-radius: 20px; font-weight: 600;
 }
-.kb-chip:hover { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-dark); }
+.kb-grid-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px;
+}
+.kb-entry {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px;
+  cursor: pointer; transition: all .15s; background: #fff;
+}
+.kb-entry:hover { border-color: var(--primary); background: var(--primary-soft); transform: translateY(-1px); }
+.kb-entry b { font-size: 14.5px; color: var(--text); }
+.kb-sub { font-size: 12.5px; color: var(--muted); }
+
 .kb-kno-list { display: flex; flex-direction: column; gap: 10px; }
 .kb-kno-card {
-  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
-  padding: 12px 14px; cursor: pointer; transition: all .15s;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 16px; cursor: pointer; transition: all .15s; box-shadow: var(--shadow);
 }
 .kb-kno-card:hover { border-color: var(--primary); background: var(--primary-soft); }
-.kb-kno-card p { font-size: 12.5px; color: var(--text-2); margin: 4px 0; }
+.kb-kno-card b { font-size: 14px; color: var(--text); }
+.kb-kno-card p { font-size: 13.5px; color: var(--text-2); margin: 5px 0; line-height: 1.8; }
 .kb-related { margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 12px; }
-.kb-related-label { font-size: 12.5px; color: var(--text-2); margin-bottom: 8px; font-weight: 600; }
+.kb-related-label { font-size: 13px; color: var(--text-2); margin-bottom: 10px; font-weight: 600; }
+
 
 .rule-stat span { font-size: 12px; color: var(--muted); }
 .rule-import-tip { margin-top: 8px; font-size: 12.5px; }

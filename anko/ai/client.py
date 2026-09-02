@@ -35,18 +35,37 @@ class AIClient:
             "temperature": 0.3,
         }
         headers = {"Authorization": f"Bearer {self._settings.api_key}"}
+        # 连接/写入短超时,读取给足 settings.timeout(生成任务可能较慢)
+        timeout = httpx.Timeout(
+            connect=15.0,
+            read=self._settings.timeout,
+            write=30.0,
+            pool=15.0,
+        )
         try:
-            async with httpx.AsyncClient(timeout=self._settings.timeout) as client:
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 resp = await client.post(url, json=payload, headers=headers)
                 resp.raise_for_status()
                 data = resp.json()
+        except httpx.ReadTimeout as exc:
+            raise AIError(
+                f"AI 响应超时(超过 {self._settings.timeout:.0f} 秒)。"
+                "可到「设置」页增大超时时间,或换更快的模型后重试。"
+            ) from exc
+        except httpx.ConnectError as exc:
+            raise AIError(
+                f"无法连接 AI 服务({url})。请检查服务地址与网络,"
+                "本地 Ollama 请确认已启动。"
+            ) from exc
         except httpx.HTTPStatusError as exc:
             raise AIError(
                 f"AI 服务返回 HTTP {exc.response.status_code}: "
                 f"{exc.response.text[:200]}"
             ) from exc
         except httpx.RequestError as exc:
-            raise AIError(f"无法连接 AI 服务({exc.request.url}): {exc}") from exc
+            raise AIError(
+                f"无法连接 AI 服务({exc.request.url}):{exc}"
+            ) from exc
 
         try:
             return data["choices"][0]["message"]["content"].strip()

@@ -71,7 +71,7 @@ createApp({
       _toastTimer: null,
 
       // AI 配置
-      aiConfig: { enabled: false, base_url: '', model: '', timeout: 30, api_key_masked: '', has_api_key: false },
+      aiConfig: { enabled: false, base_url: '', model: '', timeout: 120, api_key_masked: '', has_api_key: false },
       aiApiKey: '',
       aiTestResult: null,
       aiTestLoading: false,

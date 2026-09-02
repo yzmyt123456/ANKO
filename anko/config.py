@@ -66,7 +66,8 @@ class AISettings(BaseModel):
     base_url: str = "https://api.deepseek.com/v1"
     api_key: str = ""
     model: str = "deepseek-chat"
-    timeout: float = 30.0
+    # 读取超时(秒):生成类任务输出较长,默认给足 120 秒
+    timeout: float = 120.0
 
 
 class Settings(BaseModel):

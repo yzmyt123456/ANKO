@@ -454,6 +454,15 @@ createApp({
       } catch (e) { this.showToast(e.message, 'error'); }
     },
 
+    nice(content) {
+      // 合并 PDF 硬换行(28字/行)为自然段落;保留空行分段,让文本随容器折行
+      if (!content) return '';
+      return String(content).replace(/\r/g, '')
+        .split(/\n{2,}/)
+        .map(p => p.replace(/\s*\n\s*/g, ''))
+        .join('\n\n')
+        .trim();
+    },
     raceParts(content) {
       // 解析父卡 content:§故事 / §简介
       const out = { story: '', intro: '' };

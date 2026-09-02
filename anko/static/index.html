@@ -977,7 +977,7 @@
         <template v-else-if="kbDetail.type === 'knowledge'">
           <div v-for="(k, i) in kbDetail.data" :key="i" class="kb-kno-item">
             <b>{{ k.book }} · 第{{ k.page }}页</b>
-            <p v-html="linkify(k.content)"></p>
+            <p v-html="linkify(nice(k.content))"></p>
           </div>
         </template>
 
@@ -987,13 +987,13 @@
             <span class="tag">种族</span>
             <span class="tag">玩家手册 · 第{{ kbDetail.data.page }}页</span>
           </div>
-          <p v-if="raceParts(kbDetail.data.content).intro" class="kb-race-intro">{{ raceParts(kbDetail.data.content).intro }}</p>
+          <p v-if="raceParts(kbDetail.data.content).intro" class="kb-race-intro">{{ nice(raceParts(kbDetail.data.content).intro) }}</p>
 
           <div v-if="raceTraits(kbDetail.data.children).length" class="kb-race-block">
             <div class="kb-race-block-label">✨ 种族特质</div>
             <div v-for="t in raceTraits(kbDetail.data.children)" :key="t.id" class="kb-trait-item">
               <div class="kb-trait-title">{{ t.title }}</div>
-              <p>{{ t.content }}</p>
+              <p>{{ nice(t.content) }}</p>
             </div>
           </div>
 
@@ -1002,11 +1002,11 @@
             <div v-for="s in raceSubs(kbDetail.data.children)" :key="s.id" class="kb-race-sub">
               <details>
                 <summary>{{ s.title }}<span class="kb-chip">第{{ s.page }}页</span></summary>
-                <p v-if="s.content">{{ s.content }}</p>
+                <p v-if="s.content">{{ nice(s.content) }}</p>
                 <div v-if="s.children && s.children.length" class="kb-subtraits">
                   <div v-for="t in s.children" :key="t.id" class="kb-trait-item">
                     <div class="kb-trait-title">{{ t.title }}</div>
-                    <p>{{ t.content }}</p>
+                    <p>{{ nice(t.content) }}</p>
                   </div>
                 </div>
               </details>
@@ -1016,7 +1016,7 @@
           <div v-if="raceParts(kbDetail.data.content).story" class="kb-race-block">
             <details class="kb-story">
               <summary>📜 背景故事</summary>
-              <div class="kb-story-body">{{ raceParts(kbDetail.data.content).story }}</div>
+              <div class="kb-story-body">{{ nice(raceParts(kbDetail.data.content).story) }}</div>
             </details>
           </div>
         </template>

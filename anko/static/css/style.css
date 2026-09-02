@@ -831,7 +831,7 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .map-name { padding: 8px 12px; font-size: 12.5px; color: var(--text-2); }
 
 /* 知识详情弹窗 */
-.kb-modal { width: 680px; max-width: 94vw; }
+.kb-modal { width: 860px; max-width: 96vw; }
 .kb-meta { margin-bottom: 12px; }
 .kb-rows { display: flex; flex-direction: column; gap: 7px; margin: 12px 0; }
 .kb-rows > div { display: flex; gap: 12px; font-size: 14px; }
@@ -844,7 +844,7 @@ input[type="checkbox"] { width: auto; margin: 0; }
 }
 .kb-kno-item { margin-bottom: 14px; }
 .kb-kno-item b { font-size: 13px; color: var(--primary-dark); }
-.kb-kno-item p { font-size: 13.5px; color: var(--text-2); line-height: 2; margin-top: 5px; white-space: pre-wrap; }
+.kb-kno-item p { font-size: 13.5px; color: var(--text-2); line-height: 2; margin-top: 5px; white-space: pre-line; }
 .kb-map-img { width: 100%; border-radius: 8px; }
 
 /* ============================================================
@@ -927,8 +927,8 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-story summary, .kb-race-sub summary { cursor: pointer; padding: 9px 12px; font-weight: 600; color: var(--primary-dark); font-size: 13px; list-style: none; }
 .kb-story summary::before { content: '▸ '; }
 .kb-story[open] summary::before { content: '▾ '; }
-.kb-story-body { padding: 4px 14px 12px; font-size: 13.5px; color: var(--text-2); line-height: 2; white-space: pre-wrap; }
-.kb-race-intro { font-size: 14px; color: var(--text); line-height: 2.05; white-space: pre-wrap; text-indent: 2em; margin: 6px 0 4px; }
+.kb-story-body { padding: 4px 14px 12px; font-size: 13.5px; color: var(--text-2); line-height: 2; white-space: pre-line; }
+.kb-race-intro { font-size: 14px; color: var(--text); line-height: 2.05; white-space: pre-line; text-indent: 2em; margin: 6px 0 4px; }
 .kb-race-block { margin-top: 18px; border-top: 1px dashed var(--border); padding-top: 12px; }
 .kb-race-block-label { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
 .kb-trait-item {
@@ -936,13 +936,13 @@ input[type="checkbox"] { width: auto; margin: 0; }
   padding: 10px 14px; margin-bottom: 8px;
 }
 .kb-trait-title { font-size: 14px; font-weight: 700; color: var(--primary-dark); }
-.kb-trait-item p { font-size: 13.5px; color: var(--text); margin: 4px 0 0; line-height: 1.95; white-space: pre-wrap; }
+.kb-trait-item p { font-size: 13.5px; color: var(--text); margin: 4px 0 0; line-height: 1.95; white-space: pre-line; }
 .kb-race-sub { margin-bottom: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); overflow: hidden; }
 .kb-race-sub summary { font-weight: 600; font-size: 14px; color: var(--text); }
 .kb-race-sub summary::before { content: '▸ '; color: var(--text-3, #98a2b3); }
 .kb-race-sub[open] summary::before { content: '▾ '; color: var(--text-3, #98a2b3); }
 .kb-race-sub summary .kb-chip { margin-left: 8px; }
-.kb-race-sub p { padding: 0 14px 12px; font-size: 13.5px; color: var(--text-2); line-height: 2; white-space: pre-wrap; }
+.kb-race-sub p { padding: 0 14px 12px; font-size: 13.5px; color: var(--text-2); line-height: 2; white-space: pre-line; }
 .kb-race-sub .kb-subtraits { padding: 0 12px 12px; }
 .kb-race-sub .kb-subtraits .kb-trait-item { margin-bottom: 6px; }
 

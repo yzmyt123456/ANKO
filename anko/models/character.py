@@ -17,7 +17,14 @@ from anko.models.base import Base, TimestampMixin
 
 
 class CharacterCard(Base, TimestampMixin):
-    """一张人物卡。"""
+    """一张人物卡。
+
+    设计要点:
+    - template:人物卡模板(默认 default,可扩展 dnd5e 等)。
+    - stats:模板相关的结构化字段(如 DND 的六属性/AC/法术等)。
+    - attributes:通用自由属性字典,非模板字段,如 {"力量": 18}。
+    - extra:预留自由扩展字段,后续功能可直接写入,无需改表结构。
+    """
 
     __tablename__ = "character_cards"
 
@@ -26,6 +33,10 @@ class CharacterCard(Base, TimestampMixin):
     title: Mapped[Optional[str]] = mapped_column(String(200), default=None)
     avatar: Mapped[Optional[str]] = mapped_column(String(500), default=None)
     bio: Mapped[Optional[str]] = mapped_column(Text, default=None)
+    # 人物卡模板:default / dnd5e / 插件可扩展
+    template: Mapped[str] = mapped_column(String(50), default="default", index=True)
+    # 模板结构化字段(如 DND 六属性/AC/法术/熟练)
+    stats: Mapped[dict] = mapped_column(JSON, default=dict)
     attributes: Mapped[dict] = mapped_column(JSON, default=dict)
     tags: Mapped[list] = mapped_column(JSON, default=list)
     extra: Mapped[dict] = mapped_column(JSON, default=dict)

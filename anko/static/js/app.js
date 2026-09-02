@@ -25,9 +25,12 @@ createApp({
 
       // 人物卡
       characters: [],
-      charForm: { name: '', title: '', avatar: '', bio: '', attrRows: [], tagsText: '' },
+      templates: [],
+      charForm: { name: '', title: '', avatar: '', bio: '', template: 'default', stats: {}, attrRows: [], tagsText: '' },
       charModal: { open: false, editing: false },
       charDetail: null,
+      checkResult: null,
+      checkLoading: false,
       // AI 快速建档
       aiText: '',
       aiLoading: false,
@@ -83,6 +86,7 @@ createApp({
 
   mounted() {
     this.loadAll();
+    this.loadTemplates();
   },
 
   methods: {
@@ -137,6 +141,82 @@ createApp({
       ]);
     },
 
+    /* ---------------- 人物卡模板 ---------------- */
+    dndStatKeys: ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'],
+    dndStatLabels: { strength: '力量', dexterity: '敏捷', constitution: '体质', intelligence: '智力', wisdom: '感知', charisma: '魅力' },
+
+    async loadTemplates() {
+      try {
+        this.templates = await API.get('/templates');
+        // 预加载 dnd5e 模板详情(鉴定项)
+        const dnd = this.templates.find(t => t.id === 'dnd5e');
+        if (dnd) {
+          const detail = await API.get('/templates/dnd5e');
+          this.templates = this.templates.map(t => (t.id === 'dnd5e' ? detail : t));
+        }
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    templateById(id) {
+      return this.templates.find(t => t.id === id) || null;
+    },
+
+    dndStatLabel(key) { return this.dndStatLabels[key] || key; },
+
+    dndModifier(score) {
+      const n = parseInt(score, 10);
+      if (Number.isNaN(n)) return 0;
+      return Math.floor((n - 10) / 2);
+    },
+
+    fmtMod(m) {
+      return m > 0 ? `+${m}` : String(m);
+    },
+
+    setCharTemplate(tid) {
+      this.charForm.template = tid;
+      this.checkResult = null;
+      // 初始化模板字段
+      const tpl = this.templateById(tid);
+      const stats = {};
+      if (tpl) {
+        for (const g of tpl.groups) {
+          for (const f of g.fields) {
+            if (f.key === 'attributes') continue;
+            stats[f.key] = f.type === 'dnd_score' || f.type === 'number' ? 0 : '';
+          }
+        }
+      }
+      this.charForm.stats = stats;
+    },
+
+    dndSkillChecks() {
+      const tpl = this.templateById('dnd5e');
+      return tpl ? tpl.checks.filter(c => c.kind === 'skill') : [];
+    },
+
+    dndSaveChecks() {
+      const tpl = this.templateById('dnd5e');
+      return tpl ? tpl.checks.filter(c => c.kind === 'save') : [];
+    },
+
+    hasValue(v) {
+      return v !== null && v !== undefined && String(v).trim() !== '';
+    },
+
+    async dndCheck(key, kind) {
+      if (!this.charDetail) return;
+      this.checkLoading = true;
+      this.checkResult = null;
+      try {
+        this.checkResult = await API.post(`/characters/${this.charDetail.id}/checks`, { kind, key });
+      } catch (e) {
+        this.showToast(e.message, 'error');
+      } finally {
+        this.checkLoading = false;
+      }
+    },
+
     /* ---------------- 人物卡 ---------------- */
     async loadCharacters() {
       try {
@@ -165,20 +245,26 @@ createApp({
       this.charModal.open = true;
       this.charModal.editing = !!c;
       this.charModal.editingId = c ? c.id : null;
+      this.checkResult = null;
       // 重置 AI 面板
       this.aiText = '';
       this.aiDraft = null;
       this.aiError = '';
-      this.charForm = c
-        ? {
-            name: c.name,
-            title: c.title || '',
-            avatar: c.avatar || '',
-            bio: c.bio || '',
-            attrRows: this.attrsToRows(c.attributes),
-            tagsText: (c.tags || []).join(', '),
-          }
-        : { name: '', title: '', avatar: '', bio: '', attrRows: [], tagsText: '' };
+      if (c) {
+        this.charForm = {
+          name: c.name,
+          title: c.title || '',
+          avatar: c.avatar || '',
+          bio: c.bio || '',
+          template: c.template || 'default',
+          stats: { ...(c.stats || {}) },
+          attrRows: this.attrsToRows(c.attributes),
+          tagsText: (c.tags || []).join(', '),
+        };
+      } else {
+        this.charForm = { name: '', title: '', avatar: '', bio: '', template: 'default', stats: {}, attrRows: [], tagsText: '' };
+        this.setCharTemplate('default');
+      }
     },
 
     closeCharModal() { this.charModal.open = false; },
@@ -194,7 +280,10 @@ createApp({
       this.aiError = '';
       this.aiDraft = null;
       try {
-        this.aiDraft = await API.post('/ai/parse-character', { text: this.aiText.trim() });
+        this.aiDraft = await API.post('/ai/parse-character', {
+          text: this.aiText.trim(),
+          template: this.charForm.template,
+        });
       } catch (e) {
         this.aiError = e.message;
       } finally {
@@ -204,20 +293,32 @@ createApp({
 
     aiApply() {
       if (!this.aiDraft) return;
-      if (this.aiDraft.name) this.charForm.name = this.aiDraft.name;
-      if (this.aiDraft.title) this.charForm.title = this.aiDraft.title;
-      if (this.aiDraft.bio) this.charForm.bio = this.aiDraft.bio;
-      if (Object.keys(this.aiDraft.attributes).length) {
-        this.charForm.attrRows = this.attrsToRows(this.aiDraft.attributes);
+      const d = this.aiDraft;
+      if (d.name) this.charForm.name = d.name;
+      if (d.title) this.charForm.title = d.title;
+      if (d.bio) this.charForm.bio = d.bio;
+      if (d.template === 'dnd5e' && d.stats) {
+        this.charForm.template = 'dnd5e';
+        // 合并 AI 解析的 stats
+        const merged = { ...this.charForm.stats };
+        for (const [k, v] of Object.entries(d.stats)) {
+          if (v !== '' && v !== 0 && v !== null && v !== undefined) merged[k] = v;
+        }
+        this.charForm.stats = merged;
+      } else if (Object.keys(d.attributes || {}).length) {
+        this.charForm.attrRows = this.attrsToRows(d.attributes);
       }
-      if (this.aiDraft.tags.length) {
-        this.charForm.tagsText = this.aiDraft.tags.join(', ');
+      if (d.tags.length) {
+        this.charForm.tagsText = d.tags.join(', ');
       }
       this.aiDraft = null;
       this.showToast('已填入表单,请检查后保存 ✅');
     },
 
-    openCharDetail(c) { this.charDetail = c; },
+    openCharDetail(c) {
+      this.charDetail = c;
+      this.checkResult = null;
+    },
 
     async saveChar() {
       const body = {
@@ -225,9 +326,13 @@ createApp({
         title: this.charForm.title.trim() || null,
         avatar: this.charForm.avatar.trim() || null,
         bio: this.charForm.bio.trim() || null,
+        template: this.charForm.template || 'default',
         attributes: this.rowsToAttrs(this.charForm.attrRows),
         tags: this.charForm.tagsText.split(/[,，]/).map(s => s.trim()).filter(Boolean),
       };
+      if (body.template === 'dnd5e') {
+        body.stats = { ...this.charForm.stats };
+      }
       try {
         if (this.charModal.editing) {
           await API.put(`/characters/${this.charModal.editingId}`, body);

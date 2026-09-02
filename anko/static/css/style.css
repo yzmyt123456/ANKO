@@ -562,5 +562,104 @@ input[type="checkbox"] { width: auto; margin: 0; }
   .page-desc { display: none; }
 }
 
+/* ============================================================
+   人物卡模板(DND 5e 等)
+   ============================================================ */
+/* ---------------- 模板选择 ---------------- */
+.template-select { margin-top: 2px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+.seg-btn {
+  display: flex; flex-direction: column; gap: 2px; text-align: left;
+  padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 10px;
+  background: #fff; cursor: pointer; transition: all .15s;
+  font-size: 13px; font-weight: 600; color: var(--text);
+}
+.seg-btn:hover { border-color: var(--primary); }
+.seg-btn.on { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-dark); }
+.seg-desc { font-size: 11px; font-weight: 400; color: var(--muted); }
+
+/* ---------------- 模板表单 ---------------- */
+.tpl-group { border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; background: #fbfbfe; }
+.tpl-group-label { font-size: 12.5px; font-weight: 700; color: var(--primary-dark); margin-bottom: 10px; }
+.tpl-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.tpl-field { display: flex; flex-direction: column; gap: 2px; }
+.tpl-field-label { font-size: 12px; color: var(--text-2); }
+.tpl-field input, .tpl-field textarea { margin-top: 0; }
+.tpl-field textarea { grid-column: 1 / -1; }
+
+.score-row { display: flex; align-items: center; gap: 8px; }
+.score-row input { margin-top: 0; }
+.score-mod {
+  width: 40px; text-align: center; font-weight: 700; font-size: 14px;
+  background: var(--primary-soft); color: var(--primary-dark);
+  border-radius: 8px; padding: 7px 0; flex-shrink: 0;
+}
+
+/* ---------------- 卡片上的六属性 ---------------- */
+.c-card-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 10px; }
+.stat-mini {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+  text-align: center; font-size: 11px; color: var(--text-2); padding: 3px 0;
+}
+.stat-mini em { font-style: normal; color: var(--primary-dark); font-weight: 700; margin-left: 2px; }
+
+/* ---------------- 详情抽屉:DND ---------------- */
+.dnd-basic { margin: 6px 0 12px; }
+.dnd-basic .tag { margin-bottom: 4px; }
+.dnd-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0; }
+.dnd-stat-cell {
+  background: linear-gradient(160deg, #f7f5ff, #f0edff);
+  border: 1px solid #dcd6f8; border-radius: 12px;
+  text-align: center; padding: 10px 4px; cursor: pointer;
+  transition: all .15s; position: relative;
+}
+.dnd-stat-cell:hover { transform: translateY(-2px); border-color: var(--primary); box-shadow: 0 4px 12px rgba(109,90,224,.15); }
+.stat-name { font-size: 11px; color: var(--text-2); }
+.stat-value { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1.2; }
+.stat-mod { font-size: 13px; font-weight: 700; color: var(--primary-dark); }
+.stat-dice { position: absolute; top: 6px; right: 7px; font-size: 13px; opacity: .45; }
+
+.dnd-combat { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 12px 0; }
+.combat-item {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  text-align: center; padding: 8px 2px;
+}
+.combat-item span { display: block; font-size: 10.5px; color: var(--muted); }
+.combat-item b { font-size: 17px; color: var(--text); }
+
+.dnd-checks-block { margin: 14px 0; }
+.dnd-checks-block h3 { font-size: 13px; color: var(--text-2); margin-bottom: 8px; }
+.check-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.check-chip {
+  background: var(--bg); border: 1px solid var(--border);
+  font-size: 12px; color: var(--text-2); padding: 5px 12px;
+}
+.check-chip:hover { border-color: var(--primary); background: var(--primary-soft); color: var(--primary-dark); }
+
+.dnd-section { margin: 14px 0; }
+.dnd-section h3 { font-size: 13px; color: var(--text-2); margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.dnd-row { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dashed var(--border); font-size: 12.5px; }
+.dnd-row-label { flex-shrink: 0; color: var(--muted); width: 74px; }
+.dnd-row-val { flex: 1; color: var(--text); }
+
+/* ---------------- 鉴定结果 ---------------- */
+.check-result {
+  margin-top: 16px; padding: 16px; border-radius: 12px; text-align: center;
+  border: 2px solid var(--border); background: #fafbfe;
+  animation: pop .25s ease;
+}
+.check-total { font-size: 40px; font-weight: 800; line-height: 1.1; }
+.check-label { font-size: 12px; color: var(--text-2); }
+.check-judge { font-size: 16px; font-weight: 800; margin-top: 2px; }
+.check-result.judge-crit_success { border-color: var(--warn); background: #fffaf0; }
+.check-result.judge-crit_success .check-total, .check-result.judge-crit_success .check-judge { color: var(--warn); }
+.check-result.judge-crit_fail { border-color: var(--crit-fail); background: #fdf2f3; }
+.check-result.judge-crit_fail .check-total, .check-result.judge-crit_fail .check-judge { color: var(--crit-fail); }
+.check-result.judge-success { border-color: var(--success); background: #f0faf5; }
+.check-result.judge-success .check-total, .check-result.judge-success .check-judge { color: var(--success); }
+.check-result.judge-fail { border-color: var(--border); background: #f8f9fc; }
+.check-result.judge-fail .check-total, .check-result.judge-fail .check-judge { color: var(--muted); }
+
+
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

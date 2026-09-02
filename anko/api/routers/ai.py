@@ -33,7 +33,7 @@ async def parse_character(
             ),
         )
     try:
-        draft = await service.parse_character(payload.text)
+        draft = await service.parse_character(payload.text, payload.template)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except AIError as exc:

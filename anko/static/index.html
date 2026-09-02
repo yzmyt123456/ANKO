@@ -153,8 +153,17 @@
                 </div>
               </div>
               <div class="c-card-title">{{ c.name }}</div>
-              <div class="c-card-sub">{{ c.title || '未设称号' }}</div>
-              <div v-if="Object.keys(c.attributes).length" class="c-card-attrs">
+              <div v-if="c.template === 'dnd5e'" class="c-card-sub">
+                {{ c.stats.race || '' }} · {{ c.stats.klass || '' }} · HP {{ c.stats.hp || '?' }} · AC {{ c.stats.ac || '?' }}
+              </div>
+              <div v-else class="c-card-sub">{{ c.title || '未设称号' }}</div>
+              <div v-if="c.template === 'dnd5e'" class="c-card-stats">
+                <span v-for="k in dndStatKeys" :key="k" class="stat-mini">
+                  {{ dndStatLabel(k) }} {{ c.stats[k] || 0 }}
+                  <em>{{ fmtMod(dndModifier(c.stats[k])) }}</em>
+                </span>
+              </div>
+              <div v-if="c.template !== 'dnd5e' && Object.keys(c.attributes).length" class="c-card-attrs">
                 <span v-for="(v, k) in topAttrs(c, 3)" :key="k" class="attr-pill">{{ k }} {{ v }}</span>
               </div>
               <div v-if="c.tags.length" class="tag-row">
@@ -359,6 +368,19 @@
           </div>
         </div>
 
+        <!-- 模板选择 -->
+        <div class="template-select">
+          <div class="label-text">人物卡类型</div>
+          <div class="seg">
+            <button v-for="t in templates" :key="t.id" type="button"
+                    :class="['seg-btn', {on: charForm.template === t.id}]"
+                    @click="setCharTemplate(t.id)">
+              {{ t.name }}
+              <span class="seg-desc">{{ t.description }}</span>
+            </button>
+          </div>
+        </div>
+
         <div class="ai-divider"><span>或手动填写</span></div>
 
         <label>名字 <span class="req">*</span>
@@ -376,13 +398,40 @@
           <textarea v-model="charForm.bio" rows="3" placeholder="这个人是谁?"></textarea>
         </label>
 
-        <div class="label-text">属性组(自定义)</div>
-        <div v-for="(row, i) in charForm.attrRows" :key="i" class="kv-row">
-          <input v-model="row.key" placeholder="属性名(如 力量)" />
-          <input v-model="row.value" placeholder="值(如 18)" />
-          <button type="button" class="icon-btn danger" @click="charForm.attrRows.splice(i, 1)">✕</button>
-        </div>
-        <button type="button" class="btn small dashed" @click="charForm.attrRows.push({key:'', value:''})">＋ 添加属性</button>
+        <!-- 模板字段 -->
+        <template v-if="charForm.template === 'dnd5e'">
+          <div v-for="g in templateById('dnd5e').groups" :key="g.key" class="tpl-group">
+            <div class="tpl-group-label">{{ g.label }}</div>
+            <div class="tpl-fields">
+              <template v-for="f in g.fields" :key="f.key">
+                <div v-if="f.type === 'dnd_score'" class="tpl-field">
+                  <span class="tpl-field-label">{{ f.label }}</span>
+                  <div class="score-row">
+                    <input type="number" v-model.number="charForm.stats[f.key]" min="1" max="30" />
+                    <span class="score-mod">{{ fmtMod(dndModifier(charForm.stats[f.key])) }}</span>
+                  </div>
+                </div>
+                <label v-else-if="f.type === 'textarea'" class="tpl-field">
+                  {{ f.label }}
+                  <textarea v-model="charForm.stats[f.key]" rows="2" :placeholder="f.placeholder"></textarea>
+                </label>
+                <label v-else class="tpl-field">
+                  {{ f.label }}
+                  <input v-model="charForm.stats[f.key]" :type="f.type === 'number' ? 'number' : 'text'" :placeholder="f.placeholder" />
+                </label>
+              </template>
+            </div>
+          </div>
+        </template>
+        <template v-else>
+          <div class="label-text">属性组(自定义)</div>
+          <div v-for="(row, i) in charForm.attrRows" :key="i" class="kv-row">
+            <input v-model="row.key" placeholder="属性名(如 力量)" />
+            <input v-model="row.value" placeholder="值(如 18)" />
+            <button type="button" class="icon-btn danger" @click="charForm.attrRows.splice(i, 1)">✕</button>
+          </div>
+          <button type="button" class="btn small dashed" @click="charForm.attrRows.push({key:'', value:''})">＋ 添加属性</button>
+        </template>
 
         <label>标签
           <input v-model="charForm.tagsText" placeholder="逗号分隔,如:主角, 魔法" />
@@ -487,15 +536,82 @@
         <span v-for="t in charDetail.tags" :key="t" class="tag">{{ t }}</span>
       </div>
 
-      <div v-if="Object.keys(charDetail.attributes).length" class="attr-block">
-        <h3>属性</h3>
-        <div class="attr-grid">
-          <div v-for="(v, k) in charDetail.attributes" :key="k" class="attr-cell">
-            <div class="attr-key">{{ k }}</div>
-            <div class="attr-val">{{ v }}</div>
+      <!-- ============ DND 5e 精细展示与鉴定 ============ -->
+      <template v-if="charDetail.template === 'dnd5e'">
+        <div class="dnd-basic">
+          <span v-if="hasValue(charDetail.stats.alignment)" class="tag">阵营 {{ charDetail.stats.alignment }}</span>
+          <span v-if="hasValue(charDetail.stats.race)" class="tag">种族 {{ charDetail.stats.race }}</span>
+          <span v-if="hasValue(charDetail.stats.klass)" class="tag">{{ charDetail.stats.klass }}</span>
+          <span v-if="hasValue(charDetail.stats.level)" class="tag">等级 {{ charDetail.stats.level }}</span>
+        </div>
+
+        <!-- 六属性 + 属性鉴定 -->
+        <div class="dnd-stats">
+          <div v-for="k in dndStatKeys" :key="k" class="dnd-stat-cell" @click="dndCheck(k, 'stat')">
+            <div class="stat-name">{{ dndStatLabel(k) }}</div>
+            <div class="stat-value">{{ charDetail.stats[k] || 0 }}</div>
+            <div class="stat-mod">{{ fmtMod(dndModifier(charDetail.stats[k])) }}</div>
+            <div class="stat-dice">🎲</div>
           </div>
         </div>
-      </div>
+
+        <!-- 战斗信息 -->
+        <div class="dnd-combat">
+          <div class="combat-item"><span>HP</span><b>{{ charDetail.stats.hp || '?' }}</b></div>
+          <div class="combat-item"><span>AC</span><b>{{ charDetail.stats.ac || '?' }}</b></div>
+          <div class="combat-item"><span>DC</span><b>{{ charDetail.stats.spell_dc || '?' }}</b></div>
+          <div class="combat-item"><span>熟练</span><b>+{{ charDetail.stats.proficiency_bonus || 0 }}</b></div>
+        </div>
+
+        <!-- 技能鉴定 -->
+        <div class="dnd-checks-block">
+          <h3>技能鉴定</h3>
+          <div class="check-chips">
+            <button v-for="c in dndSkillChecks()" :key="c.key" class="chip check-chip"
+                    @click="dndCheck(c.key, 'skill')">🎲 {{ c.label }}</button>
+          </div>
+        </div>
+
+        <!-- 豁免鉴定 -->
+        <div class="dnd-checks-block">
+          <h3>豁免鉴定</h3>
+          <div class="check-chips">
+            <button v-for="c in dndSaveChecks()" :key="c.key" class="chip check-chip"
+                    @click="dndCheck(c.key, 'save')">🎲 {{ c.label }}</button>
+          </div>
+        </div>
+
+        <!-- 其余分组字段 -->
+        <div v-for="g in templateById('dnd5e').groups" :key="g.key"
+             v-if="['proficiency', 'spells', 'features', 'equipment'].includes(g.key)" class="dnd-section">
+          <h3>{{ g.label }}</h3>
+          <div v-for="f in g.fields" :key="f.key" v-if="hasValue(charDetail.stats[f.key])" class="dnd-row">
+            <span class="dnd-row-label">{{ f.label }}</span>
+            <span class="dnd-row-val">{{ charDetail.stats[f.key] }}</span>
+          </div>
+        </div>
+
+        <!-- 鉴定结果 -->
+        <div v-if="checkResult" :class="['check-result', checkResult.judgement ? 'judge-' + checkResult.judgement.code : '']">
+          <div class="check-total">{{ checkResult.total }}</div>
+          <div class="check-label">{{ checkResult.label }} · {{ checkResult.expression }}</div>
+          <div v-if="checkResult.judgement" class="check-judge">{{ checkResult.judgement.level }}</div>
+          <div v-else class="muted">未设置 DC,仅查看出目</div>
+        </div>
+      </template>
+
+      <!-- ============ 通用模板 ============ -->
+      <template v-else>
+        <div v-if="Object.keys(charDetail.attributes).length" class="attr-block">
+          <h3>属性</h3>
+          <div class="attr-grid">
+            <div v-for="(v, k) in charDetail.attributes" :key="k" class="attr-cell">
+              <div class="attr-key">{{ k }}</div>
+              <div class="attr-val">{{ v }}</div>
+            </div>
+          </div>
+        </div>
+      </template>
 
       <div v-if="charDetail.bio" class="bio-block">
         <h3>背景</h3>

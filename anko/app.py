@@ -39,7 +39,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     dice_engine = DiceEngine()
 
     # ---- 业务服务 ----
-    character_service = CharacterService(storage)
+    character_service = CharacterService(storage, dice_engine)
     story_service = StoryService(storage)
     dice_service = DiceService(
         storage, dice_engine, default_maid_name=settings.dice.default_maid

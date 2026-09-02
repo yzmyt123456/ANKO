@@ -40,7 +40,34 @@ def build_engine(settings: DatabaseSettings) -> Engine:
 def create_session_factory(settings: DatabaseSettings) -> sessionmaker[Session]:
     engine = build_engine(settings)
     Base.metadata.create_all(engine)
+    _run_migrations(engine)
     return sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
+
+
+def _run_migrations(engine: Engine) -> None:
+    """轻量表结构迁移(SQLite)。
+
+    开发期对已存在表补充新列,保证旧数据库可平滑升级。
+    """
+    with engine.connect() as conn:
+        cols = {
+            row[1]
+            for row in conn.exec_driver_sql(
+                "PRAGMA table_info(character_cards)"
+            )
+        }
+        if cols:
+            if "template" not in cols:
+                conn.exec_driver_sql(
+                    "ALTER TABLE character_cards "
+                    "ADD COLUMN template VARCHAR(50) DEFAULT 'default'"
+                )
+            if "stats" not in cols:
+                conn.exec_driver_sql(
+                    "ALTER TABLE character_cards "
+                    "ADD COLUMN stats JSON DEFAULT '{}'"
+                )
+        conn.commit()
 
 
 def init_db(settings: DatabaseSettings) -> sessionmaker[Session]:

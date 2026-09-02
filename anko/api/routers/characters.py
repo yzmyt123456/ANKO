@@ -11,6 +11,8 @@ from anko.schemas.character import (
     CharacterCreate,
     CharacterRead,
     CharacterUpdate,
+    CheckRequest,
+    CheckResponse,
 )
 from anko.services import CharacterService
 
@@ -30,9 +32,10 @@ def list_characters(
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     name: Optional[str] = Query(None, description="按名字精确过滤"),
+    template: Optional[str] = Query(None, description="按模板过滤"),
     service: CharacterService = Depends(get_character_service),
 ) -> list[CharacterRead]:
-    return service.list(offset=offset, limit=limit, name=name)
+    return service.list(offset=offset, limit=limit, name=name, template=template)
 
 
 @router.get("/{character_id}", response_model=CharacterRead)
@@ -67,3 +70,21 @@ def delete_character(
 ) -> None:
     if not service.delete(character_id):
         raise HTTPException(status_code=404, detail="人物卡不存在")
+
+
+@router.post("/{character_id}/checks", response_model=CheckResponse)
+def perform_check(
+    character_id: int,
+    payload: CheckRequest,
+    service: CharacterService = Depends(get_character_service),
+) -> CheckResponse:
+    """执行 DND 鉴定(属性/技能/豁免),支持 DC 判定。"""
+    try:
+        result = service.perform_check(
+            character_id, payload.kind, payload.key, payload.dc
+        )
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return CheckResponse(**result)

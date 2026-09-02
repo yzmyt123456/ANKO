@@ -11,6 +11,9 @@ class AIParseRequest(BaseModel):
     """AI 解析请求:粘贴的原始文本。"""
 
     text: str = Field(..., min_length=1, description="要解析的原始文本")
+    template: str = Field(
+        "default", description="目标模板: default / dnd5e"
+    )
 
 
 class CharacterDraft(BaseModel):
@@ -19,6 +22,8 @@ class CharacterDraft(BaseModel):
     name: str = Field(..., description="角色名")
     title: Optional[str] = Field(None, description="称号/职业")
     bio: Optional[str] = Field(None, description="背景概括")
+    template: str = Field("default", description="模板")
+    stats: dict[str, Any] = Field(default_factory=dict, description="模板字段")
     attributes: dict[str, Any] = Field(default_factory=dict)
     tags: list[str] = Field(default_factory=list)
 

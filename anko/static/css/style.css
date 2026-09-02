@@ -965,7 +965,15 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-guide-block .kb-trait-item { background: var(--card); }
 .kb-guide-tip { font-size: 12.5px; color: var(--text-2); margin-top: 8px; line-height: 1.8; }
 
-/* ---- 职业升级能力:等级进度带 + 选中面板 ---- */
+/* ---- 职业升级能力:切换 + 等级进度带 + 选中面板 ---- */
+.kb-cls-switch { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 10px; }
+.kb-cls-sel {
+  padding: 6px 16px; border-radius: 999px; border: 1px solid var(--border);
+  background: var(--card); color: var(--text-2); cursor: pointer;
+  font-size: 13.5px; font-weight: 600; transition: all .12s;
+}
+.kb-cls-sel:hover { border-color: var(--primary); color: var(--primary-dark); }
+.kb-cls-sel.on { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: var(--shadow); }
 .kb-lv-band { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
 .kb-lv-btn {
   width: 38px; height: 30px; border: 1px solid var(--border); border-radius: 8px;

@@ -1003,7 +1003,14 @@
           </div>
 
           <div v-if="classLevelRows(kbDetail.data).length" class="kb-race-block">
-            <div class="kb-race-block-label">⚡ 升级能力(点击等级查看该级获得)</div>
+            <div class="kb-race-block-label">⚡ 升级能力</div>
+            <div class="kb-cls-switch">
+              <button v-for="v in classViews(kbDetail.data)" :key="v.id"
+                      :class="['kb-cls-sel', { on: kbClsView === v.id }]"
+                      @click="kbClsView = v.id">
+                {{ v.sub ? '🎯 ' : '🧙 ' }}{{ v.name }}
+              </button>
+            </div>
             <div class="kb-lv-band">
               <button v-for="r in classLevelRows(kbDetail.data)" :key="r.lv"
                       :class="['kb-lv-btn', { on: kbClsLv === r.lv }]"
@@ -1011,26 +1018,29 @@
                 {{ r.lv }}
               </button>
             </div>
-            <div v-if="classLevelRows(kbDetail.data).length" class="kb-lv-panel">
-              <div class="kb-lv-panel-head">
-                Lv {{ kbClsLv }} 获得
-                <span v-if="classLevelFeats(kbClsLv, kbDetail.data).length">({{ classLevelFeats(kbClsLv, kbDetail.data).length }})</span>
-              </div>
+            <div class="kb-lv-panel">
+              <div class="kb-lv-panel-head">{{ classViewName(kbDetail.data) }} · Lv {{ kbClsLv }} 获得</div>
               <div class="kb-lv-feat-chips">
-                <span v-for="(n, i) in classLevelRowFeats(kbClsLv, kbDetail.data)" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
+                <span v-for="(n, i) in classViewFeats(kbDetail.data, kbClsView, kbClsLv).names" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
               </div>
-              <div v-if="classLevelFeats(kbClsLv, kbDetail.data).length" class="kb-subtraits">
-                <div v-for="f in classLevelFeats(kbClsLv, kbDetail.data)" :key="f.id" class="kb-trait-item">
+              <div v-if="classViewFeats(kbDetail.data, kbClsView, kbClsLv).cards.length" class="kb-subtraits">
+                <div v-for="f in classViewFeats(kbDetail.data, kbClsView, kbClsLv).cards" :key="f.id" class="kb-trait-item">
                   <div class="kb-trait-title">{{ f.title }}</div>
                   <p>{{ nice(f.content) }}</p>
                 </div>
               </div>
-              <p v-if="!classLevelFeats(kbClsLv, kbDetail.data).length" class="kb-lv-note">
-                {{ classLevelRowFeats(kbClsLv, kbDetail.data).join('、') }}
-              </p>
-              <p class="kb-lv-note" v-if="classLevelRowFeats(kbClsLv, kbDetail.data).some(n => /选择|特性$/.test(n))">
-                💡 "选择子职业 / …特性" 项实际由所选子职业提供,见下方 🎯 子职业。
-              </p>
+              <template v-else>
+                <p class="kb-lv-note" v-if="kbClsView !== 'base'">
+                  🎯 该等级此子职业未获得新能力
+                  <span v-if="classNextSubLv(kbDetail.data, kbClsView, kbClsLv)">;下一个能力在 Lv{{ classNextSubLv(kbDetail.data, kbClsView, kbClsLv) }}</span>
+                </p>
+                <p class="kb-lv-note" v-else>
+                  {{ classViewFeats(kbDetail.data, kbClsView, kbClsLv).names.join('、') }}
+                  <template v-if="classViewFeats(kbDetail.data, kbClsView, kbClsLv).names.some(n => /选择|特性$/.test(n))">
+                    💡 "选择子职业 / …特性" 实际由所选子职业提供,请在上方切换到对应 🎯 子职业查看。
+                  </template>
+                </p>
+              </template>
             </div>
           </div>
 

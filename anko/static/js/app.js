@@ -106,6 +106,7 @@ createApp({
       kbRaceResults: [],
       kbClasses: [],
       kbClsLv: 1,
+      kbClsView: 'base',
       kbMaps: [],
       kbBooks: [],
       kbBook: '',
@@ -451,6 +452,7 @@ createApp({
 
     async openKbClass(k) {
       this.kbClsLv = 1;
+      this.kbClsView = 'base';
       try {
         const data = await API.get(`/rules/knowledge/${k.id}`);
         this.kbDetail = { type: 'class', data };
@@ -514,6 +516,38 @@ createApp({
       }
       const m = String(feat.content || '').match(/第\s*(\d{1,2})\s*级/);
       return m ? +m[1] : null;
+    },
+    classViews(data) {
+      // 视图切换:原职业 + 各子职业
+      const out = [{ id: 'base', name: this.classZh(data.title), sub: false }];
+      for (const s of this.classSubs(data)) {
+        out.push({ id: 's' + s.id, name: this.classZh(s.title), sub: true });
+      }
+      return out;
+    },
+    classViewName(data) {
+      const v = this.classViews(data).find(x => x.id === this.kbClsView);
+      return v ? v.name : this.classZh(data.title);
+    },
+    classViewFeats(data, viewId, lv) {
+      // 返回所选(职业/子职)在 lv 级获得的能力
+      if (viewId === 'base') {
+        return {
+          names: this.classLevelRowFeats(lv, data),
+          cards: this.classLevelFeats(lv, data),
+        };
+      }
+      const s = this.classSubs(data).find(x => 's' + x.id === viewId);
+      const cards = (s && s.children || []).filter(c => this.classFeatLv(c, { children: s.children }) === lv);
+      return { names: cards.map(c => this.classZh(c.title)), cards };
+    },
+    classNextSubLv(data, viewId, lv) {
+      const s = this.classSubs(data).find(x => 's' + x.id === viewId);
+      if (!s) return null;
+      const lvs = (s.children || [])
+        .map(c => this.classFeatLv(c, { children: s.children }))
+        .filter(n => n && n > lv);
+      return lvs.length ? Math.min(...lvs) : null;
     },
     classLevelRowFeats(lv, data) {
       const row = this.classLevelRows(data).find(r => r.lv === lv);

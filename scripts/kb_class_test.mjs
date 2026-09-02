@@ -36,22 +36,28 @@ const modal = doc.querySelector('.kb-modal');
 console.log('弹窗打开:', !!modal);
 if (modal) {
   console.log('标题:', modal.querySelector('h2') ? modal.querySelector('h2').textContent.trim() : '无');
-  const bandBtns = modal.querySelectorAll('.kb-lv-btn').length;
-  const panelHead = modal.querySelector('.kb-lv-panel-head');
-  console.log('等级按钮数:', bandBtns);
-  console.log('面板默认 Lv1:', panelHead ? panelHead.textContent.trim() : '无');
-  // 点击 Lv5 按钮
+  const switches = [...modal.querySelectorAll('.kb-cls-sel')].map(b => b.textContent.trim());
+  console.log('切换选项:', switches.join(' | '));
+  console.log('面板默认:', modal.querySelector('.kb-lv-panel-head').textContent.trim());
+  // 原职业 Lv5
   const lv5 = [...modal.querySelectorAll('.kb-lv-btn')].find(b => b.textContent.trim() === '5');
   lv5.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-  await sleep(300);
-  const panel5 = modal.querySelector('.kb-lv-panel-head').textContent.trim();
-  console.log('点击 Lv5 后面板:', panel5);
-  console.log('面板含额外攻击:', modal.querySelector('.kb-lv-panel').textContent.includes('额外攻击'));
-  console.log('含职业设定折叠:', !!modal.querySelector('.kb-story'));
+  await sleep(250);
+  console.log('原职业 Lv5 面板:', modal.querySelector('.kb-lv-panel-head').textContent.trim());
+  // 切到狂战士道途
+  const berserk = [...modal.querySelectorAll('.kb-cls-sel')].find(b => b.textContent.includes('狂战士'));
+  berserk.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await sleep(250);
+  console.log('切狂战士后默认面板:', modal.querySelector('.kb-lv-panel-head').textContent.trim());
+  const lv6 = [...modal.querySelectorAll('.kb-lv-btn')].find(b => b.textContent.trim() === '6');
+  lv6.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await sleep(250);
+  console.log('狂战士 Lv6 面板含无我狂暴:', modal.querySelector('.kb-lv-panel').textContent.includes('无我狂暴'));
+  const lv5b = [...modal.querySelectorAll('.kb-lv-btn')].find(b => b.textContent.trim() === '5');
+  lv5b.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await sleep(250);
+  console.log('狂战士 Lv5 提示未获得:', modal.querySelector('.kb-lv-panel').textContent.includes('未获得新能力'));
   console.log('子职卡数:', modal.querySelectorAll('.kb-subclass-card').length);
-  const subFeats = modal.querySelectorAll('.kb-sub-feat summary').length;
-  console.log('子职能力条目:', subFeats);
-  console.log('含狂暴卡:', modal.textContent.includes('狂暴 Rage'));
 }
 console.log('errors:', errors.length ? errors : '无');
 process.exit(0);

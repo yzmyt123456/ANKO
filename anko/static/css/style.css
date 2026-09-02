@@ -844,7 +844,7 @@ input[type="checkbox"] { width: auto; margin: 0; }
 }
 .kb-kno-item { margin-bottom: 14px; }
 .kb-kno-item b { font-size: 13px; color: var(--primary-dark); }
-.kb-kno-item p { font-size: 13.5px; color: var(--text-2); line-height: 2; margin-top: 5px; }
+.kb-kno-item p { font-size: 13.5px; color: var(--text-2); line-height: 2; margin-top: 5px; white-space: pre-wrap; }
 .kb-map-img { width: 100%; border-radius: 8px; }
 
 /* ============================================================

@@ -18,6 +18,7 @@ import sys
 from pathlib import Path
 
 from pypdf import PdfReader
+import pymupdf
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -219,28 +220,77 @@ def parse_monsters(pages: list[str]) -> list[dict]:
     return monsters
 
 
-def _page_title(page_text: str, cat: str, pno: int) -> str:
-    """页标题:优先识别'中文短语 英文名'小节标题,否则用分类名+页首。"""
-    for line in page_text.splitlines():
-        line = line.strip()
-        if not line or len(line) > 60:
-            continue
-        if _NAME_RE.match(line):
-            return line
-    first = re.sub(r"\s+", " ", page_text).strip()
-    return f"{cat} · {first[:36]}" if first else f"{cat} · 第{pno}页"
+def _fix_cn_en_space(text: str) -> str:
+    """中英文边界补充空格(pymupdf 跨字体 span 拼接会丢失)。"""
+    text = re.sub(r"([\u4e00-\u9fff])([A-Za-z])", r"\1 \2", text)
+    text = re.sub(r"([A-Za-z])([\u4e00-\u9fff])", r"\1 \2", text)
+    return text
 
 
-def ph_page_pieces(pages: list[str], start: int, end: int, cat: str) -> list[tuple]:
-    """玩家手册按页切块(保留页码,标题优化)。返回 (title, page, category, content)。"""
+def _iter_pdf_lines(pdf_path: Path, start: int, end: int):
+    """遍历玩家手册页范围的文本行 (pno, y, size, text),按 PDF 内容流顺序。"""
+    doc = pymupdf.open(str(pdf_path))
+    try:
+        for pno in range(start, min(end, doc.page_count)):
+            d = doc[pno].get_text("dict")
+            for b in d["blocks"]:
+                if b["type"] != 0:
+                    continue
+                for l in b["lines"]:
+                    spans = l["spans"]
+                    if not spans:
+                        continue
+                    parts = []
+                    for s in spans:
+                        t = s["text"]
+                        if t:
+                            parts.append(t)
+                    txt = _fix_cn_en_space("".join(parts)).strip()
+                    if not txt:
+                        continue
+                    yield pno, l["bbox"][1], max(s["size"] for s in spans), txt
+    finally:
+        doc.close()
+
+
+def ph_section_pieces(
+    pdf_path: Path, start: int, end: int, cat: str
+) -> list[tuple]:
+    """玩家手册按小节标题(size>=9.5)切块,保留原文行;返回 (title, page, cat, content)。"""
     pieces: list[tuple] = []
-    for pi in range(start, min(end, len(pages))):
-        raw = pages[pi]
-        cleaned = re.sub(r"\s+", " ", raw).strip()
-        if len(cleaned) <= 40:
+    cur_title: str | None = None
+    cur_pno: int | None = None
+    cur_lines: list[tuple[float, str]] = []
+    last_title_y: float | None = None
+
+    def flush() -> None:
+        nonlocal cur_title, cur_pno, cur_lines, last_title_y
+        if cur_lines:
+            title = cur_title or f"{cat} · 第{cur_pno + 1}页"
+            content_lines = [clean_cn_spaces(t.strip()) for _, t in cur_lines]
+            content = "\n".join(x for x in content_lines if x)
+            if content:
+                pieces.append((clean_cn_spaces(title), (cur_pno or 0) + 1, cat, content))
+        cur_title, cur_pno, cur_lines, last_title_y = None, None, [], None  # noqa: F824
+
+    for pno, y, size, txt in _iter_pdf_lines(pdf_path, start, end):
+        if size <= 7.5:  # 页码
             continue
-        title = _page_title(raw, cat, pi + 1)
-        pieces.append((title, pi + 1, cat, clean_cn_spaces(cleaned)))
+        if size >= 9.5 and len(txt) <= 60:
+            # 相邻的标题行(如中文/英文两行)合并为同一标题
+            if cur_title is not None and last_title_y is not None and abs(y - last_title_y) <= 35:
+                cur_title = f"{cur_title} {txt}"
+            else:
+                flush()
+                cur_title = txt
+                cur_pno = pno
+            last_title_y = y
+        else:
+            if cur_title is None and cur_pno is None:
+                cur_pno = pno
+            cur_lines.append((y, txt))
+            last_title_y = None
+    flush()
     return pieces
 
 
@@ -329,7 +379,7 @@ def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> Non
             for start, end, cat in PH_PAGE_CATS:
                 if cat == "法术":
                     continue
-                for title, pno, pcat, content in ph_page_pieces(pages, start, end, cat):
+                for title, pno, pcat, content in ph_section_pieces(pdf, start, end, cat):
                     session.add(
                         RuleKnowledge(
                             book=stem, page=pno,

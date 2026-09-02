@@ -17,8 +17,14 @@ PDF = Path("D:/bdxiazi/DND 5E 规则包/DND_5E_玩家手册CN.pdf")
 DST = Path(__file__).resolve().parent.parent / "anko" / "static" / "img" / "kb"
 GRADE = re.compile(r"^\d+(st|nd|rd|th)$")
 
+ZH_EN = {
+    "野蛮人": "barbarian", "吟游诗人": "bard", "牧师": "cleric", "德鲁伊": "druid",
+    "战士": "fighter", "武僧": "monk", "圣武士": "paladin", "游侠": "ranger",
+    "游荡者": "rogue", "术士": "sorcerer", "邪术师": "warlock", "法师": "wizard",
+}
 
-def find_and_crop(doc, pno0, zh):
+
+def find_and_crop(doc, pno0, en):
     for pno in range(pno0, min(pno0 + 7, len(doc))):
         page = doc[pno]
         words = page.get_text("words")
@@ -31,13 +37,29 @@ def find_and_crop(doc, pno0, zh):
         ]
         if len(grade_rows) < 12:
             continue
+        # 等级行基线
         ys = sorted({y for y, _ in grade_rows})
-        y0, y1 = ys[0] - 6, ys[-1] + 8
+        y_min_lv, y_max_lv = ys[0], ys[-1]
         x0 = min(min(w[0] for w in ws) for _, ws in grade_rows) - 4
         x1 = max(max(w[2] for w in ws) for _, ws in grade_rows) + 6
-        clip = pymupdf.Rect(x0, y0, min(x1, page.rect.width), y1)
+
+        # 向上找表头(标题行"XX职业表" + 列头短词),限定在表宽内、y 距首行<=130
+        x_lo, x_hi = x0 - 6, min(x1 + 10, page.rect.width)
+        header_ys = []
+        for y, ws in sorted(rows.items()):
+            if y >= y_min_lv - 2 or y_min_lv - y > 130:
+                continue
+            inwin = [w for w in ws if x_lo <= w[0] and w[0] <= x_hi]
+            if not inwin:
+                continue
+            joined = "".join(w[4] for w in inwin)
+            if len(joined) <= 18 or "职业表" in joined or "表" in joined:
+                header_ys.append(y)
+        y_top = (min(header_ys) - 5) if header_ys else (y_min_lv - 34)
+
+        clip = pymupdf.Rect(x0, y_top, min(x1, page.rect.width), y_max_lv + 10)
         pix = page.get_pixmap(matrix=pymupdf.Matrix(2.2, 2.2), clip=clip, alpha=False)
-        out = DST / f"class_{zh}_table.png"
+        out = DST / f"class_{en}_table.png"
         pix.save(str(out))
         return pno, f"/static/img/kb/{out.name}"
     return None, None
@@ -57,7 +79,11 @@ def main() -> None:
         ).all()
         for cls in sorted(classes, key=lambda x: x.page):
             zh = (cls.title or "").split(" ")[0]
-            pno, url = find_and_crop(doc, cls.page - 1, zh)
+            en = ZH_EN.get(zh)
+            if not en:
+                print(f"跳过(无英文名): {zh}")
+                continue
+            pno, url = find_and_crop(doc, cls.page - 1, en)
             if not pno:
                 print(f"跳过(未找到等级表): {zh}")
                 continue

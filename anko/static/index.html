@@ -1040,6 +1040,10 @@
                 <span v-if="classRowProf(kbClsLv, kbDetail.data)" class="kb-lv-feat-chip kb-prof">熟练加值 {{ classRowProf(kbClsLv, kbDetail.data) }}</span>
                 <span v-for="(n, i) in classViewFeats(kbDetail.data, kbClsView, kbClsLv).names" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
               </div>
+              <div class="kb-res-bar" v-if="classRowResParts(kbClsLv, kbDetail.data).length">
+                <span class="kb-res-title">🔮 施法资源</span>
+                <span v-for="(p, i) in classRowResParts(kbClsLv, kbDetail.data)" :key="i" class="kb-res-chip">{{ p }}</span>
+              </div>
               <div v-if="classViewFeats(kbDetail.data, kbClsView, kbClsLv).cards.length" class="kb-subtraits">
                 <div v-for="f in classViewFeats(kbDetail.data, kbClsView, kbClsLv).cards" :key="f.id" class="kb-trait-item">
                   <div class="kb-trait-title">{{ f.title }}</div>
@@ -1080,6 +1084,18 @@
               </div>
             </div>
           </div>
+
+          <details v-if="classSpellCols(kbDetail.data).length" class="kb-spell-table kb-artbox">
+            <summary>🧪 施法资源表(已知戏法/已知法术/每环法术位 · 各等级,据原书职业表)</summary>
+            <div class="kb-spell-grid" :style="{ gridTemplateColumns: 'repeat(' + (classSpellCols(kbDetail.data).length + 1) + ', auto)' }">
+              <div class="kb-sg-h">等级</div>
+              <div v-for="(c, ci) in classSpellCols(kbDetail.data)" :key="'hc' + ci" class="kb-sg-h">{{ c }}</div>
+              <template v-for="lv in classSpellLevels(kbDetail.data)" :key="'r' + lv">
+                <div class="kb-sg-lv">{{ lv }}</div>
+                <div v-for="(c, ci) in classSpellCols(kbDetail.data)" :key="'c' + lv + '-' + ci" class="kb-sg-c">{{ classSpellVal(kbDetail.data, lv, c) }}</div>
+              </template>
+            </div>
+          </details>
 
           <details v-if="raceParts(kbDetail.data.content).story" class="kb-story">
             <summary>📜 职业设定</summary>
@@ -1140,9 +1156,9 @@
                 </summary>
                 <p v-if="s.content" class="kb-subclass-intro">{{ nice(s.content) }}</p>
                 <div class="kb-race-sub">
-                  <details v-for="c in s.children" :key="c.id" class="kb-sub-feat">
+                  <details v-for="c in subFeatures(s)" :key="c.id" class="kb-sub-feat">
                     <summary>
-                      <span class="kb-lv-feat-chip">{{ subFeatLv(c, s.children) ? 'Lv' + subFeatLv(c, s.children) : '基础' }}</span>
+                      <span class="kb-lv-feat-chip">{{ subFeatLv(c, subFeatures(s)) ? 'Lv' + subFeatLv(c, subFeatures(s)) : '基础' }}</span>
                       {{ c.title }}
                     </summary>
                     <template v-if="featOptions(c.content)">
@@ -1160,6 +1176,20 @@
                     <p v-else>{{ nice(c.content) }}</p>
                   </details>
                 </div>
+                <details v-if="classSpellCols(s).length" class="kb-spell-table kb-artbox">
+                  <summary>🧪 {{ classZh(s.title) }} 施法资源(环位/已知法术 · 3-20 级,据原书施法表)</summary>
+                  <div class="kb-spell-grid" :style="{ gridTemplateColumns: 'repeat(' + (classSpellCols(s).length + 1) + ', auto)' }">
+                    <div class="kb-sg-h">等级</div>
+                    <div v-for="(c, ci) in classSpellCols(s)" :key="'hc' + ci" class="kb-sg-h">{{ c }}</div>
+                    <template v-for="lv in classSpellLevels(s)" :key="'r' + lv">
+                      <div class="kb-sg-lv">{{ lv }}</div>
+                      <div v-for="(c, ci) in classSpellCols(s)" :key="'c' + lv + '-' + ci" class="kb-sg-c">{{ classSpellVal(s, lv, c) }}</div>
+                    </template>
+                  </div>
+                  <a v-if="classTableImg(s)" :href="classTableImg(s)" target="_blank" rel="noopener">
+                    <img :src="classTableImg(s)" class="kb-art-tall" alt="施法资源原图" />
+                  </a>
+                </details>
               </details>
             </div>
           </div>

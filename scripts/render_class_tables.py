@@ -125,11 +125,28 @@ def main() -> None:
             if level_child:
                 level_child.image = url
                 done.append((zh, pno, url))
+        # 子职独立施法表(奥法骑士/诡术师 3-20 级) → 挂其"施法资源表"卡
+        for zh, en in (("奥法骑士", "fighter_ek"), ("诡术师", "rogue_at")):
+            subs = s.query(RuleKnowledge).filter(
+                RuleKnowledge.kind == "subclass", RuleKnowledge.title.like(zh + "%")
+            ).all()
+            for sub in subs:
+                pno, url = find_and_crop(doc, sub.page - 1, en)
+                if not pno:
+                    continue
+                cast_child = s.query(RuleKnowledge).filter(
+                    RuleKnowledge.parent_id == sub.id,
+                    RuleKnowledge.kind == "class_levels",
+                    RuleKnowledge.title.like("施法资源表%"),
+                ).first()
+                if cast_child:
+                    cast_child.image = url
+                    done.append((f"{sub.title.split(' ')[0]}(子职施法表)", pno, url))
         s.commit()
     doc.close()
     for zh, pno, url in done:
         print(f"挂载: {zh} (表页 {pno}) -> {url}")
-    print(f"共 {len(done)} / {len(classes)} 个职业。")
+    print(f"共 {len(done)} 张。")
 
 
 if __name__ == "__main__":

@@ -147,6 +147,106 @@ def _class_feature_level(feats_map: dict[str, int], title: str, body: str) -> in
     return None
 
 
+_NUM_NULL = {"—", "–", "-", "－"}
+
+
+def _spell_anchor_cols(items: list) -> list | None:
+    """小字表格页 → 施法资源列锚点 [(x, label)],非施法表返回 None。
+
+    label: 已知戏法/已知法术/术法点/法术位/法术位环阶/已知祈唤 或 N环。
+    """
+    grade_ys = [y for y, _t, _x in items if _GRADE_RE.match(_t.strip())]
+    if not grade_ys:
+        return None
+    g0 = min(grade_ys)
+    band = [(y, t, x) for y, t, x in items if g0 - 45 <= y < g0 - 1]
+    if not band:
+        return None
+    found: dict[str, float] = {}
+    for _y, t, x in band:
+        t = t.strip()
+        if not t or "职业表" in t[:6]:
+            continue
+        if t.endswith("戏法"):
+            found.setdefault("已知戏法", x)
+        elif (
+            t.endswith("法术")
+            and "法术位" not in t
+            and "每环" not in t
+            and "豁免" not in t
+            and "攻击" not in t
+        ):
+            found.setdefault("已知法术", x)
+        elif t.startswith("术法"):
+            found.setdefault("术法点", x)
+        elif t == "法术位":
+            found.setdefault("法术位", x)
+        elif t.startswith("法术位环阶") or t == "环阶":
+            found.setdefault("法术位环阶", x)
+        elif t == "已知祈唤" or t == "祈唤":
+            found.setdefault("已知祈唤", x)
+    for _y, t, x in band:
+        t = t.strip()
+        rm = re.match(r"^([1-9])\s*环$", t)
+        if rm:
+            found.setdefault(f"{rm.group(1)}环", x)
+    # 邪术师:表内只有"法术位环阶"(最大环阶),其列值亦写作"N 环",不应误建环位列
+    if "法术位环阶" in found:
+        for _k in [k for k in found if re.fullmatch(r"[1-9]环", k)]:
+            found.pop(_k)
+    if not found:
+        return None
+    return sorted(found.items(), key=lambda kv: kv[1])  # [(label, x)]
+
+
+def _assign_cast_res(items: list, y: float, x_grade: float, cols: list | None) -> dict | None:
+    """把某等级行中的数字/空值格分配给最近的施法资源列。"""
+    if not cols:
+        return None
+    out: dict[str, object] = {}
+    for y2, t2, x2 in items:
+        t = t2.strip()
+        if not t or abs(y2 - y) > 10 or x2 <= x_grade:
+            continue
+        if _GRADE_RE.match(t) or _PLUS_RE.match(t):
+            continue
+        rn = re.match(r"^([1-9])\s*环$", t)
+        if rn:
+            label, ax = min(cols, key=lambda c: abs(c[1] - x2))
+            if abs(ax - x2) <= 45:
+                out[label] = int(rn.group(1))
+            continue
+        if re.search(r"[\u4e00-\u9fff]", t):
+            continue
+        if t.isdigit() or t in _NUM_NULL:
+            label, ax = min(cols, key=lambda c: abs(c[1] - x2))
+            if abs(ax - x2) <= 45:  # 列宽有限,防止左侧特性列空值格混入
+                out[label] = int(t) if t.isdigit() else None
+    return out or None
+
+
+def _parse_cast_rows(items: list) -> list[dict]:
+    """独立施法资源表(无职业特性列的小表,如奥法骑士/诡术师) → [{lv,res}]。"""
+    cols = _spell_anchor_cols(items)
+    if not cols:
+        return []
+    rows: list[dict] = []
+    for y, txt, x in items:
+        m = _GRADE_RE.match(txt.strip())
+        if not m:
+            continue
+        lv = int(m.group(1))
+        if lv < 2:
+            continue
+        res = _assign_cast_res(items, y, x, cols)
+        if res:
+            rows.append({"lv": lv, "res": res})
+    rows.sort(key=lambda r: r["lv"])
+    seen: set = set()
+    rows = [r for r in rows if not (r["lv"] in seen or seen.add(r["lv"]))]  # type: ignore[func-returns-value]
+    return rows
+
+
 def _build_class(c: dict) -> dict:
     """解析单个职业的行流 → 树节点。"""
     import json
@@ -169,7 +269,10 @@ def _build_class(c: dict) -> dict:
         if header_x is not None:
             break
     level_rows: list[dict] = []
+    feat_pages: set[int] = set()
     for pno, items in by_page.items():
+        page_cols = _spell_anchor_cols(items)
+        page_has_feat = 0
         for y, txt, x in items:
             m = _GRADE_RE.match(txt.strip())
             if not m:
@@ -187,8 +290,8 @@ def _build_class(c: dict) -> dict:
                 dx = abs(x2 - header_x) if header_x is not None else x2
                 if best is None or (abs(y2 - y), dx) < best[:2]:
                     best = (abs(y2 - y), dx, x2, t2)
-            if best is None:
-                continue
+            if best is not None:
+                page_has_feat += 1
             # 熟练加值:同行 x 最小的 +N 格(等级格右侧第一数值列)
             prof = None
             for y2, t2, x2 in items:
@@ -198,13 +301,17 @@ def _build_class(c: dict) -> dict:
                     continue
                 if prof is None or x2 < prof[0]:
                     prof = (x2, t2.strip())
-            level_rows.append(
-                {"lv": lv, "prof": prof[1] if prof else "", "feats": best[3]}
-            )
+            row = {"lv": lv, "prof": prof[1] if prof else "", "feats": best[3] if best else ""}
+            res = _assign_cast_res(items, y, x, page_cols)
+            if res:
+                row["res"] = res
+            level_rows.append(row)
             # 标记该表行全部格(等级列到特性列之间小字)供 sections 跳过
             for y2, t2, x2 in items:
                 if abs(y2 - y) <= 2 and x - 6 <= x2 <= x + 300:
                     table_cells.add((pno, round(y2), x2))
+        if page_has_feat >= 10:
+            feat_pages.add(pno)
     level_rows.sort(key=lambda r: r["lv"])
     # 等级去重(某些职业页含多张同等级小表,保留首次/主表)
     _seen: set = set()
@@ -315,6 +422,40 @@ def _build_class(c: dict) -> dict:
     for _sub in node["children"]:
         if _sub.get("kind") == "subclass":
             _fix_subclass_tables(_sub)
+
+    # 子职独立施法资源表(奥法骑士/诡术师 3-20 级小表)→ 子职卡下新增 class_levels
+    cast_pages: dict[int, list] = {}
+    for _pno, _items in by_page.items():
+        if _pno in feat_pages:
+            continue
+        _rows = _parse_cast_rows(_items)
+        if len(_rows) >= 12:
+            cast_pages[_pno] = _rows
+    for _sub in node["children"]:
+        if _sub.get("kind") != "subclass":
+            continue
+        if any(ch.get("kind") == "class_levels" for ch in (_sub.get("children") or [])):
+            continue
+        # 仅挂接通过子职获得施法能力的子职(如奥法骑士/诡术师的"施法 Spellcasting")
+        if not any(
+            ch.get("kind") != "class_levels" and ch.get("title", "").startswith("施法")
+            for ch in (_sub.get("children") or [])
+        ):
+            continue
+        sp = _sub["page"] - 1
+        for _pno in range(sp - 3, sp + 4):
+            _rows = cast_pages.get(_pno)
+            if _rows:
+                _sub.setdefault("children", []).append(
+                    {
+                        "title": "施法资源表(环位)",
+                        "page": _sub["page"],
+                        "kind": "class_levels",
+                        "content": json.dumps(_rows, ensure_ascii=False),
+                        "children": [],
+                    }
+                )
+                break
 
     if story_parts:
         node["content"] = f"§故事\n{chr(10).join(story_parts)}"

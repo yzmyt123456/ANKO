@@ -632,6 +632,34 @@ createApp({
       const r = this.classLevelRows(data).find(x => x.lv === lv);
       return r ? (r.prof || '') : '';
     },
+    classRowResParts(lv, data) {
+      const r = this.classLevelRows(data).find(x => x.lv === lv);
+      if (!r || !r.res) return [];
+      return Object.entries(r.res).map(([k, v]) => (v === null ? `${k} —` : `${k} ${v}`));
+    },
+    classSpellCols(data) {
+      const rows = this.classLevelRows(data).filter(r => r.res && Object.keys(r.res).length);
+      const cols = [];
+      for (const r of rows) {
+        for (const k of Object.keys(r.res)) {
+          if (!cols.includes(k)) cols.push(k);
+        }
+      }
+      return cols;
+    },
+    classSpellLevels(data) {
+      return this.classLevelRows(data)
+        .filter(r => r.res && Object.keys(r.res).length)
+        .map(r => r.lv);
+    },
+    classSpellVal(data, lv, col) {
+      const r = this.classLevelRows(data).find(x => x.lv === lv);
+      if (!r || !r.res || !(col in r.res)) return '';
+      return r.res[col] === null ? '—' : r.res[col];
+    },
+    subFeatures(sub) {
+      return (sub && sub.children || []).filter(x => x.kind !== 'class_levels');
+    },
     classLevelRowFeats(lv, data) {
       const row = this.classLevelRows(data).find(r => r.lv === lv);
       if (!row) return [];

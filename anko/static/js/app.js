@@ -13,6 +13,27 @@ const PAGE_META = {
   settings: ['设置', 'AI 助手等系统配置'],
 };
 
+// 职业规则元信息:主属性 / 施法类型(9 环全施法、半施法至5环、战系无表)/ 施法关键属性
+const CLASS_META = {
+  '野蛮人': { main: '力量 · 体质', cast: 'none', ab: '', note: '纯战系;道途不提供法术' },
+  '吟游诗人': { main: '魅力', cast: 'full9', ab: '魅力', note: '9 环全施法者' },
+  '牧师': { main: '感知', cast: 'full9', ab: '感知', note: '9 环全施法者' },
+  '德鲁伊': { main: '感知', cast: 'full9', ab: '感知', note: '9 环全施法者' },
+  '战士': { main: '力量 或 敏捷', cast: 'none', ab: '', note: '纯战系;奥法骑士子职可施法(1/3)' },
+  '武僧': { main: '敏捷 · 感知', cast: 'none', ab: '', note: '纯战系;武艺/气非法术' },
+  '圣武士': { main: '力量 · 魅力', cast: 'half5', ab: '魅力', note: '半施法者(法术至 5 环)' },
+  '游侠': { main: '敏捷 · 感知', cast: 'half5', ab: '感知', note: '半施法者(法术至 5 环)' },
+  '游荡者': { main: '敏捷', cast: 'none', ab: '', note: '纯战系;秘法骗子子职可施法(1/3)' },
+  '术士': { main: '魅力', cast: 'full9', ab: '魅力', note: '9 环全施法者' },
+  '邪术师': { main: '魅力', cast: 'full9', ab: '魅力', note: '9 环全施法者(法术位至5环+秘法秘仪至9环)' },
+  '法师': { main: '智力', cast: 'full9', ab: '智力', note: '9 环全施法者' },
+};
+// 战系职业中获得 1/3 施法的子职业(至 4 环)
+const SUBCAST_META = {
+  '奥法骑士': { cast: '1/3', ab: '智力', ring: '法术至 4 环' },
+  '秘法骗子': { cast: '1/3', ab: '智力', ring: '法术至 4 环' },
+};
+
 createApp({
   data() {
     return {
@@ -464,6 +485,26 @@ createApp({
     classZh(t) {
       // '野蛮人 Barbarian' → 野蛮人
       return String(t || '').split(' ')[0].trim();
+    },
+    clsMeta(data) {
+      return CLASS_META[this.classZh(data.title)] || {};
+    },
+    castLabel(data) {
+      const m = this.clsMeta(data);
+      if (!m.cast) return '';
+      if (m.cast === 'full9') return '9 环施法者';
+      if (m.cast === 'half5') return '半施法(至 5 环)';
+      return '战系(无施法)';
+    },
+    subCastTag(title) {
+      const t = this.classZh(title);
+      for (const key of Object.keys(SUBCAST_META)) {
+        if (t.includes(key) || key.includes(t)) {
+          const m = SUBCAST_META[key];
+          return `施法 1/3 · ${m.ab}`;
+        }
+      }
+      return '';
     },
     classLevelRows(data) {
       const lv = (data && data.children || []).find(c => c.kind === 'class_levels');

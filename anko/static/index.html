@@ -1001,6 +1001,13 @@
             <span class="tag">玩家手册 · 第{{ kbDetail.data.page }}页</span>
             <span class="tag" v-if="classLevelRows(kbDetail.data).length">1-20 级</span>
           </div>
+          <div class="kb-meta kb-meta-row">
+            <span class="tag tag-main">🎯 主属性:{{ clsMeta(kbDetail.data).main }}</span>
+            <span v-if="clsMeta(kbDetail.data).cast === 'full9'" class="tag tag-cast">9 环施法者</span>
+            <span v-else-if="clsMeta(kbDetail.data).cast === 'half5'" class="tag tag-cast half5">半施法(至 5 环)</span>
+            <span v-if="clsMeta(kbDetail.data).ab" class="tag">施法关键:{{ clsMeta(kbDetail.data).ab }}</span>
+            <span v-if="clsMeta(kbDetail.data).cast === 'none'" class="tag tag-none">纯战系(无施法);法术需经特定子职</span>
+          </div>
 
           <div v-if="classLevelRows(kbDetail.data).length" class="kb-race-block">
             <div class="kb-race-block-label">⚡ 升级能力</div>
@@ -1117,7 +1124,10 @@
             <div class="kb-race-block-label">🎯 子职业(3 级起选择;每个子职按等级获得能力)</div>
             <div v-for="s in classSubs(kbDetail.data)" :key="s.id" class="kb-subclass-card">
               <details class="kb-subclass-main" :open="classSubs(kbDetail.data).length === 1">
-                <summary class="kb-subclass-name">{{ s.title }}</summary>
+                <summary class="kb-subclass-name">
+                  {{ s.title }}
+                  <span v-if="subCastTag(s.title)" class="kb-sub-cast">{{ subCastTag(s.title) }}</span>
+                </summary>
                 <p v-if="s.content" class="kb-subclass-intro">{{ nice(s.content) }}</p>
                 <div class="kb-race-sub">
                   <details v-for="c in s.children" :key="c.id" class="kb-sub-feat">

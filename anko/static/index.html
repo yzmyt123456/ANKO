@@ -218,7 +218,7 @@
                     <span class="chapter">📌 {{ e.chapter || '未命名章节' }}</span>
                     <span class="muted">{{ fmtTime(e.created_at) }}</span>
                   </div>
-                  <div class="entry-content">{{ e.content }}</div>
+                  <div class="entry-content" v-html="linkify(e.content)"></div>
                   <div v-if="e.character_ids.length" class="entry-chars">
                     登场:
                     <span v-for="cid in e.character_ids" :key="cid" class="tag">{{ charName(cid) }}</span>
@@ -540,8 +540,8 @@
       <template v-if="charDetail.template === 'dnd5e'">
         <div class="dnd-basic">
           <span v-if="hasValue(charDetail.stats.alignment)" class="tag">阵营 {{ charDetail.stats.alignment }}</span>
-          <span v-if="hasValue(charDetail.stats.race)" class="tag">种族 {{ charDetail.stats.race }}</span>
-          <span v-if="hasValue(charDetail.stats.klass)" class="tag">{{ charDetail.stats.klass }}</span>
+          <span v-if="hasValue(charDetail.stats.race)" class="tag" v-html="linkify(charDetail.stats.race)"></span>
+          <span v-if="hasValue(charDetail.stats.klass)" class="tag" v-html="linkify(charDetail.stats.klass)"></span>
           <span v-if="hasValue(charDetail.stats.level)" class="tag">等级 {{ charDetail.stats.level }}</span>
         </div>
 
@@ -552,6 +552,8 @@
             <div class="stat-value">{{ charDetail.stats[k] || 0 }}</div>
             <div class="stat-mod">{{ fmtMod(dndModifier(charDetail.stats[k])) }}</div>
             <div class="stat-dice">🎲</div>
+            <a v-if="dndStatWiki(k)" class="stat-wiki" :href="dndStatWiki(k)"
+               target="_blank" rel="noopener" title="查看释义" @click.stop>📖</a>
           </div>
         </div>
 
@@ -588,7 +590,7 @@
             <template v-for="f in g.fields" :key="f.key">
               <div v-if="hasValue(charDetail.stats[f.key])" class="dnd-row">
                 <span class="dnd-row-label">{{ f.label }}</span>
-                <span class="dnd-row-val">{{ charDetail.stats[f.key] }}</span>
+                <span class="dnd-row-val" v-html="linkify(charDetail.stats[f.key])"></span>
               </div>
             </template>
           </div>

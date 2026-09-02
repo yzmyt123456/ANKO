@@ -661,5 +661,28 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .check-result.judge-fail .check-total, .check-result.judge-fail .check-judge { color: var(--muted); }
 
 
+/* ============================================================
+   DND 词条链接(wiki-link / stat-wiki)
+   ============================================================ */
+.wiki-link {
+  color: var(--primary-dark);
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: color .15s;
+}
+.wiki-link:hover { color: var(--primary); text-decoration-style: solid; }
+.entry-content .wiki-link { color: #5744cf; }
+
+.stat-wiki {
+  position: absolute; top: 6px; left: 7px;
+  font-size: 13px; opacity: .5; text-decoration: none;
+  transition: opacity .15s;
+}
+.stat-wiki:hover { opacity: 1; }
+.dnd-stat-cell:hover .stat-wiki { opacity: .9; }
+
+
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

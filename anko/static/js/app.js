@@ -36,6 +36,8 @@ createApp({
       aiLoading: false,
       aiDraft: null,
       aiError: '',
+      // DND 词条词典
+      glossary: [],
 
       // 剧情
       stories: [],
@@ -90,6 +92,7 @@ createApp({
   mounted() {
     this.loadAll();
     this.loadTemplates();
+    this.loadGlossary();
   },
 
   methods: {
@@ -218,6 +221,51 @@ createApp({
       } finally {
         this.checkLoading = false;
       }
+    },
+
+    /* ---------------- DND 词条词典 ---------------- */
+    async loadGlossary() {
+      try {
+        this.glossary = await API.get('/glossary');
+      } catch (e) { /* 词典加载失败不阻塞页面 */ }
+    },
+
+    _escHtml(s) {
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    },
+
+    _escRegex(s) {
+      return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    },
+
+    linkify(text) {
+      if (!text) return '';
+      let s = this._escHtml(text);
+      const glossary = this.glossary || [];
+      if (!glossary.length) return s;
+      const sorted = [...glossary].sort((a, b) => b.name.length - a.name.length);
+      const placeholders = [];
+      let counter = 0;
+      for (const e of sorted) {
+        const re = new RegExp(this._escRegex(e.name), 'g');
+        s = s.replace(re, () => {
+          const token = `\u0000WK${counter++}\u0000`;
+          placeholders.push({ token, entry: e });
+          return token;
+        });
+      }
+      for (const p of placeholders) {
+        s = s.replace(p.token,
+          `<a class="wiki-link" href="${p.entry.url}" target="_blank" rel="noopener">${p.entry.name}</a>`);
+      }
+      return s;
+    },
+
+    dndStatWiki(key) {
+      const label = this.dndStatLabel(key);
+      const e = (this.glossary || []).find(x => x.name === label);
+      return e ? e.url : '';
     },
 
     /* ---------------- 人物卡 ---------------- */

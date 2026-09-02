@@ -228,7 +228,7 @@ def _fix_cn_en_space(text: str) -> str:
 
 
 def _iter_pdf_lines(pdf_path: Path, start: int, end: int):
-    """遍历玩家手册页范围的文本行 (pno, y, size, text),按 PDF 内容流顺序。"""
+    """遍历玩家手册页范围的文本行 (pno, y, size, text, has_bold),按 PDF 内容流顺序。"""
     doc = pymupdf.open(str(pdf_path))
     try:
         for pno in range(start, min(end, doc.page_count)):
@@ -241,14 +241,21 @@ def _iter_pdf_lines(pdf_path: Path, start: int, end: int):
                     if not spans:
                         continue
                     parts = []
+                    has_bold = False
                     for s in spans:
                         t = s["text"]
                         if t:
                             parts.append(t)
+                        if t.strip() and (
+                            (s["flags"] & 16)
+                            or "Bold" in s["font"]
+                            or "bold" in s["font"]
+                        ):
+                            has_bold = True
                     txt = _fix_cn_en_space("".join(parts)).strip()
                     if not txt:
                         continue
-                    yield pno, l["bbox"][1], max(s["size"] for s in spans), txt
+                    yield pno, l["bbox"][1], max(s["size"] for s in spans), txt, has_bold
     finally:
         doc.close()
 
@@ -273,7 +280,7 @@ def ph_section_pieces(
                 pieces.append((clean_cn_spaces(title), (cur_pno or 0) + 1, cat, content))
         cur_title, cur_pno, cur_lines, last_title_y = None, None, [], None  # noqa: F824
 
-    for pno, y, size, txt in _iter_pdf_lines(pdf_path, start, end):
+    for pno, y, size, txt, _bold in _iter_pdf_lines(pdf_path, start, end):
         if size <= 7.5:  # 页码
             continue
         if size >= 9.5 and len(txt) <= 60:
@@ -331,6 +338,40 @@ def ph_entry_pieces(
 PH_RACE_NAMES = ["矮人", "精灵", "半身人", "人类", "龙裔", "侏儒", "半精灵", "半兽人", "提夫林"]
 
 
+_CN_TRAIT_NAMES = ("年龄", "阵营", "体型", "速度", "语言", "亚种", "技能", "专长",
+                   "属性值加成", "幸运", "勇气", "出神", "矮人体魄", "矮人战斗训练",
+                   "矮人护甲训练", "工具熟练项", "石中精妙", "黑暗视觉", "敏锐感官",
+                   "精类血统", "多才多艺", "炎狱抗性", "地狱遗赠", "侏儒狡黠", "矮人刚毅")
+
+
+def _is_trait_start(s: str, has_bold: bool) -> bool:
+    """特质起点:带加粗英文名('中文名 英文。'),或白名单纯中文短名('年龄。')。"""
+    if has_bold and re.match(r"^[\u4e00-\u9fff·（）()]{2,12}\s+[A-Za-z]", s):
+        return True
+    for n in _CN_TRAIT_NAMES:
+        if s.startswith(n + "。"):
+            return True
+    return False
+
+
+def _split_trait_lines(lines) -> list[dict]:
+    """把'XX Traits/特质'小节内容按每条特质切分。lines 可含 (txt, has_bold)。"""
+    traits: list[dict] = []
+    for item in lines:
+        s = item[0].strip() if isinstance(item, (tuple, list)) else item.strip()
+        bold = bool(item[1]) if isinstance(item, (tuple, list)) else False
+        if not s:
+            continue
+        if _is_trait_start(s, bold):
+            traits.append({"name": s.split("。")[0].strip(), "lines": [s]})
+        elif traits:
+            traits[-1]["lines"].append(s)
+        elif len(s) > 6:
+            # 标题后导语(前几个非特质句子)并入首条,避免丢失
+            traits.append({"name": None, "lines": [s]})
+    return [t for t in traits if t.get("name") or t["lines"]]
+
+
 def ph_race_hierarchy(
     pdf_path: Path, start: int, end: int, names: list[str]
 ) -> tuple[list[dict], list[dict]]:
@@ -343,7 +384,7 @@ def ph_race_hierarchy(
     anchors = {n: re.compile(rf"^{re.escape(n)}( [A-Za-z][A-Za-z'’\-/ ]*)?$") for n in names}
     parents: list[dict] = []
     cur: dict | None = None
-    for pno, y, size, txt in _iter_pdf_lines(pdf_path, start, end):
+    for pno, y, size, txt, has_bold in _iter_pdf_lines(pdf_path, start, end):
         if size <= 7.5:
             continue
         matched = next((n for n, rx in anchors.items() if rx.match(txt)), None)
@@ -370,7 +411,7 @@ def ph_race_hierarchy(
                 cur["sections"].append({"title": txt, "pno": pno, "lines": [], "ty": y})
                 cur["sec"] = cur["sections"][-1]
         elif cur["sec"] is not None:
-            cur["sec"]["lines"].append(txt)
+            cur["sec"]["lines"].append((txt, has_bold))
         else:
             cur["lead"].append(txt)
     if cur and (cur["lead"] or cur["sections"]):
@@ -405,15 +446,49 @@ def ph_race_hierarchy(
             }
         )
         for sec in p["sections"]:
+            title = clean_cn_spaces(sec["title"])
+            if re.search(r"特质|Traits", title):
+                # 特质小节 → 按每条特质拆成独立知识卡(kind=trait)
+                for tr in _split_trait_lines(sec["lines"]):
+                    lines_clean = [clean_cn_spaces(x.strip()) for x in tr["lines"]]
+                    first = lines_clean[0] if lines_clean else ""
+                    if tr["name"] and first.startswith(tr["name"] + "。"):
+                        rest = first[len(tr["name"]) + 1 :].strip()
+                        lines_clean = ([rest] if rest else []) + lines_clean[1:]
+                    body = "\n".join(x for x in lines_clean if x)
+                    if not body:
+                        continue
+                    if tr["name"] is None:
+                        # 无名称的导语行:直接以小节标题展示
+                        out_children.append(
+                            {
+                                "title": title,
+                                "page": sec["pno"] + 1,
+                                "kind": "race_part",
+                                "content": body,
+                                "parent_title": p["name"],
+                            }
+                        )
+                    else:
+                        out_children.append(
+                            {
+                                "title": tr["name"],
+                                "page": sec["pno"] + 1,
+                                "kind": "trait",
+                                "content": body,
+                                "parent_title": p["name"],
+                            }
+                        )
+                continue
             body = clean_cn_spaces(
-                "\n".join(x.strip() for x in sec["lines"] if x.strip())
+                "\n".join(x[0].strip() for x in sec["lines"] if x[0].strip())
             )
             body = "\n".join(x for x in body.split("\n") if x)
             if not body:
                 continue
             out_children.append(
                 {
-                    "title": clean_cn_spaces(sec["title"]),
+                    "title": title,
                     "page": sec["pno"] + 1,
                     "kind": "race_part",
                     "content": body,
@@ -503,7 +578,7 @@ def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> Non
                 session.add(
                     RuleKnowledge(
                         book=stem, page=rc["page"], title=rc["title"],
-                        category="种族", kind="race_part",
+                        category="种族", kind=rc["kind"],
                         parent_id=parent_ids.get(rc["parent_title"]),
                         content=rc["content"],
                     )

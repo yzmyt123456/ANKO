@@ -467,14 +467,14 @@ createApp({
       return out;
     },
     raceTraits(children) {
-      // 基础特质子卡(人类特质/变体人类特质等),直接展示为字段
+      // 每条特质独立的知识卡(kind=trait),直接展开为字段
       if (!children) return [];
-      return children.filter(c => /特质|Traits?$/.test(c.title || ''));
+      return children.filter(c => c.kind === 'trait');
     },
     raceSubs(children) {
-      // 其余细分 → 下级知识卡
+      // 亚种与文化细分 → 下级知识卡
       if (!children) return [];
-      return children.filter(c => !/特质|Traits?$/.test(c.title || ''));
+      return children.filter(c => c.kind !== 'trait');
     },
 
     async loadKbKnowledge() {

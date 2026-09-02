@@ -353,6 +353,13 @@
                 {{ l === '' ? '全部' : l }}
               </button>
             </div>
+            <div class="kb-filters">
+              <span class="kb-filter-label">学派</span>
+              <button :class="['kb-tab small-tab', {on: kbSchool === ''}]" @click="kbSchool = ''">全部</button>
+              <button v-for="sc in spellSchoolList" :key="sc" :class="['kb-tab small-tab', {on: kbSchool === sc}]" @click="kbSchool = sc">
+                {{ sc }}
+              </button>
+            </div>
             <div v-for="g in kbSpellsGrouped()" :key="g[0]" class="kb-group">
               <div class="kb-group-head">{{ g[0] }} <span class="kb-count">{{ g[1].length }}</span></div>
               <div class="kb-grid-list">
@@ -899,7 +906,7 @@
           <div class="kb-rows">
             <div><b>施法时间</b><span>{{ kbDetail.data.casting_time }}</span></div>
             <div><b>施法距离</b><span>{{ kbDetail.data.range }}</span></div>
-            <div><b>法术成分</b><span v-html="linkify(kbDetail.data.components)"></span></div>
+            <div><b>法术成分</b><span v-html="linkify(componentsExplain(kbDetail.data.components))"></span></div>
             <div><b>持续时间</b><span>{{ kbDetail.data.duration }}</span></div>
           </div>
           <p class="kb-desc" v-html="linkify(kbDetail.data.description)"></p>

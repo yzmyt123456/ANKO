@@ -106,6 +106,7 @@ createApp({
       kbBooks: [],
       kbBook: '',
       kbLevel: '',
+      kbSchool: '',
       kbLoading: false,
       kbDetail: null,
     };
@@ -413,6 +414,8 @@ createApp({
     kbSwitch(tab) {
       this.kbTab = tab;
       this.kbQuery = '';
+      this.kbLevel = '';
+      this.kbSchool = '';
       if (tab === 'knowledge' && !this.kbKnowledge.length) this.loadKbKnowledge();
     },
 
@@ -470,10 +473,11 @@ createApp({
     },
 
     kbSpellsGrouped() {
-      // 按环阶分组(可选过滤)
+      // 按环阶分组(可选过滤:环阶 / 学派)
       const groups = {};
       for (const s of this.kbSpells) {
         if (this.kbLevel && ((s.level === 0 ? '戏法' : `${s.level} 环`) !== this.kbLevel)) continue;
+        if (this.kbSchool && s.school !== this.kbSchool) continue;
         const key = s.level === 0 ? '戏法' : `${s.level} 环`;
         (groups[key] = groups[key] || []).push(s);
       }
@@ -509,6 +513,16 @@ createApp({
     spellSchoolList() {
       const schools = new Set(this.kbSpells.map(s => s.school).filter(Boolean));
       return [...schools].sort();
+    },
+    componentsExplain(comp) {
+      // 法术成分标注含义:V=言语 S=姿势 M=材料
+      if (!comp) return '';
+      const map = { V: '言语', S: '姿势', M: '材料' };
+      const mat = (comp.match(/[（(]([^）)]*)[）)]/) || [])[1] || '';
+      const body = comp.replace(/[（(][^）)]*[）)]/, '');
+      let out = body.replace(/[VSM]/g, ch => ch + '(' + (map[ch] || ch) + ')');
+      if (mat) out += '(' + mat + ')';
+      return out;
     },
     kbMonstersGrouped(type) {
       return this.kbMonsters.filter(m => (m.meta || '').split(/[,，]/)[0].trim() === type);

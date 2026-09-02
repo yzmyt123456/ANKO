@@ -22,6 +22,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from anko.models import Base
+from anko.models.rules import RuleKnowledge, RuleMap, RuleMonster, RuleSpell
 
 PH_NAME = "DND_5E_玩家手册CN.pdf"
 MM_NAME = "DND_5E_怪物图鉴CN.pdf"
@@ -81,6 +82,7 @@ def parse_spells(pages: list[str]) -> list[dict]:
         desc_start = m.end()
         desc_end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
         description = re.sub(r"\s+", " ", text[desc_start:desc_end]).strip()
+        description = normalize_spell_desc(description)
         spells.append(
             {
                 "name": name,
@@ -101,6 +103,30 @@ def parse_spells(pages: list[str]) -> list[dict]:
 def _dedup(text: str) -> str:
     """压缩相邻重复字符(PDF 字体描边导致的伪影,如'阿阿兰兰')。"""
     return re.sub(r"(.)\1", r"\1", text)
+
+
+# 中文字符与中文标点(用于空格清理)
+_CN = r"[\u4e00-\u9fff，。、；：！？（）【】《》“”‘’·—…]"
+
+
+def clean_cn_spaces(text: str) -> str:
+    """移除中文之间的无意义空格(PDF 换行/字距产生的'若命 中')。"""
+    text = re.sub(rf"({_CN}) (?={_CN})", r"\1", text)
+    # 中文字符与中文标点之间的空格
+    text = re.sub(rf"({_CN}) (?=[，。、；：！？])", r"\1", text)
+    text = re.sub(rf"([，。、；：！？]) (?={_CN})", r"\1", text)
+    return text
+
+
+def normalize_spell_desc(desc: str) -> str:
+    """规范法术描述:清理空格、规范段落。"""
+    desc = clean_cn_spaces(desc)
+    # 升环施法效应 独立成段
+    desc = re.sub(r"升环施法效应。", "\n升环施法效应。", desc)
+    # 多余空白折叠为单个换行
+    desc = re.sub(r"[ \t]+\n", "\n", desc)
+    desc = re.sub(r"\n{2,}", "\n", desc)
+    return desc.strip()
 
 
 def parse_monsters(pages: list[str]) -> list[dict]:
@@ -285,12 +311,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # 循环导入避免模型未定义
-    from anko.models.rules import (  # noqa: F401
-        RuleKnowledge,
-        RuleMap,
-        RuleMonster,
-        RuleSpell,
-    )
-
     main()

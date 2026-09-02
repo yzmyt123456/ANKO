@@ -232,6 +232,7 @@ class RuleService:
                     "category": x.category,
                     "kind": x.kind,
                     "parent_id": x.parent_id,
+                    "image": x.image,
                     "preview": (x.content or "")[:160],
                 }
                 for x in s.execute(stmt).scalars().all()
@@ -251,6 +252,7 @@ class RuleService:
                 "category": x.category,
                 "kind": x.kind,
                 "parent_id": x.parent_id,
+                "image": x.image,
                 "content": x.content,
             }
             if x.kind in ("race", "race_part", "class", "subclass"):

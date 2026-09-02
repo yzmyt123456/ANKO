@@ -764,6 +764,7 @@ def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> Non
                 ("category", "ALTER TABLE rule_knowledge ADD COLUMN category VARCHAR(50)"),
                 ("kind", "ALTER TABLE rule_knowledge ADD COLUMN kind VARCHAR(20)"),
                 ("parent_id", "ALTER TABLE rule_knowledge ADD COLUMN parent_id INTEGER"),
+                ("image", "ALTER TABLE rule_knowledge ADD COLUMN image VARCHAR(300)"),
             ):
                 if col not in cols:
                     conn.exec_driver_sql(ddl)

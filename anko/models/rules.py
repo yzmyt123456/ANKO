@@ -62,6 +62,7 @@ class RuleKnowledge(Base):
     category: Mapped[Optional[str]] = mapped_column(String(50), index=True, default=None)
     kind: Mapped[Optional[str]] = mapped_column(String(20), index=True, default=None)
     parent_id: Mapped[Optional[int]] = mapped_column(Integer, index=True, default=None)
+    image: Mapped[Optional[str]] = mapped_column(String(300), default=None)
     content: Mapped[str] = mapped_column(Text, default="")
 
     def __repr__(self) -> str:  # pragma: no cover

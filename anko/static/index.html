@@ -1001,6 +1001,9 @@
             <span class="tag">玩家手册 · 第{{ kbDetail.data.page }}页</span>
             <span class="tag" v-if="classLevelRows(kbDetail.data).length">1-20 级</span>
           </div>
+          <a v-if="kbDetail.data.image" :href="kbDetail.data.image" target="_blank" rel="noopener">
+            <img :src="kbDetail.data.image" class="kb-art" alt="职业插图" />
+          </a>
           <div class="kb-meta kb-meta-row">
             <span class="tag tag-main">🎯 主属性:{{ clsMeta(kbDetail.data).main }}</span>
             <span v-if="clsMeta(kbDetail.data).cast === 'full9'" class="tag tag-cast">9 环施法者</span>
@@ -1161,6 +1164,9 @@
             <span class="tag">种族</span>
             <span class="tag">玩家手册 · 第{{ kbDetail.data.page }}页</span>
           </div>
+          <a v-if="kbDetail.data.image" :href="kbDetail.data.image" target="_blank" rel="noopener">
+            <img :src="kbDetail.data.image" class="kb-art" alt="种族插图" />
+          </a>
           <p v-if="raceParts(kbDetail.data.content).intro" class="kb-race-intro">{{ nice(raceParts(kbDetail.data.content).intro) }}</p>
 
           <div v-if="raceTraits(kbDetail.data.children).length" class="kb-race-block">

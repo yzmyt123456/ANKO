@@ -520,17 +520,21 @@
     </div>
   </div>
 
-  <!-- ==================== 人物卡详情抽屉 ==================== -->
-  <div v-if="charDetail" class="drawer-mask" @click.self="charDetail = null">
-    <aside class="drawer">
-      <div class="drawer-head">
-        <div class="avatar big" :style="avatarColor(charDetail.name)">{{ charDetail.name[0] }}</div>
-        <div class="drawer-titles">
-          <h2>{{ charDetail.name }}</h2>
-          <p class="muted">{{ charDetail.title || '未设称号' }}</p>
+  <!-- ==================== 人物卡详情(居中弹窗) ==================== -->
+  <div v-if="charDetail" class="modal-mask" @click.self="charDetail = null">
+    <div class="modal char-detail-modal">
+      <div class="modal-head">
+        <div class="cd-head">
+          <div class="avatar big" :style="avatarColor(charDetail.name)">{{ charDetail.name[0] }}</div>
+          <div class="cd-titles">
+            <h2>{{ charDetail.name }}</h2>
+            <p class="muted">{{ charDetail.title || '未设称号' }}</p>
+          </div>
         </div>
         <button class="icon-btn" @click="charDetail = null">✕</button>
       </div>
+
+      <div class="cd-body">
 
       <div v-if="charDetail.tags.length" class="tag-row">
         <span v-for="t in charDetail.tags" :key="t" class="tag">{{ t }}</span>
@@ -623,8 +627,13 @@
         <p>{{ charDetail.bio }}</p>
       </div>
 
-      <button class="btn primary full" @click="openCharModal(charDetail); charDetail=null">编辑这张卡</button>
-    </aside>
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn" @click="charDetail = null">关闭</button>
+        <button class="btn primary" @click="openCharModal(charDetail); charDetail=null">✏️ 编辑这张卡</button>
+      </div>
+    </div>
   </div>
 
   <!-- ==================== 全局提示 ==================== -->

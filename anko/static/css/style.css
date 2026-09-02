@@ -662,6 +662,26 @@ input[type="checkbox"] { width: auto; margin: 0; }
 
 
 /* ============================================================
+   人物卡详情(居中弹窗)
+   ============================================================ */
+.char-detail-modal { width: 780px; max-width: 94vw; }
+.char-detail-modal .modal-head { align-items: center; }
+.cd-head { display: flex; align-items: center; gap: 14px; }
+.cd-titles h2 { font-size: 18px; line-height: 1.3; }
+.cd-titles p { margin-top: 1px; }
+.cd-body { padding: 16px 24px 8px; overflow-y: auto; }
+.cd-body .tag-row { margin-bottom: 6px; }
+.cd-body .dnd-checks-block { margin: 16px 0; }
+.cd-body .dnd-section { margin: 16px 0; }
+.cd-foot { justify-content: flex-end; padding-top: 12px; }
+
+@media (max-width: 860px) {
+  .char-detail-modal { width: 100%; }
+  .cd-body { padding: 14px 16px 6px; }
+}
+
+
+/* ============================================================
    DND 词条链接(wiki-link / stat-wiki)
    ============================================================ */
 .wiki-link {

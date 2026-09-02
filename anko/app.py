@@ -96,7 +96,9 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     # ---- 基础端点 ----
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+        response = FileResponse(STATIC_DIR / "index.html")
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
 
     @app.get("/health", tags=["系统"])
     def health() -> dict[str, str]:

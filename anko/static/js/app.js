@@ -140,6 +140,11 @@ createApp({
   },
 
   mounted() {
+    // 支持 ?view=knowledge 等深链接(便于验证与分享)
+    try {
+      const v = new URLSearchParams(window.location.search).get('view');
+      if (v && PAGE_META[v]) this.view = v;
+    } catch (e) { /* 忽略 */ }
     this.loadAll();
     this.loadTemplates();
     this.loadGlossary();

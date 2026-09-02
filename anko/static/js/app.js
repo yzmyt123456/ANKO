@@ -532,9 +532,12 @@ createApp({
     classViewFeats(data, viewId, lv) {
       // 返回所选(职业/子职)在 lv 级获得的能力
       if (viewId === 'base') {
+        const names = this.classLevelRowFeats(lv, data);
+        const isSubLevel = names.some(n => /^选择/.test(n) || /特性$/.test(n));
         return {
-          names: this.classLevelRowFeats(lv, data),
+          names,
           cards: this.classLevelFeats(lv, data),
+          isSubLevel,
         };
       }
       const s = this.classSubs(data).find(x => 's' + x.id === viewId);
@@ -548,6 +551,15 @@ createApp({
         .map(c => this.classFeatLv(c, { children: s.children }))
         .filter(n => n && n > lv);
       return lvs.length ? Math.min(...lvs) : null;
+    },
+    classSubChoices(data, lv) {
+      // 各子职业在该等级提供的能力(用于职业视图'选择XX/XX特性'占位级)
+      return this.classSubs(data)
+        .map(s => ({
+          s,
+          cards: (s.children || []).filter(c => this.classFeatLv(c, { children: s.children }) === lv),
+        }))
+        .filter(o => o.cards.length);
     },
     classLevelRowFeats(lv, data) {
       const row = this.classLevelRows(data).find(r => r.lv === lv);

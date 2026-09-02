@@ -996,6 +996,16 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-lv-panel .kb-trait-item { margin-bottom: 6px; }
 .kb-lv-note { font-size: 12.5px; color: var(--text-2); margin: 6px 0 2px; line-height: 1.9; }
 
+/* 占位级(选择XX/XX特性)下方:可选子职业该级能力 */
+.kb-sub-choice { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }
+.kb-sub-choice-item { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 5px 0; }
+.kb-choice-btn {
+  padding: 4px 12px; border-radius: 999px; border: 1px solid var(--primary);
+  background: var(--primary); color: #fff; cursor: pointer; font-size: 13px; font-weight: 600;
+}
+.kb-choice-btn:hover { filter: brightness(1.1); }
+.kb-choice-hint { font-size: 11.5px; color: var(--text-3, #98a2b3); }
+
 /* ---- 子职业能力卡 ---- */
 .kb-subclass-card { margin: 12px 0; border: 1px solid var(--border); border-radius: 12px; padding: 4px 14px; background: var(--card); box-shadow: var(--shadow); }
 .kb-subclass-name { cursor: pointer; font-weight: 700; color: var(--primary-dark); padding: 8px 0; font-size: 14px; list-style: none; }

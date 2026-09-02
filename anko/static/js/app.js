@@ -506,6 +506,10 @@ createApp({
       }
       return '';
     },
+    classTableImg(data) {
+      const c = (data && data.children || []).find(x => x.kind === 'class_levels');
+      return c ? c.image : '';
+    },
     classLevelRows(data) {
       const lv = (data && data.children || []).find(c => c.kind === 'class_levels');
       if (!lv) return [];

@@ -273,6 +273,7 @@ class RuleService:
                 "title": c.title,
                 "page": c.page,
                 "kind": c.kind,
+                "image": c.image,
                 "content": c.content,
                 "book": c.book,
             }

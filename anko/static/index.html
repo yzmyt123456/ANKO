@@ -1014,6 +1014,12 @@
 
           <div v-if="classLevelRows(kbDetail.data).length" class="kb-race-block">
             <div class="kb-race-block-label">⚡ 升级能力</div>
+            <details v-if="classTableImg(kbDetail.data)" class="kb-artbox">
+              <summary>📊 原书职业等级表(1-20,图片可放大)</summary>
+              <a :href="classTableImg(kbDetail.data)" target="_blank" rel="noopener">
+                <img :src="classTableImg(kbDetail.data)" class="kb-art-tall" alt="职业等级表原图" />
+              </a>
+            </details>
             <div class="kb-cls-switch">
               <button v-for="v in classViews(kbDetail.data)" :key="v.id"
                       :class="['kb-cls-sel', { on: kbClsView === v.id }]"

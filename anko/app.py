@@ -20,6 +20,7 @@ from anko.config import Settings, load_settings
 from anko.dice.engine import DiceEngine
 from anko.plugins.manager import PluginManager
 from anko.services import CharacterService, DiceService, StoryService
+from anko.services.config import ConfigService
 from anko.storage.database import init_db
 from anko.storage.sqlite import SqliteStorage
 
@@ -45,7 +46,11 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
         storage, dice_engine, default_maid_name=settings.dice.default_maid
     )
     dice_service.ensure_default_maid()  # 首次启动时创建内置骰娘
-    ai_service = AIService(settings.ai)
+    config_service = ConfigService(storage)
+    ai_service = AIService(
+        settings.ai,
+        config_getter=lambda: config_service.get_ai_settings(settings.ai),
+    )
 
     # ---- 应用对象 ----
     app = FastAPI(title=settings.app.name, debug=settings.app.debug)
@@ -56,6 +61,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     app.state.story_service = story_service
     app.state.dice_service = dice_service
     app.state.ai_service = ai_service
+    app.state.config_service = config_service
 
     # ---- 内置路由 ----
     app.include_router(api_router, prefix=settings.server.api_prefix)

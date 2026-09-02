@@ -12,7 +12,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from anko.core.interfaces import Storage
-from anko.models import CharacterCard, DiceMaid, DiceRoll, Story, StoryEntry
+from anko.models import (
+    CharacterCard,
+    DiceMaid,
+    DiceRoll,
+    Story,
+    StoryEntry,
+    SystemConfig,
+)
 
 
 def _apply_filters(query: Any, model: type, filters: dict) -> Any:
@@ -192,6 +199,23 @@ class SqliteStorage(Storage):
             session.commit()
             return True
 
+    # ---------- 系统配置 ----------
+    def get_config(self, key: str) -> Optional[dict]:
+        with self._session() as session:
+            obj = session.get(SystemConfig, key)
+            return dict(obj.value) if obj else None
+
+    def set_config(self, key: str, value: dict) -> dict:
+        with self._session() as session:
+            obj = session.get(SystemConfig, key)
+            if obj is None:
+                obj = SystemConfig(key=key, value=value)
+                session.add(obj)
+            else:
+                obj.value = value
+            session.commit()
+            return dict(obj.value)
+
     # ---------- 掷骰记录 ----------
     def create_roll(self, data: dict) -> DiceRoll:
         with self._session() as session:
@@ -215,7 +239,3 @@ class SqliteStorage(Storage):
                 .scalars()
                 .all()
             )
-
-            session.delete(obj)
-            session.commit()
-            return True

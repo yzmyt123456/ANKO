@@ -9,6 +9,7 @@ const PAGE_META = {
   stories: ['剧情', '创作与管理安科故事线'],
   maids: ['骰娘', '召唤与定制你的专属骰娘'],
   rolls: ['掷骰台', '让命运之骰为你发声'],
+  settings: ['设置', 'AI 助手等系统配置'],
 };
 
 createApp({
@@ -21,6 +22,7 @@ createApp({
         { id: 'stories', icon: '📖', label: '剧情', badge: 'stories' },
         { id: 'maids', icon: '🧝', label: '骰娘', badge: 'maids' },
         { id: 'rolls', icon: '🎲', label: '掷骰台' },
+        { id: 'settings', icon: '⚙️', label: '设置' },
       ],
 
       // 人物卡
@@ -67,6 +69,12 @@ createApp({
       toast: '',
       toastType: 'success',
       _toastTimer: null,
+
+      // AI 配置
+      aiConfig: { enabled: false, base_url: '', model: '', timeout: 30, api_key_masked: '', has_api_key: false },
+      aiApiKey: '',
+      aiTestResult: null,
+      aiTestLoading: false,
     };
   },
 
@@ -96,6 +104,7 @@ createApp({
     this.loadAll();
     this.loadTemplates();
     this.loadGlossary();
+    this.loadAiConfig();
   },
 
   methods: {
@@ -319,6 +328,40 @@ createApp({
     },
 
     closeCharModal() { this.charModal.open = false; },
+
+    /* ---------------- AI 配置 ---------------- */
+    async loadAiConfig() {
+      try {
+        this.aiConfig = await API.get('/ai/config');
+      } catch (e) { /* 静默 */ }
+    },
+
+    async saveAiConfig() {
+      try {
+        const body = {
+          enabled: !!this.aiConfig.enabled,
+          base_url: (this.aiConfig.base_url || '').trim(),
+          model: (this.aiConfig.model || '').trim(),
+          timeout: Number(this.aiConfig.timeout) || 30,
+        };
+        if (this.aiApiKey.trim()) body.api_key = this.aiApiKey.trim();
+        this.aiConfig = await API.put('/ai/config', body);
+        this.aiApiKey = '';
+        this.showToast('AI 配置已保存 ✅');
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    async testAi() {
+      this.aiTestLoading = true;
+      this.aiTestResult = null;
+      try {
+        this.aiTestResult = await API.post('/ai/test');
+      } catch (e) {
+        this.aiTestResult = { ok: false, error: e.message };
+      } finally {
+        this.aiTestLoading = false;
+      }
+    },
 
     /* ---------------- AI 快速建档 ---------------- */
     attrsPreview(attrs) {

@@ -95,3 +95,10 @@ class Storage(ABC):
     def list_rolls(
         self, *, offset: int = 0, limit: int = 100, **filters: Any
     ) -> list[Any]: ...
+
+    # ---------- 系统配置 ----------
+    @abstractmethod
+    def get_config(self, key: str) -> Optional[dict]: ...
+
+    @abstractmethod
+    def set_config(self, key: str, value: dict) -> dict: ...

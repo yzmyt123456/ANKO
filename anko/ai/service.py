@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
+from typing import Any, Callable, Optional
 
 from anko.ai.client import AIError, AIClient
 from anko.config import AISettings
@@ -187,20 +187,49 @@ def normalize_dnd_draft(data: dict) -> dict:
 
 
 class AIService:
-    """AI 能力门面:路由到具体功能。"""
+    """AI 能力门面:路由到具体功能。
 
-    def __init__(self, settings: AISettings) -> None:
-        self._settings = settings
-        self._client = AIClient(settings)
+    配置支持运行时更新(通过 config_getter 从数据库读取最新配置),
+    网页上修改 AI 设置后无需重启立即生效。
+    """
+
+    def __init__(
+        self,
+        settings: AISettings,
+        config_getter: Optional[Callable[[], AISettings]] = None,
+    ) -> None:
+        self._default_settings = settings
+        self._config_getter = config_getter
+
+    def _current(self) -> AISettings:
+        """获取当前生效的 AI 配置。"""
+        if self._config_getter is not None:
+            s = self._config_getter()
+            if s is not None:
+                return s
+        return self._default_settings
 
     @property
     def enabled(self) -> bool:
         """是否已配置可用(开启且填了 api_key)。"""
-        return self._settings.enabled and bool(self._settings.api_key)
+        s = self._current()
+        return s.enabled and bool(s.api_key)
 
     @property
     def provider_desc(self) -> str:
-        return f"{self._settings.base_url} / {self._settings.model}"
+        s = self._current()
+        return f"{s.base_url} / {s.model}"
+
+    async def test_connection(self) -> dict:
+        """测试 AI 连接:发送一条最小消息。"""
+        client = AIClient(self._current())
+        try:
+            reply = await client.chat(
+                [{"role": "user", "content": "请回复 OK"}]
+            )
+            return {"ok": True, "reply": (reply or "")[:50]}
+        except AIError as exc:
+            return {"ok": False, "error": str(exc)}
 
     async def parse_character(
         self, text: str, template: str = "default"
@@ -217,7 +246,8 @@ class AIService:
         else:
             prompt = build_character_prompt(text)
 
-        content = await self._client.chat(
+        client = AIClient(self._current())
+        content = await client.chat(
             [{"role": "user", "content": prompt}]
         )
         data = extract_json(content)

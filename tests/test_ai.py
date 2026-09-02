@@ -74,7 +74,7 @@ class TestAIService:
         return AIService(settings)
 
     async def test_parse_character(self, service: AIService, monkeypatch) -> None:
-        async def fake_chat(messages):
+        async def fake_chat(self, messages):
             return json.dumps(
                 {
                     "name": "雷恩",
@@ -85,7 +85,9 @@ class TestAIService:
                 }
             )
 
-        monkeypatch.setattr(service._client, "chat", fake_chat)  # noqa: SLF001
+        monkeypatch.setattr(
+            "anko.ai.service.AIClient.chat", fake_chat
+        )
         draft = await service.parse_character("雷恩是一名雇佣兵……")
         assert draft["name"] == "雷恩"
         assert draft["attributes"]["力量"] == 18

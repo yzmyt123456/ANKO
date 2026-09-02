@@ -326,6 +326,60 @@
             </div>
           </div>
         </section>
+
+        <!-- ==================== 设置 ==================== -->
+        <section v-else-if="view === 'settings'" class="view">
+          <div class="settings-grid">
+            <div class="card settings-card">
+              <h2>🤖 AI 助手配置</h2>
+              <p class="muted">填写你的 AI 服务信息,保存后立即生效,无需重启服务器。</p>
+              <form @submit.prevent="saveAiConfig">
+                <label class="checkline">
+                  <input type="checkbox" v-model="aiConfig.enabled" /> 启用 AI 助手
+                </label>
+                <label>API 服务地址(base_url)
+                  <input v-model="aiConfig.base_url" placeholder="https://api.deepseek.com/v1" />
+                </label>
+                <label>API Key
+                  <input v-model="aiApiKey" type="password" autocomplete="off"
+                         :placeholder="aiConfig.has_api_key ? '已配置(' + aiConfig.api_key_masked + '),留空保持不变' : 'sk-...'" />
+                </label>
+                <label>模型(model)
+                  <input v-model="aiConfig.model" placeholder="deepseek-chat" />
+                </label>
+                <label>超时(秒)
+                  <input type="number" v-model.number="aiConfig.timeout" min="5" max="120" />
+                </label>
+                <div class="settings-actions">
+                  <button type="submit" class="btn primary">💾 保存配置</button>
+                  <button type="button" class="btn" :disabled="aiTestLoading" @click="testAi">
+                    {{ aiTestLoading ? '⏳ 测试中…' : '🔌 测试连接' }}
+                  </button>
+                </div>
+                <div v-if="aiTestResult" :class="['ai-test-result', aiTestResult.ok ? 'ok' : 'err']">
+                  <template v-if="aiTestResult.ok">✅ 连接成功,回复:{{ aiTestResult.reply }}</template>
+                  <template v-else>❌ {{ aiTestResult.error }}</template>
+                </div>
+              </form>
+            </div>
+
+            <div class="card settings-card">
+              <h2>💡 支持的服务</h2>
+              <p class="muted">平台兼容任何 OpenAI 格式接口:</p>
+              <ul class="provider-list">
+                <li><b>DeepSeek</b> — https://api.deepseek.com/v1 · deepseek-chat</li>
+                <li><b>OpenAI</b> — https://api.openai.com/v1 · gpt-4o-mini</li>
+                <li><b>通义千问</b> — https://dashscope.aliyuncs.com/compatible-mode/v1 · qwen-plus</li>
+                <li><b>Kimi</b> — https://api.moonshot.cn/v1 · moonshot-v1-8k</li>
+                <li><b>Ollama 本地</b> — http://127.0.0.1:11434/v1 · qwen2.5(API Key 填任意值)</li>
+              </ul>
+              <div class="ai-tip">
+                🎴 配置完成后,打开<b>人物卡创建弹窗</b>,在「AI 快速建档」中粘贴角色描述,
+                即可自动拆分填入名字 / 称号 / 背景 / 属性 / 标签(选 DND 5e 模板时支持精细字段)。
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   </div>

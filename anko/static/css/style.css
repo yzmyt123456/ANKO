@@ -706,3 +706,29 @@ input[type="checkbox"] { width: auto; margin: 0; }
 
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+
+/* ============================================================
+   设置页
+   ============================================================ */
+.settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+.settings-card { padding: 24px; }
+.settings-card h2 { font-size: 17px; margin-bottom: 4px; }
+.settings-card form { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.settings-actions { display: flex; gap: 10px; margin-top: 4px; }
+.provider-list { margin: 10px 0 0 18px; display: flex; flex-direction: column; gap: 7px; font-size: 13px; color: var(--text-2); }
+.provider-list b { color: var(--text); }
+.ai-test-result {
+  margin-top: 4px; padding: 10px 14px; border-radius: 9px; font-size: 13px;
+  word-break: break-all;
+}
+.ai-test-result.ok { background: var(--success-soft); color: var(--success); }
+.ai-test-result.err { background: var(--danger-soft); color: var(--danger); }
+.ai-tip {
+  margin-top: 16px; background: var(--primary-soft); color: var(--primary-dark);
+  border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .settings-grid { grid-template-columns: 1fr; }
+}

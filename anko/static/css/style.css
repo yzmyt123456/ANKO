@@ -1017,6 +1017,13 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-choice-tab.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 .kb-choice-body { font-size: 13.5px; color: var(--text-2); line-height: 2; margin: 2px 0; white-space: pre-line; }
 
+/* 超长内容(狂野魔法浪涌 d100 表等)折叠 */
+.kb-long-preview { font-size: 13.5px; color: var(--text-2); line-height: 2; margin: 4px 0; }
+.kb-fold { margin-top: 6px; border-top: 1px dashed var(--border); padding-top: 6px; }
+.kb-fold summary { cursor: pointer; font-size: 12.5px; color: var(--primary-dark); font-weight: 600; list-style: none; }
+.kb-fold summary::before { content: '📄 '; }
+.kb-fold p { font-size: 13.5px; color: var(--text-2); line-height: 2; margin-top: 4px; white-space: pre-line; }
+
 /* ---- 子职业能力卡 ---- */
 .kb-subclass-card { margin: 12px 0; border: 1px solid var(--border); border-radius: 12px; padding: 4px 14px; background: var(--card); box-shadow: var(--shadow); }
 .kb-subclass-name { cursor: pointer; font-weight: 700; color: var(--primary-dark); padding: 8px 0; font-size: 14px; list-style: none; }

@@ -102,6 +102,37 @@ def ph_class_hierarchy(
 
 _GRADE_RE = re.compile(r"^(\d+)(?:st|nd|rd|th)$")
 _LV_TEXT_RE = re.compile(r"第\s*(\d{1,2})\s*级")
+_D100_LINE_RE = re.compile(r"^\d{2}~\d{2}")
+
+
+def _fix_subclass_tables(sub: dict) -> None:
+    """把子职卡中误并入末尾能力的 d100 随机表,归并回表标题对应的能力卡。"""
+    kids = sub.get("children") or []
+    if not kids:
+        return
+    for ch in kids:
+        ls = (ch.get("content") or "").split("\n")
+        cut = None
+        target = None
+        for i, l in enumerate(ls):
+            s = l.strip()
+            if not s or _D100_LINE_RE.match(s):
+                continue
+            # 行 == 某能力标题(表标题),且其后紧接 d100/效应/表行 → 表区
+            t = next((k for k in kids if k.get("title", "").strip() == s), None)
+            if t is None or t is ch:
+                continue
+            nxt = "\n".join(ls[i : i + 6]).lower()
+            if "d100" in nxt or _D100_LINE_RE.match(ls[i + 1].strip() if i + 1 < len(ls) else ""):
+                cut, target = i, t
+                break
+        if cut is None or target is None:
+            continue
+        tail = "\n".join(x for x in ls[cut:] if x.strip())
+        if len(tail) < 300:
+            continue
+        ch["content"] = "\n".join(x for x in ls[:cut] if x.strip())
+        target["content"] = ((target.get("content") or "").strip() + "\n\n" + tail).strip()
 
 
 def _class_feature_level(feats_map: dict[str, int], title: str, body: str) -> int | None:
@@ -258,6 +289,11 @@ def _build_class(c: dict) -> dict:
             sub["children"].append(make_feat(s))
         else:
             node["children"].append(make_feat(s))
+
+    # 子职卡:将误并入末尾能力的 d100 随机表归并到该子职首个能力
+    for _sub in node["children"]:
+        if _sub.get("kind") == "subclass":
+            _fix_subclass_tables(_sub)
 
     if story_parts:
         node["content"] = f"§故事\n{chr(10).join(story_parts)}"

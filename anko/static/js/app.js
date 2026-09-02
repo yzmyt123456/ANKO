@@ -631,8 +631,21 @@ createApp({
         .join('\n\n')
         .trim();
     },
+    isLongContent(c) {
+      return (c || '').length > 700;
+    },
+    contentChars(c) {
+      return Math.round((c || '').length);
+    },
+    previewLong(c) {
+      return this.nice(c).slice(0, 220) + '…';
+    },
     featOptions(content) {
       // 能力文本内“多选一段”(如图腾精魄的熊/鹰/狼)拆成选项卡
+      // 排除 d100 随机表等表格式内容(走整表折叠)
+      if (String(content || '').match(/\d{2}~\d{2}/g)) {
+        if ((String(content).match(/\d{2}~\d{2}/g) || []).length >= 3) return null;
+      }
       const lines = String(content || '').split('\n').map(s => s.trim()).filter(Boolean);
       const idx = [];
       lines.forEach((l, i) => {

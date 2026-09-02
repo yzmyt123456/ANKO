@@ -1034,6 +1034,10 @@
                     </div>
                     <p class="kb-choice-body">{{ featOptions(f.content).options[clsChoice[f.id] || 0].text }}</p>
                   </template>
+                  <template v-else-if="isLongContent(f.content)">
+                    <p class="kb-long-preview">{{ previewLong(f.content) }}</p>
+                    <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><p>{{ nice(f.content) }}</p></details>
+                  </template>
                   <p v-else>{{ nice(f.content) }}</p>
                 </div>
               </div>
@@ -1100,6 +1104,10 @@
                   </div>
                   <p class="kb-choice-body">{{ featOptions(f.content).options[clsChoice[f.id] || 0].text }}</p>
                 </template>
+                <template v-else-if="isLongContent(f.content)">
+                  <p class="kb-long-preview">{{ previewLong(f.content) }}</p>
+                  <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><p>{{ nice(f.content) }}</p></details>
+                </template>
                 <p v-else>{{ nice(f.content) }}</p>
               </details>
             </div>
@@ -1124,6 +1132,10 @@
                                 @click="clsChoice[c.id] = i">{{ o.name }}</button>
                       </div>
                       <p class="kb-choice-body">{{ featOptions(c.content).options[clsChoice[c.id] || 0].text }}</p>
+                    </template>
+                    <template v-else-if="isLongContent(c.content)">
+                      <p class="kb-long-preview">{{ previewLong(c.content) }}</p>
+                      <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(c.content) }} 字)</summary><p>{{ nice(c.content) }}</p></details>
                     </template>
                     <p v-else>{{ nice(c.content) }}</p>
                   </details>

@@ -120,56 +120,43 @@ def _build_class(c: dict) -> dict:
     import json
 
     lines = c["lines"]
-    # ---- 等级表:按页把行按 y 贪心聚组(gap<=3),组内按 x 排序,定位等级行 ----
+    # ---- 等级表:等级格 ↔ 同行最近特性格 配对 ----
     by_page: dict[int, list] = {}
     for pno, y, sz, txt, x in lines:
         if sz >= 11:  # 标题级文本不参与表格
             continue
-        by_page.setdefault(pno, []).append((y, txt, x))
+        by_page.setdefault(pno, []).append([y, txt, x])
     table_cells: set = set()
     level_rows: list[tuple[int, str]] = []
     for pno, items in by_page.items():
-        items.sort()
-        y_rows: list[list] = []
-        cur: list | None = None
-        prev = None
-        for it in items:
-            if cur is None or (prev is not None and it[0] - prev > 6):
-                if cur:
-                    y_rows.append(cur)
-                cur = []
-            cur.append(it)
-            prev = it[0]
-        if cur:
-            y_rows.append(cur)
-        for grp in y_rows:
-            grp.sort(key=lambda t: t[2])  # x 排序
-            gi = None
-            for i, (_y, txt, _x) in enumerate(grp):
-                if _GRADE_RE.match(txt.strip()):
-                    gi = i
-                    break
-            if gi is None:
+        for y, txt, x in items:
+            m = _GRADE_RE.match(txt.strip())
+            if not m:
                 continue
-            grade = int(_GRADE_RE.match(grp[gi][1].strip()).group(1))  # type: ignore[union-attr]
-            seg = [grp[gi]]
-            for k in range(gi + 1, len(grp)):
-                if grp[k][2] - seg[-1][2] <= 120:
-                    seg.append(grp[k])
-                else:
-                    break
-            feat = None
-            for _y, txt, _x in seg:
-                ts = txt.strip()
-                if re.search(r"[\u4e00-\u9fff]", ts) and not _GRADE_RE.match(ts):
-                    feat = ts
-                    break
-            if feat is None:
+            lv = int(m.group(1))
+            best = None
+            for y2, t2, x2 in items:
+                if not re.search(r"[\u4e00-\u9fff]", t2) or _GRADE_RE.match(t2.strip()):
+                    continue
+                if x2 <= x or x2 - x > 300 or len(t2) > 36:
+                    continue
+                if abs(y2 - y) > 8:
+                    continue
+                if best is None or (abs(y2 - y), x2) < best[:2]:
+                    best = (abs(y2 - y), x2, t2)
+            if best is None:
                 continue
-            for y, _txt, x in seg:
-                table_cells.add((pno, round(y), x))
-            level_rows.append((grade, feat))
+            level_rows.append((lv, best[2]))
+            # 标记该表行全部格(等级列到特性列之间小字)供 sections 跳过
+            for y2, t2, x2 in items:
+                if abs(y2 - y) <= 2 and x - 6 <= x2 <= x + 300:
+                    table_cells.add((pno, round(y2), x2))
     level_rows.sort(key=lambda x: x[0])
+    # 等级去重(某些职业页含多张同等级小表,保留首次/主表)
+    _seen: set = set()
+    level_rows = [
+        r for r in level_rows if not (r[0] in _seen or _seen.add(r[0]))  # type: ignore[func-returns-value]
+    ]
     # 特性→等级映射(表权威)
     feats_map: dict[str, int] = {}
     for lv, fs in level_rows:

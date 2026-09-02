@@ -107,6 +107,7 @@ createApp({
       kbClasses: [],
       kbClsLv: 1,
       kbClsView: 'base',
+      clsChoice: {},
       kbMaps: [],
       kbBooks: [],
       kbBook: '',
@@ -453,6 +454,7 @@ createApp({
     async openKbClass(k) {
       this.kbClsLv = 1;
       this.kbClsView = 'base';
+      this.clsChoice = {};
       try {
         const data = await API.get(`/rules/knowledge/${k.id}`);
         this.kbDetail = { type: 'class', data };
@@ -561,6 +563,13 @@ createApp({
         }))
         .filter(o => o.cards.length);
     },
+    classLevelList() {
+      return Array.from({ length: 20 }, (_, i) => i + 1);
+    },
+    classRowFeatsTitle(lv, data) {
+      const r = this.classLevelRows(data).find(x => x.lv === lv);
+      return r ? `Lv${lv}：${r.feats}` : `Lv${lv}`;
+    },
     classLevelRowFeats(lv, data) {
       const row = this.classLevelRows(data).find(r => r.lv === lv);
       if (!row) return [];
@@ -609,6 +618,23 @@ createApp({
         .map(p => p.replace(/\s*\n\s*/g, ''))
         .join('\n\n')
         .trim();
+    },
+    featOptions(content) {
+      // 能力文本内“多选一段”(如图腾精魄的熊/鹰/狼)拆成选项卡
+      const lines = String(content || '').split('\n').map(s => s.trim()).filter(Boolean);
+      const idx = [];
+      lines.forEach((l, i) => {
+        if (/^[\u4e00-\u9fff·]{1,8}\s+[A-Za-z][A-Za-z'’\- ]*?。/.test(l)) idx.push(i);
+      });
+      if (idx.length < 2) return null;
+      const intro = lines.slice(0, idx[0]).join('');
+      const options = idx.map((s, i) => {
+        const e = idx[i + 1] || lines.length;
+        const text = lines.slice(s, e).join('');
+        const head = (text.split('。')[0] || '').trim();
+        return { name: (head.match(/^[\u4e00-\u9fff·]+/) || [''])[0], text };
+      });
+      return { intro, options };
     },
     raceParts(content) {
       // 解析父卡 content:§故事 / §简介

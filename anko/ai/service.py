@@ -46,6 +46,59 @@ def build_character_prompt(text: str) -> str:
     return _CHARACTER_PROMPT.replace("{text}", text[:MAX_INPUT_CHARS])
 
 
+def _strip_trailing_commas(text: str) -> str:
+    """移除 JSON 对象/数组中多余的尾随逗号(跳过字符串内容)。
+
+    例如:{ "a": 1, } → { "a": 1 }(AI 常犯的错误)
+    """
+    out: list[str] = []
+    in_string = False
+    escape = False
+    i = 0
+    n = len(text)
+    while i < n:
+        ch = text[i]
+        if in_string:
+            out.append(ch)
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+        if ch == '"':
+            in_string = True
+            out.append(ch)
+            i += 1
+            continue
+        if ch == ",":
+            # 向后跳过空白,若紧跟 } 或 ] 则为尾随逗号,跳过它
+            j = i + 1
+            while j < n and text[j] in " \t\n\r":
+                j += 1
+            if j < n and text[j] in "}]":
+                i = j
+                continue
+        out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _parse_json_lenient(raw: str) -> Any:
+    """宽容 JSON 解析:容忍尾随逗号等常见 AI 输出问题。"""
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+    cleaned = _strip_trailing_commas(raw)
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as exc:
+        raise AIError(f"AI 返回的 JSON 无法解析:{exc}") from exc
+
+
 def extract_json(text: str) -> dict:
     """从 LLM 回复中稳健地提取 JSON 对象。"""
     content = text.strip()
@@ -59,10 +112,7 @@ def extract_json(text: str) -> dict:
     if start == -1 or end == -1 or end <= start:
         raise AIError("AI 回复中未找到 JSON 数据")
     raw = content[start : end + 1]
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise AIError(f"AI 返回的 JSON 无法解析:{exc}") from exc
+    data = _parse_json_lenient(raw)
     if not isinstance(data, dict):
         raise AIError("AI 返回的数据不是 JSON 对象")
     return data

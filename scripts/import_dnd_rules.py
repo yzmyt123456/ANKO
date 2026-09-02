@@ -32,7 +32,7 @@ SPELL_END_PAGE = 312  # 玩家手册总页数
 
 _SPELL_RE = re.compile(
     r"(?m)^[ \t]*([^\n]{2,60}?)[ \t]*\n"
-    r"[ \t]*(\d+) 环([^\n]*)\n"
+    r"[ \t]*((?:\d+) 环[^\n]*|[\u4e00-\u9fff·]+ 戏法[^\n]*)[ \t]*\n"
     r"施法时间[:：]([^\n]*)\n"
     r"施法距离[:：]([^\n]*)\n"
     r"法术成分[:：]([^\n]*)\n"
@@ -59,10 +59,22 @@ def parse_spells(pages: list[str]) -> list[dict]:
         nm = _NAME_RE.match(name_line)
         name = nm.group(1).strip() if nm else name_line.strip()
         name_en = nm.group(2).strip() if nm else None
-        level = int(m.group(2))
-        school_part = m.group(3).strip()
+        # 环阶行解析:支持 "2 环 塑能" 与 "变化 戏法" 两种格式
+        level_line = m.group(2).strip()
+        if "戏法" in level_line:
+            level = 0
+            school_part = level_line.split("戏法")[0].strip()
+            school = school_part
+        else:
+            lm = re.match(r"(\d+) 环(.*)", level_line)
+            level = int(lm.group(1))
+            school_part = (lm.group(2) or "").strip()
+            school = school_part
         ritual = "仪式" in school_part
-        school = school_part.replace("（仪式）", "").replace("(仪式)", "").strip()
+        school = (
+            school.replace("（仪式）", "").replace("(仪式)", "").strip()
+            or None
+        )
         desc_start = m.end()
         desc_end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
         description = re.sub(r"\s+", " ", text[desc_start:desc_end]).strip()
@@ -73,10 +85,10 @@ def parse_spells(pages: list[str]) -> list[dict]:
                 "level": level,
                 "school": school or None,
                 "ritual": ritual,
-                "casting_time": m.group(4).strip() or None,
-                "range": m.group(5).strip() or None,
-                "components": m.group(6).strip() or None,
-                "duration": m.group(7).strip() or None,
+                "casting_time": m.group(3).strip() or None,
+                "range": m.group(4).strip() or None,
+                "components": m.group(5).strip() or None,
+                "duration": m.group(6).strip() or None,
                 "description": description,
             }
         )

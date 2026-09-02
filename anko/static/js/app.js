@@ -74,6 +74,9 @@ createApp({
         rolls: this.rollHistory.length,
       };
     },
+    dndTemplate() {
+      return this.templateById('dnd5e') || { groups: [], checks: [] };
+    },
     pageTitle() {
       if (this.view === 'storyDetail') return this.currentStory ? this.currentStory.title : '剧情详情';
       return (PAGE_META[this.view] || ['', ''])[0];

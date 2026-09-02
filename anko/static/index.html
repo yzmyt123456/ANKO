@@ -400,7 +400,7 @@
 
         <!-- 模板字段 -->
         <template v-if="charForm.template === 'dnd5e'">
-          <div v-for="g in templateById('dnd5e').groups" :key="g.key" class="tpl-group">
+          <div v-for="g in dndTemplate.groups" :key="g.key" class="tpl-group">
             <div class="tpl-group-label">{{ g.label }}</div>
             <div class="tpl-fields">
               <template v-for="f in g.fields" :key="f.key">
@@ -582,14 +582,17 @@
         </div>
 
         <!-- 其余分组字段 -->
-        <div v-for="g in templateById('dnd5e').groups" :key="g.key"
-             v-if="['proficiency', 'spells', 'features', 'equipment'].includes(g.key)" class="dnd-section">
-          <h3>{{ g.label }}</h3>
-          <div v-for="f in g.fields" :key="f.key" v-if="hasValue(charDetail.stats[f.key])" class="dnd-row">
-            <span class="dnd-row-label">{{ f.label }}</span>
-            <span class="dnd-row-val">{{ charDetail.stats[f.key] }}</span>
+        <template v-for="g in dndTemplate.groups" :key="g.key">
+          <div v-if="['proficiency', 'spells', 'features', 'equipment'].includes(g.key)" class="dnd-section">
+            <h3>{{ g.label }}</h3>
+            <template v-for="f in g.fields" :key="f.key">
+              <div v-if="hasValue(charDetail.stats[f.key])" class="dnd-row">
+                <span class="dnd-row-label">{{ f.label }}</span>
+                <span class="dnd-row-val">{{ charDetail.stats[f.key] }}</span>
+              </div>
+            </template>
           </div>
-        </div>
+        </template>
 
         <!-- 鉴定结果 -->
         <div v-if="checkResult" :class="['check-result', checkResult.judgement ? 'judge-' + checkResult.judgement.code : '']">

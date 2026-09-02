@@ -472,8 +472,18 @@ createApp({
       return (data && data.children || []).filter(c => c.kind === 'class_base');
     },
     classFeats(data) {
-      // 核心职业特性(含等级排序)
-      return (data && data.children || []).filter(c => c.kind === 'class_feature');
+      // 核心职业特性(排除创建/快速建卡引导卡,引导卡单独展示)
+      return (data && data.children || []).filter(
+        c => c.kind === 'class_feature'
+          && !(c.title.includes('创建') || c.title === '快速建卡 Quick Build' || c.title === '快速建卡')
+      );
+    },
+    classGuide(data) {
+      // 创建该职业:创建职业(起源构思)+ 快速建卡(属性/背景/装备建议)
+      return (data && data.children || []).filter(
+        c => c.kind === 'class_feature'
+          && (c.title.includes('创建') || c.title.includes('快速建卡'))
+      );
     },
     sortedClassFeats(data) {
       const lvOf = c => this.classFeatLv(c, data);

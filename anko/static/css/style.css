@@ -960,6 +960,11 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-lv-feats { color: var(--text-2); }
 .kb-lv-row .kb-subtraits { padding: 0 12px 10px; }
 
+/* 职业创建指南(AI 建档参考) */
+.kb-guide-block { border: 1px dashed var(--primary); border-radius: 12px; padding: 12px 14px; background: var(--primary-soft); }
+.kb-guide-block .kb-trait-item { background: var(--card); }
+.kb-guide-tip { font-size: 12.5px; color: var(--text-2); margin-top: 8px; line-height: 1.8; }
+
 
 .rule-stat span { font-size: 12px; color: var(--muted); }
 .rule-import-tip { margin-top: 8px; font-size: 12.5px; }

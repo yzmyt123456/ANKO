@@ -182,7 +182,10 @@ def _build_class(c: dict) -> dict:
     sections: list[dict] = []
     cur_sec: dict | None = None
     for pno, y, size, txt, x in lines:
-        if (pno, y, x) in table_cells or size <= 7.5 or "职业表" in txt[:6]:
+        # 标题级文本永不跳过;仅小字表格格按 (页,基线,x) 精确跳过
+        if (pno, y, x) in table_cells and size < 9.5:
+            continue
+        if size <= 7.5 or "职业表" in txt[:6]:
             continue
         if size >= 9.5 and len(txt) <= 60:
             if cur_sec is not None and abs(y - (cur_sec.get("ty") or 0)) <= 22:

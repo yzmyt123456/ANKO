@@ -1025,6 +1025,15 @@
             <div class="kb-story-body">{{ nice(raceParts(kbDetail.data.content).story) }}</div>
           </details>
 
+          <div v-if="classGuide(kbDetail.data).length" class="kb-race-block kb-guide-block">
+            <div class="kb-race-block-label">🎓 如何创建该职业(AI 建档参考)</div>
+            <div v-for="g in classGuide(kbDetail.data)" :key="g.id" class="kb-trait-item">
+              <div class="kb-trait-title">{{ g.title }}</div>
+              <p>{{ nice(g.content) }}</p>
+            </div>
+            <p class="kb-guide-tip">💡 创建人物卡时,可在「AI 快速建档」描述里注明本职业名,系统会参考属性建议 / 背景 / 装备自动预填。</p>
+          </div>
+
           <div v-if="classBases(kbDetail.data).length" class="kb-race-block">
             <div class="kb-race-block-label">🛡 职业基础</div>
             <div v-for="b in classBases(kbDetail.data)" :key="b.id" class="kb-race-sub">

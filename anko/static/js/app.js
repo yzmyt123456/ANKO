@@ -83,6 +83,9 @@ createApp({
       genLoading: false,
       genDraft: null,
       genError: '',
+      genText: '',
+      genPartial: '',
+      genController: null,
     };
   },
 
@@ -474,9 +477,14 @@ createApp({
       this.genHint = '';
       this.genDraft = null;
       this.genError = '';
+      this.genText = '';
+      this.genPartial = '';
     },
 
-    closeGenCharModal() { this.genCharModal.open = false; },
+    closeGenCharModal() {
+      if (this.genController) { this.genController.abort(); this.genController = null; }
+      this.genCharModal.open = false;
+    },
 
     buildStoryContext() {
       // 组装故事上下文:标题 + 简介 + 最近剧情
@@ -495,19 +503,78 @@ createApp({
     },
 
     async generateChar() {
+      // 若从断点继续,不清空已显示文本;否则清空
+      if (!this.genPartial) {
+        this.genText = '';
+      }
       this.genLoading = true;
       this.genError = '';
+      this.genDraft = null;
+      this.genController = new AbortController();
+      const prevLen = this.genText.length; // 已有文本长度(断点续传时)
       try {
-        this.genDraft = await API.post('/ai/generate-character', {
-          story_context: this.buildStoryContext(),
-          hint: this.genHint.trim(),
-          template: this.genTemplate,
+        const resp = await fetch('/api/ai/generate-character/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            story_context: this.buildStoryContext(),
+            hint: this.genHint.trim(),
+            template: this.genTemplate,
+            partial: this.genPartial || '',
+          }),
+          signal: this.genController.signal,
         });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error((err.detail && (typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail))) || ('HTTP ' + resp.status));
+        }
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const events = buf.split('\n\n');
+          buf = events.pop();
+          for (const ev of events) {
+            if (!ev.startsWith('data:')) continue;
+            let obj;
+            try { obj = JSON.parse(ev.slice(5).trim()); } catch (e) { continue; }
+            if (obj.type === 'delta') {
+              // 只追加新增的部分(断点续传时 AI 可能补全而非重写)
+              this.genText += obj.text;
+            } else if (obj.type === 'done') {
+              this.genDraft = obj.draft;
+              this.genPartial = '';
+            } else if (obj.type === 'error') {
+              this.genError = obj.message;
+            }
+          }
+          if (this.$refs.genTextBox) this.$refs.genTextBox.scrollTop = this.$refs.genTextBox.scrollHeight;
+        }
       } catch (e) {
-        this.genError = e.message;
+        if (e.name === 'AbortError') {
+          // 用户主动停止:保留当前文本作为断点
+          this.genPartial = this.genText.slice(prevLen); // 本轮新生成的
+        } else {
+          this.genError = e.message;
+        }
       } finally {
         this.genLoading = false;
+        this.genController = null;
       }
+    },
+
+    stopGenChar() {
+      if (this.genController) this.genController.abort();
+    },
+
+    resetGenChar() {
+      this.genPartial = '';
+      this.genText = '';
+      this.genDraft = null;
+      this.genError = '';
     },
 
     async saveGeneratedChar() {

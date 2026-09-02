@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from anko.ai import AIService
@@ -43,6 +45,9 @@ class GenerateCharacterRequest(BaseModel):
     )
     hint: Optional[str] = Field(None, description="对角色的一句话想法(可选)")
     template: str = Field("dnd5e", description="目标模板: default / dnd5e")
+    partial: Optional[str] = Field(
+        None, description="已生成(可能被中断)的文本,用于从断点继续"
+    )
 
 
 @router.get("/status", response_model=AIStatus)
@@ -102,6 +107,63 @@ async def test_ai(
             detail="请开启 AI 并填写 API Key(可先测试再保存)",
         )
     return await service.test_connection()
+
+
+@router.post("/generate-character/stream")
+async def generate_character_stream(
+    payload: GenerateCharacterRequest, request: Request
+) -> StreamingResponse:
+    """流式生成角色(SSE):实时推送增量文本,支持从断点继续。"""
+    service = request.app.state.ai_service
+    if not service.enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="AI 尚未配置。请到「设置」页填写 AI 服务地址、API Key 与模型。",
+        )
+
+    async def event_stream():
+        buffer = payload.partial or ""
+        try:
+            async for delta in service.generate_character_stream(
+                story_context=payload.story_context or "",
+                hint=payload.hint or "",
+                template=payload.template,
+                partial=buffer,
+            ):
+                buffer += delta
+                yield f"data: {json.dumps({'type': 'delta', 'text': delta}, ensure_ascii=False)}\n\n"
+            # 结束后解析完整文本为草稿
+            from anko.ai.service import (
+                extract_json,
+                normalize_character_draft,
+                normalize_dnd_draft,
+            )
+
+            data = extract_json(buffer)
+            draft = (
+                normalize_dnd_draft(data)
+                if payload.template == "dnd5e"
+                else normalize_character_draft(data)
+            )
+            if not draft.get("name"):
+                raise ValueError("AI 未能生成角色名,请重试")
+            yield (
+                f"data: {json.dumps({'type': 'done', 'draft': draft}, ensure_ascii=False)}\n\n"
+            )
+        except (ValueError, AIError) as exc:
+            yield (
+                f"data: {json.dumps({'type': 'error', 'message': str(exc)}, ensure_ascii=False)}\n\n"
+            )
+        except Exception as exc:  # noqa: BLE001
+            yield (
+                f"data: {json.dumps({'type': 'error', 'message': f'生成失败:{exc}'}, ensure_ascii=False)}\n\n"
+            )
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/generate-character", response_model=CharacterDraft)

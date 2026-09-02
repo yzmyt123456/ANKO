@@ -139,3 +139,55 @@ class TestGenerateAPI:
         )
         assert draft["stats"]["charisma"] == 20
         assert draft["stats"]["wisdom"] == 9
+
+
+class TestGenerateStreamAPI:
+    @pytest.fixture
+    def client(self) -> TestClient:
+        settings = Settings(
+            database=DatabaseSettings(url="sqlite:///:memory:", echo=False),
+            plugins=PluginSettings(directory="__no_plugins__"),
+            ai=AISettings(enabled=True, api_key="sk-test"),
+        )
+        return TestClient(create_app(settings))
+
+    async def test_stream_ok(self, client: TestClient, monkeypatch) -> None:
+        async def fake_chat_stream(self, messages):
+            yield '{"name": "'
+            yield "雷恩"
+            yield '", "stats": {"strength": 18, "charisma": 14}}'
+
+        monkeypatch.setattr(
+            "anko.ai.service.AIClient.chat_stream", fake_chat_stream
+        )
+        with client.stream(
+            "POST",
+            "/api/ai/generate-character/stream",
+            json={"story_context": "剑湾", "template": "dnd5e"},
+        ) as resp:
+            assert resp.status_code == 200
+            body = "".join(resp.iter_text())
+
+        assert '"type": "delta"' in body
+        assert '"type": "done"' in body
+        assert "雷恩" in body
+        assert '"name": "雷恩"' in body
+
+    async def test_stream_error(self, client: TestClient, monkeypatch) -> None:
+        async def fake_chat_stream(self, messages):
+            yield ""  # 使函数成为 async generator
+            raise ValueError("boom")
+
+        monkeypatch.setattr(
+            "anko.ai.service.AIClient.chat_stream", fake_chat_stream
+        )
+        with client.stream(
+            "POST",
+            "/api/ai/generate-character/stream",
+            json={"template": "dnd5e"},
+        ) as resp:
+            assert resp.status_code == 200
+            body = "".join(resp.iter_text())
+        assert '"type": "error"' in body
+        assert "boom" in body
+

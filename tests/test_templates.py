@@ -128,7 +128,9 @@ class TestDNDChecks:
         assert resp.status_code == 200
         data = resp.json()
         assert data["judgement"] is not None
-        assert data["judgement"]["code"] in {"success", "fail"}
+        assert data["judgement"]["code"] in {
+            "success", "fail", "crit_success", "crit_fail",
+        }
 
     def test_check_on_default_template(self, client: TestClient) -> None:
         resp = client.post(

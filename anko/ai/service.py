@@ -246,14 +246,26 @@ _GENERATE_PROMPT_DEFAULT = """你是一位资深的安科导游与 AI 创作助�
 
 
 def build_generate_prompt(
-    story_context: str, hint: str, template: str
+    story_context: str,
+    hint: str,
+    template: str,
+    partial: str = "",
 ) -> str:
     story = (story_context or "").strip()[:3000] or "无特别设定,由你自由发挥一个奇幻世界。"
     hint = (hint or "").strip()[:500] or "无特别要求,自由发挥。"
     prompt = (
         _GENERATE_PROMPT_DND if template == "dnd5e" else _GENERATE_PROMPT_DEFAULT
     )
-    return prompt.replace("{story}", story).replace("{hint}", hint)
+    prompt = prompt.replace("{story}", story).replace("{hint}", hint)
+    if partial.strip():
+        prompt += (
+            "\n\n========================\n"
+            "以下是一段已经生成的内容(可能不完整,可能在被用户中断处截断)。\n"
+            "请从中断处继续,不要重复开头,把最终结果补全为完整可解析的 JSON"
+            "(保持原有字段,不要省略)。已生成内容:\n"
+            f"{partial.strip()[:4000]}"
+        )
+    return prompt
 
 
 class AIService:
@@ -357,3 +369,21 @@ class AIService:
         if not draft["name"]:
             raise ValueError("AI 未能生成角色名,请重试")
         return draft
+
+    async def generate_character_stream(
+        self,
+        story_context: str = "",
+        hint: str = "",
+        template: str = "dnd5e",
+        partial: str = "",
+    ):
+        """流式生成角色:逐块产出增量文本(供 SSE 推送)。
+
+        支持 partial:从已生成(可能被中断)的文本处继续补全。
+        """
+        client = AIClient(self._current())
+        prompt = build_generate_prompt(story_context, hint, template, partial)
+        async for delta in client.chat_stream(
+            [{"role": "user", "content": prompt}]
+        ):
+            yield delta

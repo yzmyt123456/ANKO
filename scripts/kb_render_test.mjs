@@ -58,6 +58,11 @@ if (entries.length && kbGroups.length) {
   console.log('分组1标题:', doc.querySelector('.kb-group-head').textContent.slice(0, 30));
   console.log('首张卡片:', doc.querySelector('.kb-entry').textContent.slice(0, 40));
 }
+const kbFilters = doc.querySelectorAll('.kb-filter-label');
+console.log('筛选行数:', kbFilters.length);
+const schoolTabs = [...doc.querySelectorAll('.kb-filters .small-tab')]
+  .map(el => el.textContent.trim());
+console.log('学派筛选按钮:', schoolTabs.join(' | ') || '(空)');
 const kbEmpty = doc.querySelector('.kb .inline-empty, .view .inline-empty');
 console.log('空提示:', kbEmpty ? kbEmpty.textContent : '无');
 // 输出知识库区域片段

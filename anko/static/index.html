@@ -356,7 +356,7 @@
             <div class="kb-filters">
               <span class="kb-filter-label">学派</span>
               <button :class="['kb-tab small-tab', {on: kbSchool === ''}]" @click="kbSchool = ''">全部</button>
-              <button v-for="sc in spellSchoolList" :key="sc" :class="['kb-tab small-tab', {on: kbSchool === sc}]" @click="kbSchool = sc">
+              <button v-for="sc in spellSchoolList()" :key="sc" :class="['kb-tab small-tab', {on: kbSchool === sc}]" @click="kbSchool = sc">
                 {{ sc }}
               </button>
             </div>

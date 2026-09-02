@@ -1,12 +1,18 @@
-"""查看成分格式样例。"""
+"""用 TestClient 验证 /api/rules/spells 返回的 school 字段。"""
 
-import sqlite3
+import sys
 
-conn = sqlite3.connect("data/anko.db")
-rows = conn.execute(
-    "select name, components, description from rule_spells "
-    "where components is not null limit 10"
-).fetchall()
-for r in rows:
-    print(r[0], "|", r[1], "| 换行:", r[2].count("\n"))
-conn.close()
+sys.path.insert(0, ".")
+from fastapi.testclient import TestClient
+
+from anko.app import create_app
+
+client = TestClient(create_app())
+r = client.get("/api/rules/spells?limit=500")
+print("status:", r.status_code)
+data = r.json()
+print("count:", len(data))
+schools = sorted({d["school"] for d in data if d.get("school")})
+print("schools:", schools)
+null_school = [d["name"] for d in data if not d.get("school")]
+print("school 为空的条数:", len(null_school), null_school[:5])

@@ -12,7 +12,16 @@ from typing import Any, Optional
 
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from starlette.staticfiles import StaticFiles as BaseStaticFiles
+
+
+class NoCacheStaticFiles(BaseStaticFiles):
+    """静态资源不缓存,每次请求都重新验证,避免浏览器缓存旧样式。"""
+
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return response
 
 from anko.ai import AIService
 from anko.api.routers import api_router
@@ -71,13 +80,15 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
 
     # ---- 前端静态页面 ----
     app.mount(
-        "/static", StaticFiles(directory=STATIC_DIR), name="static"
+        "/static", NoCacheStaticFiles(directory=STATIC_DIR), name="static"
     )
 
     # ---- 地图素材库静态目录 ----
     maps_dir = Path("data/maps")
     maps_dir.mkdir(parents=True, exist_ok=True)
-    app.mount("/maps", StaticFiles(directory=maps_dir), name="maps")
+    app.mount(
+        "/maps", NoCacheStaticFiles(directory=maps_dir), name="maps"
+    )
 
     # ---- 插件 ----
     _load_plugins(app, settings, dice_engine)

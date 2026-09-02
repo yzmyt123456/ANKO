@@ -1037,6 +1037,7 @@
             <div class="kb-lv-panel">
               <div class="kb-lv-panel-head">{{ classViewName(kbDetail.data) }} · Lv {{ kbClsLv }} 获得</div>
               <div class="kb-lv-feat-chips">
+                <span v-if="classRowProf(kbClsLv, kbDetail.data)" class="kb-lv-feat-chip kb-prof">熟练加值 {{ classRowProf(kbClsLv, kbDetail.data) }}</span>
                 <span v-for="(n, i) in classViewFeats(kbDetail.data, kbClsView, kbClsLv).names" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
               </div>
               <div v-if="classViewFeats(kbDetail.data, kbClsView, kbClsLv).cards.length" class="kb-subtraits">

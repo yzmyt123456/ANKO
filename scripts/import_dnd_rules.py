@@ -103,6 +103,7 @@ def ph_class_hierarchy(
 _GRADE_RE = re.compile(r"^(\d+)(?:st|nd|rd|th)$")
 _LV_TEXT_RE = re.compile(r"第\s*(\d{1,2})\s*级")
 _D100_LINE_RE = re.compile(r"^\d{2}~\d{2}")
+_PLUS_RE = re.compile(r"^\+\d+$")
 
 
 def _fix_subclass_tables(sub: dict) -> None:
@@ -158,13 +159,23 @@ def _build_class(c: dict) -> dict:
             continue
         by_page.setdefault(pno, []).append([y, txt, x])
     table_cells: set = set()
-    level_rows: list[tuple[int, str]] = []
+    # 表头"职业特性"列 x(用于行内定位特性格)
+    header_x: float | None = None
+    for _pno, _items in by_page.items():
+        for _y, txt, x in _items:
+            if txt.strip() == "职业特性":
+                header_x = x
+                break
+        if header_x is not None:
+            break
+    level_rows: list[dict] = []
     for pno, items in by_page.items():
         for y, txt, x in items:
             m = _GRADE_RE.match(txt.strip())
             if not m:
                 continue
             lv = int(m.group(1))
+            # 特性格:取同行与"职业特性"列最接近的中文格(无表头时取最左中文)
             best = None
             for y2, t2, x2 in items:
                 if not re.search(r"[\u4e00-\u9fff]", t2) or _GRADE_RE.match(t2.strip()):
@@ -173,28 +184,40 @@ def _build_class(c: dict) -> dict:
                     continue
                 if abs(y2 - y) > 8:
                     continue
-                if best is None or (abs(y2 - y), x2) < best[:2]:
-                    best = (abs(y2 - y), x2, t2)
+                dx = abs(x2 - header_x) if header_x is not None else x2
+                if best is None or (abs(y2 - y), dx) < best[:2]:
+                    best = (abs(y2 - y), dx, x2, t2)
             if best is None:
                 continue
-            level_rows.append((lv, best[2]))
+            # 熟练加值:同行 x 最小的 +N 格(等级格右侧第一数值列)
+            prof = None
+            for y2, t2, x2 in items:
+                if not _PLUS_RE.match(t2.strip()):
+                    continue
+                if x2 <= x or x2 - x > 300 or abs(y2 - y) > 8:
+                    continue
+                if prof is None or x2 < prof[0]:
+                    prof = (x2, t2.strip())
+            level_rows.append(
+                {"lv": lv, "prof": prof[1] if prof else "", "feats": best[3]}
+            )
             # 标记该表行全部格(等级列到特性列之间小字)供 sections 跳过
             for y2, t2, x2 in items:
                 if abs(y2 - y) <= 2 and x - 6 <= x2 <= x + 300:
                     table_cells.add((pno, round(y2), x2))
-    level_rows.sort(key=lambda x: x[0])
+    level_rows.sort(key=lambda r: r["lv"])
     # 等级去重(某些职业页含多张同等级小表,保留首次/主表)
     _seen: set = set()
     level_rows = [
-        r for r in level_rows if not (r[0] in _seen or _seen.add(r[0]))  # type: ignore[func-returns-value]
+        r for r in level_rows if not (r["lv"] in _seen or _seen.add(r["lv"]))  # type: ignore[func-returns-value]
     ]
     # 特性→等级映射(表权威)
     feats_map: dict[str, int] = {}
-    for lv, fs in level_rows:
-        for f in re.split(r"[，,、/]", fs):
+    for r in level_rows:
+        for f in re.split(r"[，,、/]", r["feats"]):
             f = f.strip()
             if f and f not in feats_map:
-                feats_map[f] = lv
+                feats_map[f] = r["lv"]
 
     # ---- 标题小节流 ----
     sections: list[dict] = []
@@ -246,9 +269,7 @@ def _build_class(c: dict) -> dict:
         "children": [],
     }
     # 等级表卡
-    rows_json = json.dumps(
-        [{"lv": lv, "feats": fs} for lv, fs in level_rows], ensure_ascii=False
-    )
+    rows_json = json.dumps(level_rows, ensure_ascii=False)
     node["children"].append(
         {"title": "职业等级表", "page": node["page"], "kind": "class_levels",
          "content": rows_json, "children": []}

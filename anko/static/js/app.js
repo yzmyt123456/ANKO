@@ -625,7 +625,12 @@ createApp({
     },
     classRowFeatsTitle(lv, data) {
       const r = this.classLevelRows(data).find(x => x.lv === lv);
-      return r ? `Lv${lv}：${r.feats}` : `Lv${lv}`;
+      if (!r) return `Lv${lv}`;
+      return `Lv${lv} 熟练${r.prof || ''}：${r.feats}`;
+    },
+    classRowProf(lv, data) {
+      const r = this.classLevelRows(data).find(x => x.lv === lv);
+      return r ? (r.prof || '') : '';
     },
     classLevelRowFeats(lv, data) {
       const row = this.classLevelRows(data).find(r => r.lv === lv);

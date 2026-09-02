@@ -1016,6 +1016,7 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-choice-tab:hover { border-color: var(--primary); color: var(--primary-dark); }
 .kb-choice-tab.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 .kb-choice-body { font-size: 13.5px; color: var(--text-2); line-height: 2; margin: 2px 0; white-space: pre-line; }
+.kb-prof { background: #fff7e6; border-color: #fde68a; color: #b45309; }
 
 /* 超长内容(狂野魔法浪涌 d100 表等)折叠 */
 .kb-long-preview { font-size: 13.5px; color: var(--text-2); line-height: 2; margin: 4px 0; }

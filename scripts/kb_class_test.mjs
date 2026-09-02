@@ -36,14 +36,22 @@ const modal = doc.querySelector('.kb-modal');
 console.log('弹窗打开:', !!modal);
 if (modal) {
   console.log('标题:', modal.querySelector('h2') ? modal.querySelector('h2').textContent.trim() : '无');
-  const mainRows = (modal.querySelectorAll('.kb-lv-table')[0] || { querySelectorAll: () => [] })
-    .querySelectorAll('tbody tr').length;
-  const subTables = modal.querySelectorAll('.kb-subclass-card table').length;
-  console.log('主能力表行数:', mainRows);
-  console.log('子职业表数:', subTables);
+  const bandBtns = modal.querySelectorAll('.kb-lv-btn').length;
+  const panelHead = modal.querySelector('.kb-lv-panel-head');
+  console.log('等级按钮数:', bandBtns);
+  console.log('面板默认 Lv1:', panelHead ? panelHead.textContent.trim() : '无');
+  // 点击 Lv5 按钮
+  const lv5 = [...modal.querySelectorAll('.kb-lv-btn')].find(b => b.textContent.trim() === '5');
+  lv5.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await sleep(300);
+  const panel5 = modal.querySelector('.kb-lv-panel-head').textContent.trim();
+  console.log('点击 Lv5 后面板:', panel5);
+  console.log('面板含额外攻击:', modal.querySelector('.kb-lv-panel').textContent.includes('额外攻击'));
   console.log('含职业设定折叠:', !!modal.querySelector('.kb-story'));
-  console.log('含狂战士/图腾:', modal.textContent.includes('狂战士道途'), modal.textContent.includes('图腾武者道途'));
-  console.log('含狂暴:', modal.textContent.includes('狂暴 Rage'));
+  console.log('子职卡数:', modal.querySelectorAll('.kb-subclass-card').length);
+  const subFeats = modal.querySelectorAll('.kb-sub-feat summary').length;
+  console.log('子职能力条目:', subFeats);
+  console.log('含狂暴卡:', modal.textContent.includes('狂暴 Rage'));
 }
 console.log('errors:', errors.length ? errors : '无');
 process.exit(0);

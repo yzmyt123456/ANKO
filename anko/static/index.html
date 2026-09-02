@@ -1003,31 +1003,35 @@
           </div>
 
           <div v-if="classLevelRows(kbDetail.data).length" class="kb-race-block">
-            <div class="kb-race-block-label">⚡ 职业等级能力表</div>
-            <table class="kb-lv-table">
-              <thead>
-                <tr><th>等级</th><th>获得能力</th><th></th></tr>
-              </thead>
-              <tbody>
-                <tr v-for="r in classLevelRows(kbDetail.data)" :key="r.lv">
-                  <td class="kb-lv-badge-td">Lv{{ r.lv }}</td>
-                  <td class="kb-lv-feats">{{ r.feats }}</td>
-                  <td class="kb-lv-detail">
-                    <details>
-                      <summary>详情</summary>
-                      <div v-if="classLevelFeats(r.lv, kbDetail.data).length">
-                        <div v-for="f in classLevelFeats(r.lv, kbDetail.data)" :key="f.id" class="kb-trait-item">
-                          <div class="kb-trait-title">{{ f.title }}</div>
-                          <p>{{ nice(f.content) }}</p>
-                        </div>
-                      </div>
-                      <p v-else class="kb-lv-note">见下方对应子职业/特性卡</p>
-                    </details>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p class="kb-lv-note">Lv3 起选择子职业;6/10/14(部分职业另定)级获得的"道途特性/领域特性"等占位项,实际由所选子职业能力提供(见下方子职业表)。</p>
+            <div class="kb-race-block-label">⚡ 升级能力(点击等级查看该级获得)</div>
+            <div class="kb-lv-band">
+              <button v-for="r in classLevelRows(kbDetail.data)" :key="r.lv"
+                      :class="['kb-lv-btn', { on: kbClsLv === r.lv }]"
+                      :title="'Lv' + r.lv + '：' + r.feats" @click="kbClsLv = r.lv">
+                {{ r.lv }}
+              </button>
+            </div>
+            <div v-if="classLevelRows(kbDetail.data).length" class="kb-lv-panel">
+              <div class="kb-lv-panel-head">
+                Lv {{ kbClsLv }} 获得
+                <span v-if="classLevelFeats(kbClsLv, kbDetail.data).length">({{ classLevelFeats(kbClsLv, kbDetail.data).length }})</span>
+              </div>
+              <div class="kb-lv-feat-chips">
+                <span v-for="(n, i) in classLevelRowFeats(kbClsLv, kbDetail.data)" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
+              </div>
+              <div v-if="classLevelFeats(kbClsLv, kbDetail.data).length" class="kb-subtraits">
+                <div v-for="f in classLevelFeats(kbClsLv, kbDetail.data)" :key="f.id" class="kb-trait-item">
+                  <div class="kb-trait-title">{{ f.title }}</div>
+                  <p>{{ nice(f.content) }}</p>
+                </div>
+              </div>
+              <p v-if="!classLevelFeats(kbClsLv, kbDetail.data).length" class="kb-lv-note">
+                {{ classLevelRowFeats(kbClsLv, kbDetail.data).join('、') }}
+              </p>
+              <p class="kb-lv-note" v-if="classLevelRowFeats(kbClsLv, kbDetail.data).some(n => /选择|特性$/.test(n))">
+                💡 "选择子职业 / …特性" 项实际由所选子职业提供,见下方 🎯 子职业。
+              </p>
+            </div>
           </div>
 
           <details v-if="raceParts(kbDetail.data.content).story" class="kb-story">
@@ -1068,26 +1072,21 @@
           </div>
 
           <div v-if="classSubs(kbDetail.data).length" class="kb-race-block">
-            <div class="kb-race-block-label">🌳 子职业能力表(3 级起选择,逐级能力替换原职业占位项)</div>
+            <div class="kb-race-block-label">🎯 子职业(3 级起选择;每个子职按等级获得能力)</div>
             <div v-for="s in classSubs(kbDetail.data)" :key="s.id" class="kb-subclass-card">
-              <div class="kb-subclass-name">🎯 {{ s.title }}</div>
-              <p v-if="s.content" class="kb-subclass-intro">{{ nice(s.content) }}</p>
-              <table class="kb-lv-table">
-                <tbody>
-                  <tr v-for="c in s.children" :key="c.id">
-                    <td class="kb-lv-badge-td">
-                      Lv{{ classFeatLv(c, { children: s.children }) || '?' }}
-                    </td>
-                    <td class="kb-lv-feats">{{ c.title }}</td>
-                    <td class="kb-lv-detail">
-                      <details>
-                        <summary>详情</summary>
-                        <p>{{ nice(c.content) }}</p>
-                      </details>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <details class="kb-subclass-main" :open="classSubs(kbDetail.data).length === 1">
+                <summary class="kb-subclass-name">{{ s.title }}</summary>
+                <p v-if="s.content" class="kb-subclass-intro">{{ nice(s.content) }}</p>
+                <div class="kb-race-sub">
+                  <details v-for="c in s.children" :key="c.id" class="kb-sub-feat">
+                    <summary>
+                      <span class="kb-lv-feat-chip">{{ classFeatLv(c, { children: s.children }) ? 'Lv' + classFeatLv(c, { children: s.children }) : '基础' }}</span>
+                      {{ c.title }}
+                    </summary>
+                    <p>{{ nice(c.content) }}</p>
+                  </details>
+                </div>
+              </details>
             </div>
           </div>
         </template>

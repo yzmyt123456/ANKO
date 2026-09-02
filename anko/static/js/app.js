@@ -105,6 +105,7 @@ createApp({
       kbRaces: [],
       kbRaceResults: [],
       kbClasses: [],
+      kbClsLv: 1,
       kbMaps: [],
       kbBooks: [],
       kbBook: '',
@@ -449,6 +450,7 @@ createApp({
     },
 
     async openKbClass(k) {
+      this.kbClsLv = 1;
       try {
         const data = await API.get(`/rules/knowledge/${k.id}`);
         this.kbDetail = { type: 'class', data };
@@ -512,6 +514,11 @@ createApp({
       }
       const m = String(feat.content || '').match(/第\s*(\d{1,2})\s*级/);
       return m ? +m[1] : null;
+    },
+    classLevelRowFeats(lv, data) {
+      const row = this.classLevelRows(data).find(r => r.lv === lv);
+      if (!row) return [];
+      return String(row.feats || '').split(/[，,、/]/).map(s => s.trim()).filter(Boolean);
     },
     classLevelFeats(lv, data) {
       // 某等级获得的特性卡(表名匹配)

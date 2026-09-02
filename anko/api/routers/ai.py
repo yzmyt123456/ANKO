@@ -7,7 +7,9 @@ from typing import Any, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from anko.ai import AIService
 from anko.ai.client import AIError
+from anko.config import AISettings
 from anko.schemas.ai import AIParseRequest, AIStatus, CharacterDraft
 
 router = APIRouter(prefix="/ai", tags=["AI 助手"])
@@ -19,6 +21,16 @@ class AIConfigUpdate(BaseModel):
     enabled: Optional[bool] = None
     base_url: Optional[str] = None
     api_key: Optional[str] = None  # 传入新 key 则更新;传掩码/空串保留
+    model: Optional[str] = None
+    timeout: Optional[float] = None
+
+
+class AITestRequest(BaseModel):
+    """测试连接请求:可携带表单当前填写(未保存)的配置。"""
+
+    enabled: Optional[bool] = None
+    base_url: Optional[str] = None
+    api_key: Optional[str] = None
     model: Optional[str] = None
     timeout: Optional[float] = None
 
@@ -50,13 +62,34 @@ def update_ai_config(
 
 
 @router.post("/test")
-async def test_ai(request: Request) -> dict:
-    """测试 AI 连接(使用当前配置发送一条消息)。"""
+async def test_ai(
+    request: Request, payload: Optional[AITestRequest] = None
+) -> dict:
+    """测试 AI 连接。
+
+    支持携带表单当前填写的配置(未保存),用指定配置直接测试;
+    不携带时使用已保存的配置。
+    """
     service = request.app.state.ai_service
+
+    if payload is not None:
+        fields = payload.model_dump(exclude_none=True)
+        if fields:
+            # 以"已保存配置"为基底,叠加表单当前值
+            base = service._current().model_dump()  # noqa: SLF001
+            base.update(fields)
+            tmp = AIService(AISettings(**base))
+            if not tmp.enabled:
+                raise HTTPException(
+                    status_code=400,
+                    detail="请开启 AI 并填写 API Key 后再测试",
+                )
+            return await tmp.test_connection()
+
     if not service.enabled:
         raise HTTPException(
             status_code=400,
-            detail="请先开启 AI 并填写 API Key 后再测试",
+            detail="请开启 AI 并填写 API Key(可先测试再保存)",
         )
     return await service.test_connection()
 

@@ -355,7 +355,15 @@ createApp({
       this.aiTestLoading = true;
       this.aiTestResult = null;
       try {
-        this.aiTestResult = await API.post('/ai/test');
+        // 携带表单当前填写(未保存)的配置直接测试
+        const body = {
+          enabled: !!this.aiConfig.enabled,
+          base_url: (this.aiConfig.base_url || '').trim(),
+          model: (this.aiConfig.model || '').trim(),
+          timeout: Number(this.aiConfig.timeout) || 30,
+        };
+        if (this.aiApiKey.trim()) body.api_key = this.aiApiKey.trim();
+        this.aiTestResult = await API.post('/ai/test', body);
       } catch (e) {
         this.aiTestResult = { ok: false, error: e.message };
       } finally {

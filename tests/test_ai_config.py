@@ -106,3 +106,30 @@ class TestAIConfigAPI:
         assert resp.status_code == 200
         assert resp.json()["ok"] is True
         assert resp.json()["reply"] == "OK"
+
+    async def test_test_with_unsaved_config(
+        self, client: TestClient, monkeypatch
+    ) -> None:
+        """即使未保存,携带表单配置也能直接测试。"""
+        calls: list[dict] = []
+
+        async def fake_chat(self, messages):
+            calls.append(messages)
+            return "OK"
+
+        monkeypatch.setattr("anko.ai.service.AIClient.chat", fake_chat)
+        resp = client.post(
+            "/api/ai/test",
+            json={
+                "enabled": True,
+                "base_url": "https://api.unsaved.com/v1",
+                "api_key": "sk-unsaved",
+                "model": "tmp-model",
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+        # 配置未被持久化
+        data = client.get("/api/ai/config").json()
+        assert data["has_api_key"] is False
+        assert data["base_url"] != "https://api.unsaved.com/v1"

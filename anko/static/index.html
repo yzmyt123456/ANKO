@@ -230,6 +230,9 @@
             <!-- 追加表单(sticky) -->
             <aside class="card compose-card">
               <h2 class="compose-title">✍️ 追加剧情</h2>
+              <button type="button" class="btn ai-btn compose-gen-btn" @click="openGenCharModal()">
+                🤖 生成新角色(骰点创建法)
+              </button>
               <form @submit.prevent="addEntry">
                 <label>章节
                   <input v-model="entryForm.chapter" placeholder="如:第一章 · 麦田" />
@@ -686,6 +689,64 @@
       <div class="modal-foot">
         <button class="btn" @click="charDetail = null">关闭</button>
         <button class="btn primary" @click="openCharModal(charDetail); charDetail=null">✏️ 编辑这张卡</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== AI 生成角色弹窗 ==================== -->
+  <div v-if="genCharModal.open" class="modal-mask" @click.self="closeGenCharModal()">
+    <div class="modal gen-char-modal">
+      <div class="modal-head">
+        <h2>🤖 AI 生成角色</h2>
+        <button class="icon-btn" @click="closeGenCharModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="gen-tip">
+          🎲 采用经典安科「骰点创建法」:理解当前故事 → 掷骰决定种族 / 阵营 / 出身 / 职业
+          → 属性骰点(1d16+2 两次取高)→ 结合剧情撰写背景。
+        </div>
+        <label>角色想法(可选)
+          <textarea v-model="genHint" rows="2" placeholder="如:想要一个神秘又带点悲剧色彩的角色"></textarea>
+        </label>
+        <div class="label-text">人物卡模板</div>
+        <div class="seg">
+          <button v-for="t in templates" :key="t.id" type="button"
+                  :class="['seg-btn', {on: genTemplate === t.id}]"
+                  @click="genTemplate = t.id">
+            {{ t.name }}
+          </button>
+        </div>
+        <button class="btn primary full" :disabled="genLoading" @click="generateChar">
+          {{ genLoading ? '⏳ 骰点中…' : '🎲 开始生成' }}
+        </button>
+        <div v-if="genError" class="ai-error">{{ genError }}</div>
+
+        <div v-if="genDraft" class="gen-result">
+          <div class="gen-name">{{ genDraft.name }}
+            <span v-if="genDraft.title" class="char-title">· {{ genDraft.title }}</span>
+          </div>
+          <div v-if="genDraft.template === 'dnd5e'" class="gen-tags">
+            <span v-if="hasValue(genDraft.stats.race)" class="tag">{{ genDraft.stats.race }}</span>
+            <span v-if="hasValue(genDraft.stats.alignment)" class="tag">{{ genDraft.stats.alignment }}</span>
+            <span v-if="hasValue(genDraft.stats.klass)" class="tag">{{ genDraft.stats.klass }}</span>
+          </div>
+          <div v-if="genDraft.template === 'dnd5e'" class="gen-stat-grid">
+            <div v-for="k in dndStatKeys" :key="k" class="gen-stat">
+              <span>{{ dndStatLabel(k) }}</span><b>{{ genDraft.stats[k] || 0 }}</b>
+            </div>
+          </div>
+          <div v-else v-if="Object.keys(genDraft.attributes).length" class="gen-attrs">
+            {{ attrsPreview(genDraft.attributes) }}
+          </div>
+          <div v-if="genDraft.bio" class="gen-bio">{{ genDraft.bio }}</div>
+          <div v-if="genDraft.tags.length" class="gen-tags">
+            <span v-for="t in genDraft.tags" :key="t" class="tag">{{ t }}</span>
+          </div>
+        </div>
+      </div>
+      <div v-if="genDraft" class="modal-foot">
+        <button class="btn" @click="generateChar">🔄 重新生成</button>
+        <button class="btn primary" @click="saveGeneratedChar">💾 保存并登场</button>
       </div>
     </div>
   </div>

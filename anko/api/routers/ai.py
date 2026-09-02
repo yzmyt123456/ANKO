@@ -35,6 +35,16 @@ class AITestRequest(BaseModel):
     timeout: Optional[float] = None
 
 
+class GenerateCharacterRequest(BaseModel):
+    """AI 生成角色请求。"""
+
+    story_context: Optional[str] = Field(
+        None, description="故事世界观/已写剧情摘要"
+    )
+    hint: Optional[str] = Field(None, description="对角色的一句话想法(可选)")
+    template: str = Field("dnd5e", description="目标模板: default / dnd5e")
+
+
 @router.get("/status", response_model=AIStatus)
 def ai_status(request: Request) -> AIStatus:
     """查询 AI 服务是否已配置。"""
@@ -92,6 +102,32 @@ async def test_ai(
             detail="请开启 AI 并填写 API Key(可先测试再保存)",
         )
     return await service.test_connection()
+
+
+@router.post("/generate-character", response_model=CharacterDraft)
+async def generate_character(
+    payload: GenerateCharacterRequest, request: Request
+) -> CharacterDraft:
+    """用"骰点创建法"生成一位角色(结合当前故事设定)。"""
+    service = request.app.state.ai_service
+    if not service.enabled:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "AI 尚未配置。请到「设置」页填写 AI 服务地址、API Key 与模型。"
+            ),
+        )
+    try:
+        draft = await service.generate_character(
+            story_context=payload.story_context or "",
+            hint=payload.hint or "",
+            template=payload.template,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except AIError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return CharacterDraft(**draft)
 
 
 @router.post("/parse-character", response_model=CharacterDraft)

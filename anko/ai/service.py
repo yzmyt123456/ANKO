@@ -186,6 +186,76 @@ def normalize_dnd_draft(data: dict) -> dict:
     return draft
 
 
+# ------------------------------------------------------------
+# 骰点创建法生成角色(借鉴经典安科人物创建流程)
+# ------------------------------------------------------------
+_GENERATE_PROMPT_DND = """你是一位资深的安科导游与 DND 5e 规则助手。请用经典的"骰点创建法"为用户生成一位登场角色。
+
+骰点创建法流程(请严格遵循):
+1. 先理解"故事设定",把角色自然地融入其中。
+2. 依次"掷骰决定"(在脑海中模拟骰子,给出合理结果):
+   - 种族(人类/精灵/矮人/半精灵/提夫林等)
+   - 阵营(DND 九宫格:守序/中立/混乱 × 善良/中立/邪恶)
+   - 出身背景(贵族/士兵/流浪者/学者/工匠/艺人等)
+   - 职业(战士/法师/游荡者/术士/牧师/游侠/圣武士/德鲁伊等)
+3. 属性骰点:采用安科骰点法 —— 六项属性(力量/敏捷/体质/智力/感知/魅力)各"掷两次 1d16+2 取较高值"(普通人约 10),再按种族/背景做少量调整,最终 8~20。
+4. 结合"角色提示"与故事设定,撰写角色的性格与背景(150 字内),个性鲜明、有安科风味。
+5. 生成 3~6 个标签。
+
+只输出一个 JSON 对象,不要任何其他文字:
+{
+  "name": "角色名",
+  "title": "称号或职业",
+  "bio": "背景故事概括",
+  "stats": {
+    "alignment": "阵营", "race": "种族", "klass": "职业", "level": "1级",
+    "hp": "生命值(如 12)", "strength": 12, "dexterity": 14, "constitution": 13,
+    "intelligence": 10, "wisdom": 9, "charisma": 16,
+    "ac": "防御等级(如 15)", "spell_dc": "法术DC", "proficiency_bonus": 2,
+    "primary_stat": "主要属性", "save_proficiencies": "熟练豁免",
+    "skill_proficiencies": "熟练技能", "weapon_proficiencies": "武器熟练",
+    "equipment": "起始装备", "languages": "语言", "tool_proficiencies": "工具熟练",
+    "class_features": "职业特性", "feats": "专长", "faith": "信仰"
+  },
+  "tags": ["标签1", "标签2"]
+}
+
+故事设定:
+""" + "{story}" + """
+
+角色提示:
+""" + "{hint}"
+
+
+_GENERATE_PROMPT_DEFAULT = """你是一位资深的安科导游与 AI 创作助手。请用"骰点创建法"为用户生成一位登场角色:先理解故事设定,再掷骰决定身份/性格/经历,结合角色提示撰写人物背景(150字内),并给出 3~6 个标签和若干自由属性(如智慧/武力/魅力等)。
+
+只输出一个 JSON 对象,不要任何其他文字:
+{
+  "name": "角色名",
+  "title": "称号",
+  "bio": "背景故事概括",
+  "attributes": {"属性名": 数值或描述, ...},
+  "tags": ["标签1", "标签2"]
+}
+
+故事设定:
+""" + "{story}" + """
+
+角色提示:
+""" + "{hint}"
+
+
+def build_generate_prompt(
+    story_context: str, hint: str, template: str
+) -> str:
+    story = (story_context or "").strip()[:3000] or "无特别设定,由你自由发挥一个奇幻世界。"
+    hint = (hint or "").strip()[:500] or "无特别要求,自由发挥。"
+    prompt = (
+        _GENERATE_PROMPT_DND if template == "dnd5e" else _GENERATE_PROMPT_DEFAULT
+    )
+    return prompt.replace("{story}", story).replace("{hint}", hint)
+
+
 class AIService:
     """AI 能力门面:路由到具体功能。
 
@@ -259,4 +329,31 @@ class AIService:
 
         if not draft["name"]:
             raise ValueError("AI 未能从这段文本中识别出角色名,可尝试补充人物名字后重试")
+        return draft
+
+    async def generate_character(
+        self,
+        story_context: str = "",
+        hint: str = "",
+        template: str = "dnd5e",
+    ) -> dict:
+        """用"骰点创建法"生成一位角色(借鉴经典安科人物创建流程)。
+
+        story_context:故事世界观/已写剧情摘要(供 AI 参考融合)
+        hint:         用户对角色的一句话想法(可选)
+        """
+        client = AIClient(self._current())
+        content = await client.chat(
+            [{"role": "user", "content": build_generate_prompt(
+                story_context, hint, template)}]
+        )
+        data = extract_json(content)
+
+        if template == "dnd5e":
+            draft = normalize_dnd_draft(data)
+        else:
+            draft = normalize_character_draft(data)
+
+        if not draft["name"]:
+            raise ValueError("AI 未能生成角色名,请重试")
         return draft

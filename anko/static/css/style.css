@@ -723,6 +723,36 @@ input[type="checkbox"] { width: auto; margin: 0; }
   word-break: break-all;
 }
 .ai-test-result.ok { background: var(--success-soft); color: var(--success); }
+
+/* ============================================================
+   AI 生成角色弹窗
+   ============================================================ */
+.gen-char-modal { width: 560px; max-width: 94vw; }
+.compose-gen-btn { margin-bottom: 12px; }
+.gen-tip {
+  background: var(--primary-soft); color: var(--primary-dark);
+  border-radius: 10px; padding: 10px 14px; font-size: 12.5px; line-height: 1.7;
+}
+.gen-result {
+  margin-top: 14px; background: #fbfbfe; border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px;
+}
+.gen-name { font-size: 18px; font-weight: 800; }
+.gen-tags { margin-top: 6px; }
+.gen-stat-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0;
+}
+.gen-stat {
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  text-align: center; padding: 6px 2px; font-size: 12px; color: var(--text-2);
+}
+.gen-stat b { display: block; font-size: 17px; color: var(--text); }
+.gen-attrs { font-size: 13px; color: var(--text-2); margin: 10px 0; }
+.gen-bio {
+  font-size: 13px; color: var(--text-2); margin-top: 8px;
+  white-space: pre-wrap; line-height: 1.7;
+}
+
 .ai-test-result.err { background: var(--danger-soft); color: var(--danger); }
 .ai-tip {
   margin-top: 16px; background: var(--primary-soft); color: var(--primary-dark);

@@ -75,6 +75,14 @@ createApp({
       aiApiKey: '',
       aiTestResult: null,
       aiTestLoading: false,
+
+      // AI 生成角色
+      genCharModal: { open: false },
+      genHint: '',
+      genTemplate: 'dnd5e',
+      genLoading: false,
+      genDraft: null,
+      genError: '',
     };
   },
 
@@ -456,6 +464,72 @@ createApp({
         if (this.charDetail && this.charDetail.id === c.id) this.charDetail = null;
         this.showToast('已删除');
         await this.loadCharacters();
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    /* ---------------- AI 生成角色(骰点创建法) ---------------- */
+    openGenCharModal() {
+      if (!this.currentStory) { this.showToast('请先打开一个故事线', 'error'); return; }
+      this.genCharModal.open = true;
+      this.genHint = '';
+      this.genDraft = null;
+      this.genError = '';
+    },
+
+    closeGenCharModal() { this.genCharModal.open = false; },
+
+    buildStoryContext() {
+      // 组装故事上下文:标题 + 简介 + 最近剧情
+      const parts = [];
+      if (this.currentStory) {
+        parts.push(`故事标题:${this.currentStory.title}`);
+        if (this.currentStory.description) {
+          parts.push(`故事简介:${this.currentStory.description}`);
+        }
+      }
+      if (this.entries.length) {
+        const recent = this.entries.slice(-3).map(e => e.content).join('\n');
+        parts.push(`已写剧情(节选):\n${recent.slice(0, 1200)}`);
+      }
+      return parts.join('\n\n');
+    },
+
+    async generateChar() {
+      this.genLoading = true;
+      this.genError = '';
+      try {
+        this.genDraft = await API.post('/ai/generate-character', {
+          story_context: this.buildStoryContext(),
+          hint: this.genHint.trim(),
+          template: this.genTemplate,
+        });
+      } catch (e) {
+        this.genError = e.message;
+      } finally {
+        this.genLoading = false;
+      }
+    },
+
+    async saveGeneratedChar() {
+      if (!this.genDraft) return;
+      try {
+        const body = {
+          name: this.genDraft.name,
+          title: this.genDraft.title || null,
+          bio: this.genDraft.bio || null,
+          template: this.genDraft.template || 'default',
+          stats: this.genDraft.stats || {},
+          attributes: this.genDraft.attributes || {},
+          tags: this.genDraft.tags || [],
+        };
+        const created = await API.post('/characters', body);
+        // 自动加入当前剧情条目的登场人物
+        if (!this.entryForm.character_ids.includes(created.id)) {
+          this.entryForm.character_ids.push(created.id);
+        }
+        await this.loadCharacters();
+        this.closeGenCharModal();
+        this.showToast(`角色「${created.name}」已创建并登场 🎉`);
       } catch (e) { this.showToast(e.message, 'error'); }
     },
 

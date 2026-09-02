@@ -51,7 +51,7 @@ class RuleMonster(Base):
 
 
 class RuleKnowledge(Base):
-    """规则知识片段(按页切块),用于检索。"""
+    """规则知识片段(按页/条目切块),用于检索。"""
 
     __tablename__ = "rule_knowledge"
 
@@ -59,6 +59,7 @@ class RuleKnowledge(Base):
     book: Mapped[str] = mapped_column(String(100), index=True)
     page: Mapped[int] = mapped_column(Integer, index=True)
     title: Mapped[Optional[str]] = mapped_column(String(200), default=None)
+    category: Mapped[Optional[str]] = mapped_column(String(50), index=True, default=None)
     content: Mapped[str] = mapped_column(Text, default="")
 
     def __repr__(self) -> str:  # pragma: no cover

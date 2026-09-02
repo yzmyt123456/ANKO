@@ -105,6 +105,8 @@ createApp({
       kbMaps: [],
       kbBooks: [],
       kbBook: '',
+      kbCategory: '',
+      kbCategories: [],
       kbLevel: '',
       kbSchool: '',
       kbLoading: false,
@@ -129,6 +131,15 @@ createApp({
     },
     kbLevels() {
       return ['', '戏法', '1 环', '2 环', '3 环', '4 环', '5 环', '6 环', '7 环', '8 环', '9 环'];
+    },
+    kbCatOrder() {
+      // 玩家手册分类按章节顺序展示
+      const order = ['创建角色', '种族', '职业', '背景', '装备', '自定义选项',
+        '属性值应用', '冒险', '战斗', '施法', '状态', '诸神', '位面', '生物资料', '导言', '附录'];
+      return [...this.kbCategories].sort((a, b) => {
+        const ia = order.indexOf(a), ib = order.indexOf(b);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+      });
     },
     pageTitle() {
       if (this.view === 'storyDetail') return this.currentStory ? this.currentStory.title : '剧情详情';
@@ -416,12 +427,23 @@ createApp({
       this.kbQuery = '';
       this.kbLevel = '';
       this.kbSchool = '';
+      this.kbCategory = '';
       if (tab === 'knowledge' && !this.kbKnowledge.length) this.loadKbKnowledge();
     },
 
     async loadKbKnowledge() {
+      // 规则库浏览:默认选玩家手册(含分类)
       try {
-        this.kbKnowledge = await API.get('/rules/search?q=规则&limit=20');
+        if (!this.kbBooks.length) {
+          this.kbBooks = await API.get('/rules/books');
+        }
+        if (!this.kbBook) {
+          this.kbBook = this.kbBooks.includes('DND_5E_玩家手册CN')
+            ? 'DND_5E_玩家手册CN'
+            : (this.kbBooks[0] || '');
+          if (!this.kbBook) return;
+        }
+        await this.browseBook();
       } catch (e) { /* 静默 */ }
     },
 
@@ -436,7 +458,8 @@ createApp({
           this.kbMonsters = await API.get(`/rules/monsters?q=${encodeURIComponent(q)}&limit=200`);
         } else if (this.kbTab === 'knowledge') {
           const bookParam = this.kbBook ? `&book=${encodeURIComponent(this.kbBook)}` : '';
-          this.kbKnowledge = await API.get(`/rules/search?q=${encodeURIComponent(q)}${bookParam}&limit=30`);
+          const catParam = this.kbCategory ? `&category=${encodeURIComponent(this.kbCategory)}` : '';
+          this.kbKnowledge = await API.get(`/rules/search?q=${encodeURIComponent(q)}${bookParam}${catParam}&limit=30`);
         }
       } catch (e) { this.showToast(e.message, 'error'); } finally {
         this.kbLoading = false;
@@ -444,10 +467,46 @@ createApp({
     },
 
     async browseBook() {
-      // 按书籍浏览规则
+      // 按书籍浏览:带分类的书(玩家手册)同时加载分类列表
+      this.kbCategory = '';
+      this.kbCategories = [];
       if (!this.kbBook) { this.kbKnowledge = []; return; }
+      this.kbLoading = true;
       try {
-        this.kbKnowledge = await API.get(`/rules/search?q=的&book=${encodeURIComponent(this.kbBook)}&limit=40`);
+        const [cats, items] = await Promise.all([
+          API.get(`/rules/categories?book=${encodeURIComponent(this.kbBook)}`),
+          API.get(`/rules/knowledge?book=${encodeURIComponent(this.kbBook)}&limit=200`),
+        ]);
+        this.kbCategories = cats;
+        this.kbKnowledge = items;
+      } catch (e) { this.showToast(e.message, 'error'); } finally {
+        this.kbLoading = false;
+      }
+    },
+
+    async browseCategory(cat) {
+      this.kbCategory = cat;
+      if (!this.kbBook) return;
+      this.kbLoading = true;
+      try {
+        const base = `/rules/knowledge?book=${encodeURIComponent(this.kbBook)}`;
+        const url = cat
+          ? `${base}&category=${encodeURIComponent(cat)}&limit=200`
+          : `${base}&limit=200`;
+        this.kbKnowledge = await API.get(url);
+      } catch (e) { this.showToast(e.message, 'error'); } finally {
+        this.kbLoading = false;
+      }
+    },
+
+    async openKbKnowledge(k) {
+      if (k.content) {
+        this.kbDetail = { type: 'knowledge', data: [k] };
+        return;
+      }
+      try {
+        const full = await API.get(`/rules/knowledge/${k.id}`);
+        this.kbDetail = { type: 'knowledge', data: [full] };
       } catch (e) { this.showToast(e.message, 'error'); }
     },
 

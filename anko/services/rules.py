@@ -191,11 +191,66 @@ class RuleService:
             ).scalars().all()
             return [b for b in rows if b]
 
+    def list_categories(self, book: Optional[str] = None) -> list[str]:
+        """知识片段分类列表(可限定书籍)。"""
+        with self._session() as s:
+            stmt = (
+                select(RuleKnowledge.category)
+                .where(RuleKnowledge.category.is_not(None))
+                .distinct()
+            )
+            if book:
+                stmt = stmt.where(RuleKnowledge.book == book)
+            rows = s.execute(stmt).scalars().all()
+            return [c for c in rows if c]
+
+    def list_knowledge(
+        self,
+        book: Optional[str] = None,
+        category: Optional[str] = None,
+        limit: int = 60,
+    ) -> list[dict]:
+        """按书籍/分类列出知识片段(轻量,不含全文)。"""
+        with self._session() as s:
+            stmt = select(RuleKnowledge).order_by(RuleKnowledge.page)
+            if book:
+                stmt = stmt.where(RuleKnowledge.book == book)
+            if category:
+                stmt = stmt.where(RuleKnowledge.category == category)
+            stmt = stmt.limit(limit)
+            return [
+                {
+                    "id": x.id,
+                    "book": x.book,
+                    "page": x.page,
+                    "title": x.title,
+                    "category": x.category,
+                    "preview": (x.content or "")[:180],
+                }
+                for x in s.execute(stmt).scalars().all()
+            ]
+
+    def get_knowledge(self, kid: int) -> Optional[dict]:
+        """单条知识片段全文。"""
+        with self._session() as s:
+            x = s.get(RuleKnowledge, kid)
+            if x is None:
+                return None
+            return {
+                "id": x.id,
+                "book": x.book,
+                "page": x.page,
+                "title": x.title,
+                "category": x.category,
+                "content": x.content,
+            }
+
     def search_knowledge(
         self,
         q: str,
         limit: int = 10,
         book: Optional[str] = None,
+        category: Optional[str] = None,
     ) -> list[dict]:
         with self._session() as s:
             like = f"%{q}%"
@@ -204,12 +259,15 @@ class RuleService:
             )
             if book:
                 stmt = stmt.where(RuleKnowledge.book == book)
+            if category:
+                stmt = stmt.where(RuleKnowledge.category == category)
             stmt = stmt.limit(limit)
             return [
                 {
                     "book": x.book,
                     "page": x.page,
                     "title": x.title,
+                    "category": x.category,
                     "content": x.content,
                 }
                 for x in s.execute(stmt).scalars().all()

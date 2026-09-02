@@ -896,6 +896,11 @@ input[type="checkbox"] { width: auto; margin: 0; }
 }
 .kb-kno-card:hover { border-color: var(--primary); background: var(--primary-soft); }
 .kb-kno-card b { font-size: 14px; color: var(--text); }
+.kb-kno-card .kb-chip {
+  display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 8px;
+  font-size: 11px; color: var(--primary-dark); background: var(--primary-soft);
+  vertical-align: 1px;
+}
 .kb-kno-card p { font-size: 13.5px; color: var(--text-2); margin: 5px 0; line-height: 1.8; }
 .kb-related { margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 12px; }
 .kb-related-label { font-size: 13px; color: var(--text-2); margin-bottom: 10px; font-weight: 600; }

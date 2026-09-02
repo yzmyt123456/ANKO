@@ -63,6 +63,35 @@ def list_books(request: Request) -> list[str]:
     return _svc(request).list_books()
 
 
+@router.get("/categories")
+def list_categories(
+    book: Optional[str] = Query(None, description="按书籍过滤"),
+    request: Request = None,
+) -> list[str]:
+    """知识片段分类列表。"""
+    return _svc(request).list_categories(book)
+
+
+@router.get("/knowledge")
+def list_knowledge_items(
+    book: Optional[str] = Query(None, description="按书籍过滤"),
+    category: Optional[str] = Query(None, description="按分类过滤"),
+    limit: int = Query(60, ge=1, le=200),
+    request: Request = None,
+) -> list[dict]:
+    """按书籍/分类列出知识片段(轻量列表)。"""
+    return _svc(request).list_knowledge(book, category, limit)
+
+
+@router.get("/knowledge/{kid}")
+def get_knowledge_item(kid: int, request: Request) -> dict:
+    """单条知识片段全文。"""
+    obj = _svc(request).get_knowledge(kid)
+    if obj is None:
+        raise HTTPException(status_code=404, detail="未找到该知识片段")
+    return obj
+
+
 @router.get("/maps")
 def list_maps(request: Request) -> list[dict]:
     """地图素材列表。"""
@@ -73,8 +102,9 @@ def list_maps(request: Request) -> list[dict]:
 def search_knowledge(
     q: str = Query(..., min_length=1),
     book: Optional[str] = Query(None, description="按书籍过滤"),
+    category: Optional[str] = Query(None, description="按分类过滤"),
     limit: int = Query(5, ge=1, le=20),
     request: Request = None,
 ) -> list[dict]:
     """全文检索玩家手册知识片段。"""
-    return _svc(request).search_knowledge(q, limit, book)
+    return _svc(request).search_knowledge(q, limit, book, category)

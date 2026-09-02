@@ -31,6 +31,48 @@ MM_NAME = "DND_5E_怪物图鉴CN.pdf"
 SPELL_START_PAGE = 211  # 0-based 索引
 SPELL_END_PAGE = 312  # 玩家手册总页数
 
+# 玩家手册章节页范围(0-based 索引)与分类名。条目章节只保留引言页,
+# 其余按条目切块(见 PH_ENTRY_CATS)。
+PH_PAGE_CATS: list[tuple[int, int, str]] = [
+    (0, 10, "导言"),
+    (10, 16, "创建角色"),
+    (16, 17, "种族"),  # 第 2 章引言页,条目从 p17 起
+    (44, 45, "职业"),  # 第 3 章引言页,条目从 p45 起
+    (120, 126, "背景"),  # 第 4 章导言(个性/阵营/语言/激励),条目从 p126 起
+    (142, 162, "装备"),
+    (162, 170, "自定义选项"),
+    (172, 180, "属性值应用"),
+    (180, 188, "冒险"),
+    (188, 198, "战斗"),
+    (200, 206, "施法"),
+    (206, 289, "法术"),  # 已结构化到 rule_spells,知识片段跳过
+    (289, 292, "状态"),
+    (292, 299, "诸神"),
+    (299, 303, "位面"),
+    (303, 311, "生物资料"),
+    (311, 313, "附录"),
+]
+
+# 条目切块锚点:种族/职业/背景的条目名,以及对应分类。
+PH_ENTRY_CATS: list[tuple[int, int, str, list[str]]] = [
+    (17, 44, "种族", ["矮人", "精灵", "半身人", "人类", "龙裔", "侏儒", "半精灵", "半兽人", "提夫林"]),
+    (45, 120, "职业", ["野蛮人", "吟游诗人", "牧师", "德鲁伊", "战士", "武僧", "圣武士", "游侠", "游荡者", "术士", "邪术师", "法师"]),
+    (126, 142, "背景", ["侍僧", "骗子", "罪犯", "艺人", "平民英雄", "公会工匠", "隐士", "贵族", "化外之民", "智者", "水手", "士兵", "流浪儿"]),
+]
+
+_ENTRY_ANCHOR_CACHE: dict[tuple, re.Pattern] = {}
+
+
+def entry_anchor_re(names: list[str]) -> re.Pattern:
+    """匹配'条目名 英文名'行(条目切块锚点)。"""
+    key = tuple(names)
+    if key not in _ENTRY_ANCHOR_CACHE:
+        alt = "|".join(map(re.escape, names))
+        _ENTRY_ANCHOR_CACHE[key] = re.compile(
+            rf"^({alt})\s+([A-Z][A-Za-z'’\-\/\s]+)$"
+        )
+    return _ENTRY_ANCHOR_CACHE[key]
+
 _SPELL_RE = re.compile(
     r"(?m)^[ \t]*([^\n]{2,60}?)[ \t]*\n"
     r"[ \t]*((?:\d+) 环[^\n]*|[\u4e00-\u9fff·]+ 戏法[^\n]*)[ \t]*\n"
@@ -177,10 +219,83 @@ def parse_monsters(pages: list[str]) -> list[dict]:
     return monsters
 
 
+def _page_title(page_text: str, cat: str, pno: int) -> str:
+    """页标题:优先识别'中文短语 英文名'小节标题,否则用分类名+页首。"""
+    for line in page_text.splitlines():
+        line = line.strip()
+        if not line or len(line) > 60:
+            continue
+        if _NAME_RE.match(line):
+            return line
+    first = re.sub(r"\s+", " ", page_text).strip()
+    return f"{cat} · {first[:36]}" if first else f"{cat} · 第{pno}页"
+
+
+def ph_page_pieces(pages: list[str], start: int, end: int, cat: str) -> list[tuple]:
+    """玩家手册按页切块(保留页码,标题优化)。返回 (title, page, category, content)。"""
+    pieces: list[tuple] = []
+    for pi in range(start, min(end, len(pages))):
+        raw = pages[pi]
+        cleaned = re.sub(r"\s+", " ", raw).strip()
+        if len(cleaned) <= 40:
+            continue
+        title = _page_title(raw, cat, pi + 1)
+        pieces.append((title, pi + 1, cat, clean_cn_spaces(cleaned)))
+    return pieces
+
+
+def ph_entry_pieces(
+    pages: list[str], start: int, end: int, cat: str, names: list[str]
+) -> list[tuple]:
+    """玩家手册按条目切块(如'矮人 Dwarf'),整条目合并为一条。"""
+    anchor = entry_anchor_re(names)
+    boundaries: list[tuple[int, int, str]] = []
+    for pi in range(start, min(end, len(pages))):
+        for li, line in enumerate(pages[pi].splitlines()):
+            line = line.strip()
+            if anchor.match(line):
+                boundaries.append((pi, li, line))
+
+    pieces: list[tuple] = []
+    for i, (pi, li, line) in enumerate(boundaries):
+        name = line.split()[0]
+        if i + 1 < len(boundaries):
+            epi, eli, _ = boundaries[i + 1]
+            if epi == pi:
+                lines = pages[pi].splitlines()[li:eli]
+            else:
+                lines = pages[pi].splitlines()[li:]
+                for mp in range(pi + 1, epi):
+                    lines.extend(pages[mp].splitlines())
+                lines.extend(pages[epi].splitlines()[:eli])
+        else:
+            lines = pages[pi].splitlines()[li:]
+            for mp in range(pi + 1, min(end, len(pages))):
+                lines.extend(pages[mp].splitlines())
+        content_lines = [clean_cn_spaces(ln.strip()) for ln in lines]
+        content = "\n".join(ln for ln in content_lines if ln)
+        pieces.append((name, pi + 1, cat, content))
+    return pieces
+
+
 def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> None:
     """全量导入:核心规则 + 冒险模组 → 知识库;地图 → 地图素材库。"""
     engine = create_engine(db_url, future=True)
     Base.metadata.create_all(engine)
+    # SQLite 旧表补充 category 列(幂等)
+    try:
+        with engine.connect() as conn:
+            cols = [
+                r[1]
+                for r in conn.exec_driver_sql("PRAGMA table_info(rule_knowledge)")
+            ]
+            if "category" not in cols:
+                conn.exec_driver_sql(
+                    "ALTER TABLE rule_knowledge ADD COLUMN category VARCHAR(50)"
+                )
+                conn.commit()
+    except Exception:  # noqa: BLE001
+        pass
     Session = sessionmaker(bind=engine, expire_on_commit=False)
     session = Session()
 
@@ -205,20 +320,45 @@ def import_rules(pdf_dir: Path, db_url: str = "sqlite:///./data/anko.db") -> Non
         total = len(reader.pages)
         print(f"[{stem}] {total} 页")
 
-        # 知识切块(每本书最多 400 页)
+        # 玩家手册 → 按章节/条目切块入库;其他书按页切块
         pages = []
         for i in range(min(total, 400)):
             pages.append(reader.pages[i].extract_text() or "")
-        for i, page_text in enumerate(pages):
-            cleaned = re.sub(r"\s+", " ", page_text).strip()
-            if len(cleaned) > 40:
-                session.add(
-                    RuleKnowledge(
-                        book=stem, page=i + 1,
-                        title=cleaned[:40], content=cleaned,
+
+        if "玩家手册" in stem:
+            for start, end, cat in PH_PAGE_CATS:
+                if cat == "法术":
+                    continue
+                for title, pno, pcat, content in ph_page_pieces(pages, start, end, cat):
+                    session.add(
+                        RuleKnowledge(
+                            book=stem, page=pno,
+                            title=title, category=pcat, content=content,
+                        )
                     )
-                )
-                knowledge_count += 1
+                    knowledge_count += 1
+            for start, end, cat, names in PH_ENTRY_CATS:
+                for title, pno, pcat, content in ph_entry_pieces(
+                    pages, start, end, cat, names
+                ):
+                    session.add(
+                        RuleKnowledge(
+                            book=stem, page=pno,
+                            title=title, category=pcat, content=content,
+                        )
+                    )
+                    knowledge_count += 1
+        else:
+            for i, page_text in enumerate(pages):
+                cleaned = re.sub(r"\s+", " ", page_text).strip()
+                if len(cleaned) > 40:
+                    session.add(
+                        RuleKnowledge(
+                            book=stem, page=i + 1,
+                            title=cleaned[:40], content=cleaned,
+                        )
+                    )
+                    knowledge_count += 1
 
         # 玩家手册 → 法术
         if "玩家手册" in stem:

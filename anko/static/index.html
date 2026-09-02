@@ -386,23 +386,31 @@
             <div v-if="!kbMonsters.length" class="inline-empty">没有找到怪物</div>
           </div>
 
-          <!-- 规则:按书籍浏览 -->
+          <!-- 规则:按书籍/分类浏览 -->
           <div v-else-if="kbTab === 'knowledge'">
             <div class="kb-filters">
               <span class="kb-filter-label">书籍</span>
               <select v-model="kbBook" class="kb-book-select" @change="browseBook">
-                <option value="">全部书籍</option>
+                <option value="">全部书籍(需搜索)</option>
                 <option v-for="b in kbBooks" :key="b" :value="b">{{ b }}</option>
               </select>
             </div>
+            <div v-if="kbCategories.length" class="kb-filters">
+              <span class="kb-filter-label">分类</span>
+              <button :class="['kb-tab small-tab', {on: kbCategory === ''}]" @click="browseCategory('')">全部</button>
+              <button v-for="cat in kbCatOrder" :key="cat" :class="['kb-tab small-tab', {on: kbCategory === cat}]" @click="browseCategory(cat)">
+                {{ cat }}
+              </button>
+            </div>
             <div class="kb-kno-list">
-              <div v-for="(k, i) in kbKnowledge" :key="i" class="kb-kno-card" @click="kbDetail = {type:'knowledge', data:[k]}">
+              <div v-for="k in kbKnowledge" :key="k.id || k.page" class="kb-kno-card" @click="openKbKnowledge(k)">
                 <b>{{ k.title }}</b>
-                <p v-html="linkify(truncate(k.content, 150))"></p>
+                <span v-if="k.category" class="kb-chip">{{ k.category }}</span>
+                <p v-html="linkify(truncate(k.content || k.preview, 150))"></p>
                 <span class="muted">{{ k.book }} · 第{{ k.page }}页</span>
               </div>
             </div>
-            <div v-if="!kbKnowledge.length" class="inline-empty">选择书籍浏览,或搜索规则关键词(如"属性""战斗""检定")</div>
+            <div v-if="!kbKnowledge.length" class="inline-empty">选择书籍浏览,或直接搜索关键词(如"属性""战斗""检定")。玩家手册可再按"种族 / 职业 / 背景"等分类快速查阅。</div>
           </div>
 
           <!-- 地图 -->

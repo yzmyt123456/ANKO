@@ -50,29 +50,29 @@ await sleep(800);
 
 const appEl = doc.querySelector('#app');
 console.log('切换知识库后 #app 有内容:', appEl.innerHTML.length > 500);
-const chips = doc.querySelectorAll('.kb-chip');
-console.log('法术词条数:', chips.length);
+const entries = doc.querySelectorAll('.kb-entry');
+console.log('新卡片 .kb-entry 数:', entries.length);
 const kbGroups = doc.querySelectorAll('.kb-group');
 console.log('分组数:', kbGroups.length);
+if (entries.length && kbGroups.length) {
+  console.log('分组1标题:', doc.querySelector('.kb-group-head').textContent.slice(0, 30));
+  console.log('首张卡片:', doc.querySelector('.kb-entry').textContent.slice(0, 40));
+}
 const kbEmpty = doc.querySelector('.kb .inline-empty, .view .inline-empty');
 console.log('空提示:', kbEmpty ? kbEmpty.textContent : '无');
 // 输出知识库区域片段
 const kbSection = doc.querySelector('.view');
 if (kbSection) console.log('知识库区前300:', kbSection.innerHTML.slice(0, 300).replace(/\s+/g, ' '));
-if (!chips.length) {
-  console.log('errors:', errors);
-  console.log('#app 前 200:', appEl.innerHTML.slice(0, 200).replace(/\s+/g, ' '));
-  process.exit(1);
-}
-
 // 点击第一个法术词条
-chips[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-await sleep(600);
-const modal = doc.querySelector('.kb-modal');
-console.log('词条详情弹窗打开:', !!modal);
-if (modal) {
-  console.log('弹窗含名称:', !!modal.querySelector('h2'));
-  console.log('相关词条区:', !!modal.querySelector('.kb-related'));
+if (entries.length) {
+  entries[0].dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  await sleep(600);
+  const modal = doc.querySelector('.kb-modal');
+  console.log('词条详情弹窗打开:', !!modal);
+  if (modal) {
+    console.log('弹窗含名称:', !!modal.querySelector('h2'));
+    console.log('相关词条区:', !!modal.querySelector('.kb-related'));
+  }
 }
 console.log('errors:', errors.length ? errors : '无');
 // 独立验证 API

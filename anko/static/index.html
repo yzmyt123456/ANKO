@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>安科创作平台</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
-  <link rel="stylesheet" href="/static/css/style.css" />
+  <link rel="stylesheet" href="/static/css/style.css?v=3" />
 </head>
 <body>
 <div id="app">
@@ -903,8 +903,11 @@
           <p class="kb-desc" v-html="linkify(kbDetail.data.description)"></p>
           <div v-if="relatedSpells(kbDetail.data).length" class="kb-related">
             <div class="kb-related-label">相关·{{ kbDetail.data.school }}系法术</div>
-            <div class="kb-chips">
-              <span v-for="s in relatedSpells(kbDetail.data)" :key="s.id" class="kb-chip" @click="openKbItem(s)">{{ s.name }}</span>
+            <div class="kb-grid-list">
+              <div v-for="s in relatedSpells(kbDetail.data)" :key="s.id" class="kb-entry" @click="openKbItem(s)">
+                <b>{{ s.name }}</b>
+                <span class="kb-sub">{{ s.level }} 环 · {{ s.school }}</span>
+              </div>
             </div>
           </div>
         </template>
@@ -922,8 +925,11 @@
           </div>
           <div v-if="relatedMonsters(kbDetail.data).length" class="kb-related">
             <div class="kb-related-label">相关·同类怪物</div>
-            <div class="kb-chips">
-              <span v-for="m in relatedMonsters(kbDetail.data)" :key="m.id" class="kb-chip" @click="openKbItem(m)">{{ m.name }}</span>
+            <div class="kb-grid-list">
+              <div v-for="m in relatedMonsters(kbDetail.data)" :key="m.id" class="kb-entry" @click="openKbItem(m)">
+                <b>{{ m.name }}</b>
+                <span class="kb-sub">{{ m.ac ? 'AC ' + m.ac : m.meta }}</span>
+              </div>
             </div>
           </div>
         </template>
@@ -949,7 +955,7 @@
 </div>
 
 <script src="/static/vendor/vue.global.prod.js"></script>
-<script src="/static/js/api.js"></script>
-<script src="/static/js/app.js"></script>
+<script src="/static/js/api.js?v=3"></script>
+<script src="/static/js/app.js?v=3"></script>
 </body>
 </html>

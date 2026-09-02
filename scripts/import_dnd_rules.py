@@ -352,6 +352,9 @@ def _is_trait_start(s: str, has_bold: bool) -> bool:
         return True
     for n in _CN_TRAIT_NAMES:
         if s.startswith(n + "。"):
+            # 孤行只有名称+句号(如'语言。')是上一特质描述的断行残词
+            if not s[len(n) + 1 :].strip():
+                return False
             return True
     return False
 
@@ -483,7 +486,9 @@ def ph_race_hierarchy(
                     "content": sub_desc, "children": [],
                 }
                 for tr in named:
-                    sub["children"].append(make_trait(tr, spage))
+                    mt = make_trait(tr, spage)
+                    if mt["content"]:
+                        sub["children"].append(mt)
                 parent["children"].append(sub)
             else:
                 body = clean_cn_spaces(

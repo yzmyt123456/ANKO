@@ -886,9 +886,8 @@ createApp({
       return '—';
     },
     pfTreeClasses(data) {
-      // 树排序:当前职业置顶(便于展示其变体),其余职业随后
-      if (!data || !this.kbClasses.length) return this.kbClasses || [];
-      return [data, ...this.kbClasses.filter(c => c.id !== data.id)];
+      // 职业列表保持固定顺序(不把当前项置顶),当前职业在其原位高亮展开子职
+      return this.kbClasses || [];
     },
     pfPickSub(s) {
       this.kbClsView = 's' + s.id;

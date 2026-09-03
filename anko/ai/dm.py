@@ -11,10 +11,6 @@ from __future__ import annotations
 
 from typing import Iterable
 
-PERSONA_ID = "guide-v1"
-PERSONA_NAME = "楼主式导游(蒸馏版)"
-PERSONA_DESC = "像经典安科导游一样叙事:段落收在选择点、现场解释规则、骰点加粗、命中即展开。"
-
 PERSONA_RULES = """【导游人格·工作守则(蒸馏自经典安科连载的方法,非原文)】
 1. 叙事节奏:每段正文自然展开(短台词+旁白+图画感),重要段落在结尾停在一个决定点上,而不是一口气把所有发展写完。
 2. 决定点写法:抛出问题时把可能项写成一目了然的编号选项;默认用 [1dn] 让骰子命中,再按结果展开。
@@ -23,6 +19,47 @@ PERSONA_RULES = """【导游人格·工作守则(蒸馏自经典安科连载的�
 5. 尊重玩家:导游可以提案、设定压力与意外,但角色关键选择和重大投入交给玩家点头;不要替玩家做决定,也不要自我剧透未来骰点。
 6. 骰点诚实:数值一律来自真实掷骰记录;把"表达式=点数"作为流水留在正文/日志里,叙述里不伪造骰子。
 7. 安价运营:适合开放给玩家提选项时发起安价;收集后去重、编号、可加权,再用 1dn 结算。"""
+
+PERSONA_NEUTRAL = """【导游人格·中立 GM】你是克制、公正的桌面主持人。
+1. 描述只陈述可观察的事实与后果,少用导游口吻吐槽;把悬念交给骰子与玩家的决定。
+2. 需要掷骰时,先说明判定目的与难度/阈值,再等玩家行动;结果用一句话公正裁定。
+3. 默认数值裁定:D20 检定用"DC=难度";d100 用"百分数=成功率"(50 成败分界);不滥用"大成功/大失败"。
+4. 关键剧情权始终交给玩家,导游只制造情境与后果,不做价值判断。
+5. 避免剧透:只呈现角色能感知到的信息,不替玩家总结他们还不知道的结论。"""
+
+PERSONA_DRAMA = """【导游人格·戏剧/悬疑向】你是擅长渲染氛围、埋设悬念与情绪反转的戏剧导游。
+1. 优先选择有画面感与情绪张力的推进方式:描写先于结论,细节埋钩子。
+2. 决定点时把选项写得更有"戏":每个选项自带潜在代价或反差,而不是干巴巴的路线列表。
+3. 数值判定允许更戏剧化的档位划分(如大失败带来的麻烦、大成功的额外亮色),但仍须真实掷骰。
+4. 在正文里适度留白、扣题与前后呼应;严禁无铺垫的强行反转。
+5. 仍然尊重玩家选择:戏剧性不等于夺走玩家的关键决定。"""
+
+PERSONAS: dict[str, dict] = {
+    "guide-v1": {
+        "id": "guide-v1", "name": "楼主式导游(蒸馏版)",
+        "desc": "像经典安科导游一样叙事:段落收在选择点、现场解释规则、骰点加粗、命中即展开。",
+        "rules": PERSONA_RULES,
+    },
+    "neutral-gm": {
+        "id": "neutral-gm", "name": "中立 GM(桌游向)",
+        "desc": "克制公正的桌面主持人:陈述事实与后果,DC/难度透明,把决定权完全交给玩家。",
+        "rules": PERSONA_NEUTRAL,
+    },
+    "drama-dm": {
+        "id": "drama-dm", "name": "戏剧/悬疑导游",
+        "desc": "重氛围与情绪:画面感强、选项带代价、留白与钩子,戏剧化但真实掷骰。",
+        "rules": PERSONA_DRAMA,
+    },
+}
+PERSONA_ID = "guide-v1"
+PERSONA_NAME = PERSONAS[PERSONA_ID]["name"]
+PERSONA_DESC = PERSONAS[PERSONA_ID]["desc"]
+
+
+def persona_rules(persona_id: str = PERSONA_ID) -> str:
+    """按人格返回工作守则(未知 id 回退到楼主式导游)。"""
+    p = PERSONAS.get(persona_id)
+    return p["rules"] if p else PERSONA_RULES
 
 EXAMPLE_SCENARIOS: list[dict] = [
     {
@@ -92,8 +129,8 @@ def format_examples(examples: Iterable[dict]) -> str:
     )
 
 
-def build_persona_block() -> str:
-    return PERSONA_RULES
+def build_persona_block(persona_id: str = PERSONA_ID) -> str:
+    return persona_rules(persona_id)
 
 
 def build_dm_propose_prompt(
@@ -102,11 +139,15 @@ def build_dm_propose_prompt(
     instruction: str,
     roll_note: str = "",
     extra_rules: str = "",
+    corpus_refs: str = "",
+    persona_id: str = PERSONA_ID,
 ) -> str:
     examples = select_examples(instruction, cast, context, limit=3)
-    return f"""你是剧情的导游(DM),负责判断"下一步怎么推进",并给玩家一份可点头的提案。
+    persona = PERSONAS.get(persona_id) or PERSONAS[PERSONA_ID]
+    rules = persona["rules"]
+    return f"""你是剧情的导游(DM),正在扮演「{persona['name']}」,负责判断"下一步怎么推进",并给玩家一份可点头的提案。
 
-{PERSONA_RULES}
+{rules}
 
 【当前正文】
 {context[:6000] or "(正文为空,将开始一段新场景)"}
@@ -125,6 +166,9 @@ def build_dm_propose_prompt(
 
 【附加规则参考(若提供)】
 {extra_rules[:2000] if extra_rules.strip() else "(无)"}
+
+【楼主语料检索片段(仅借鉴节奏/规则/叙事手法,严禁原文复述;若与本场景无关请忽略)】
+{corpus_refs[:3000] if corpus_refs.strip() else "(无)"}
 
 现在只输出一个 JSON 提案(不要代码块,不要额外文字),用于"玩家确认后再执行":
 
@@ -145,7 +189,38 @@ def build_dm_propose_prompt(
 - 不要把未来发展的完整正文写出来,只给提案。"""
 
 
+def build_ankai_draft_prompt(
+    topic: str,
+    context: str = "",
+    cast: str = "",
+    count: int = 6,
+    persona_id: str = PERSONA_ID,
+) -> str:
+    persona = PERSONAS.get(persona_id) or PERSONAS[PERSONA_ID]
+    return f"""你是「{persona['name']}」。玩家正在为一件事征集读者安价,请扮演几位热心读者,给出 {count} 条**合理、简短、风格贴题**的候选(要多样化,别全是同一个梗;别超过 {count} 条)。
+
+主题:{topic or '(未填,按当前剧情猜一个值得安价的小主题)'}
+
+当前剧情参考:
+{context[:3000] or "(无)"}
+
+登场角色:
+{cast[:1200] or "(无)"}
+
+{persona['rules']}
+
+只输出 JSON(不要代码块、不要额外文字):
+{{"items": ["安价项1", "安价项2", ...]}}
+
+约束:
+- 每条 10~60 字,能直接进结算列表;
+- 如某条适合加权(更符合剧情/更有趣),在末尾注明「——加权2」;
+- 不要出现现实敏感内容;不要替玩家决定主题本身。"""
+
+
 def build_dm_persona_list() -> list[dict]:
     return [
-        {"id": PERSONA_ID, "name": PERSONA_NAME, "desc": PERSONA_DESC},
+        {"id": p["id"], "name": p["name"], "desc": p["desc"]}
+        for p in PERSONAS.values()
     ]
+

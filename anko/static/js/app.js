@@ -202,6 +202,20 @@ createApp({
       dmBusy: false,
       dmErr: '',
       dmProposal: null,
+      segPersona: 'guide-v1',
+      dmPersonas: [
+        { id: 'guide-v1', name: '楼主式导游', desc: '经典安科节奏·现场解释·命中加粗' },
+        { id: 'neutral-gm', name: '中立 GM', desc: '公正主持·DC 透明·决定权在玩家' },
+        { id: 'drama-dm', name: '戏剧悬疑', desc: '氛围与钩子·选项带代价·真骰' },
+      ],
+      // 安价盒:收集读者选项 → 加权 → 真实结算
+      ankaiTopic: '',
+      ankaiRaw: '',
+      ankaiItems: [],
+      ankaiSeq: 0,
+      ankaiBusy: false,
+      ankaiErr: '',
+      ankaiHit: null,
 
       // 安科决策台(逐项掷骰定角色 + 数值判定)
       decOpen: false,
@@ -1965,6 +1979,7 @@ createApp({
             cast: this.segCast,
             instruction: this.segWant.trim(),
             roll_note: lastRoll,
+            persona: this.segPersona,
           }),
           signal: this.segController.signal,
         });
@@ -2020,6 +2035,7 @@ createApp({
           cast: this.segCast,
           instruction: this.segWant.trim(),
           roll_note: lastRoll,
+          persona: this.segPersona,
         });
       } catch (e) { this.dmErr = e.message; }
       finally { this.dmBusy = false; }
@@ -2092,6 +2108,124 @@ createApp({
       this.dmProposal = null;
       this.dmBusy = false;
       await this.segGenerate();
+    },
+    /* ---------------- 安价盒:收集→加权→真实结算 ---------------- */
+    ankaiLine(text) {
+      let s = String(text || '').trim();
+      if (!s) return null;
+      // 去常见前缀(数字序号 + 安价字样)
+      s = s.replace(/^\s*\d*\s*[安案]?价?\s*[:：.,、\s]*/, '');
+      let weight = 1;
+      const wm = s.match(/——\s*加权\s*(\d+)\s*$/);
+      if (wm) {
+        weight = parseInt(wm[1], 10) || 1;
+        s = s.replace(wm[0], '').trim();
+      }
+      if (!s) return null;
+      return { text: s, weight: Math.max(1, weight) };
+    },
+    ankaiMergeRaw() {
+      const lines = this.ankaiRaw.split('\n');
+      let added = 0;
+      for (const raw of lines) {
+        const item = this.ankaiLine(raw);
+        if (!item) continue;
+        const key = item.text.replace(/\s+/g, '');
+        const exist = this.ankaiItems.find(x => x.text.replace(/\s+/g, '') === key);
+        if (exist) {
+          exist.weight = Math.min(999, (exist.weight || 1) + item.weight);
+        } else {
+          this.ankaiSeq += 1;
+          this.ankaiItems.push({ id: this.ankaiSeq, text: item.text, weight: item.weight });
+        }
+        added += 1;
+      }
+      this.ankaiRaw = '';
+      if (added) this.ankaiErr = '';
+      return added;
+    },
+    ankaiRemove(idx) {
+      this.ankaiItems.splice(idx, 1);
+      if (!this.ankaiItems.length) this.ankaiHit = null;
+    },
+    ankaiWeight(idx, delta) {
+      const it = this.ankaiItems[idx];
+      if (!it) return;
+      it.weight = Math.max(1, (it.weight || 1) + delta);
+      this.ankaiHit = null;
+    },
+    async ankaiDraft() {
+      const topic = this.ankaiTopic.trim();
+      if (!topic) { this.ankaiErr = '先填安价主题(如:祥子的狂野魔法浪涌)'; return; }
+      if (this.ankaiBusy) return;
+      this.ankaiBusy = true; this.ankaiErr = '';
+      try {
+        const resp = await API.post('/ai/dm/ankai-draft', {
+          topic,
+          context: this.entryForm.content,
+          cast: this.segCast || '',
+          count: 6,
+          persona: this.segPersona,
+        });
+        const items = (resp.items || []);
+        for (const raw of items) {
+          const item = this.ankaiLine(raw);
+          if (item) {
+            this.ankaiSeq += 1;
+            this.ankaiItems.push({ id: this.ankaiSeq, text: item.text, weight: item.weight });
+          }
+        }
+      } catch (e) { this.ankaiErr = e.message; }
+      finally { this.ankaiBusy = false; }
+    },
+    async ankaiSettle() {
+      if (this.ankaiBusy) return;
+      const items = this.ankaiItems.filter(x => x && (x.weight || 1) > 0);
+      if (!items.length) { this.ankaiErr = '安价盒里还没有选项'; return; }
+      const topic = this.ankaiTopic.trim() || '安价结算';
+      const totalW = items.reduce((s, x) => s + (x.weight || 1), 0);
+      this.ankaiBusy = true; this.ankaiErr = '';
+      let pick = null;
+      let expr = '';
+      let total = null;
+      try {
+        if (totalW > 1) {
+          expr = `1d${totalW}`;
+          const resp = await API.post('/rolls', { expression: expr, maid_id: this.rollMaidId, save: true });
+          const rec = resp.record || {};
+          total = rec.total;
+          if (this.segRollIds.indexOf(rec.id) < 0) this.segRollIds.push(rec.id);
+          let acc = 0;
+          for (const it of items) {
+            acc += (it.weight || 1);
+            if (total <= acc) { pick = it; break; }
+          }
+        } else {
+          pick = items[0];
+        }
+      } catch (e) { this.ankaiErr = e.message; this.ankaiBusy = false; return; }
+      const note = totalW > 1
+        ? `安价结算「${topic}」 ${expr}=${total} → 命中:${pick.text}`
+        : `安价结算「${topic}」 (唯一项)→ ${pick.text}`;
+      this.segRollLog.push(note);
+      const prefix = this.entryForm.content ? '\n\n' : '';
+      this.entryForm.content += `${prefix}🎲 ${note}`;
+      if (this.segRollIds.length === 1) await this.loadRollHistory();
+      this.ankaiHit = { item: pick, note, topic };
+      this.ankaiBusy = false;
+    },
+    async ankaiWriteResult() {
+      const hit = this.ankaiHit;
+      if (!hit || this.segBusy) return;
+      this.segWant = `安价「${hit.topic || '结算'}」命中:「${hit.item.text}」。请把这一选择的影响自然写进正文并适当留钩子。`;
+      this.ankaiHit = null;
+      await this.segGenerate();
+    },
+    ankaiClear() {
+      this.ankaiItems = [];
+      this.ankaiRaw = '';
+      this.ankaiHit = null;
+      this.ankaiErr = '';
     },
 
     /* ---------------- 安科决策台(逐项掷骰定角色) ---------------- */
@@ -2249,7 +2383,7 @@ createApp({
         const resp = await fetch('/api/ai/generate-segment/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ context: this.entryForm.content, cast: summary, instruction, roll_note: noteText }),
+          body: JSON.stringify({ context: this.entryForm.content, cast: summary, instruction, roll_note: noteText, persona: this.segPersona }),
         });
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
@@ -2383,6 +2517,7 @@ createApp({
             cast: castText,
             instruction,
             roll_note: `${hit.expr}=${hit.total}`,
+            persona: this.segPersona,
           }),
         });
         if (!resp.ok) {
@@ -2457,6 +2592,12 @@ createApp({
       this.dmProposal = null;
       this.dmBusy = false;
       this.dmErr = '';
+      this.ankaiItems = [];
+      this.ankaiHit = null;
+      this.ankaiBusy = false;
+      this.ankaiErr = '';
+      this.ankaiRaw = '';
+      this.ankaiTopic = '';
       this.decOpen = false;
       this.decDone = false;
       this.decIdx = 0;

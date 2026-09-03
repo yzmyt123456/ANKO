@@ -260,6 +260,11 @@
                   之后每一段都会先写进正文框、等你改好,再“掷骰→生成下一段”。
                 </p>
                 <template v-else>
+                  <label class="seg-persona">导游人格
+                    <select v-model="segPersona" :disabled="segBusy">
+                      <option v-for="p in dmPersonas" :key="p.id" :value="p.id">{{ p.name }} · {{ p.desc }}</option>
+                    </select>
+                  </label>
                   <label>登场角色参考(可编辑)
                     <textarea v-model="segCast" rows="3"></textarea>
                   </label>
@@ -301,6 +306,15 @@
                       <ul v-if="dmProposal.thresholds && dmProposal.thresholds.length" class="seg-rolls">
                         <li v-for="(t, i) in dmProposal.thresholds" :key="i">🎯 {{ t }}</li>
                       </ul>
+                      <details v-if="dmProposal.references && dmProposal.references.length" class="dm-refs">
+                        <summary>📚 楼主语料参考 {{ dmProposal.references.length }} 段(仅借鉴手法)</summary>
+                        <ul class="dm-refs-list">
+                          <li v-for="(rf, i) in dmProposal.references" :key="i">
+                            <span class="muted">{{ rf.category }} · {{ rf.date }} · p{{ rf.page }}</span><br/>
+                            {{ rf.snippet }}
+                          </li>
+                        </ul>
+                      </details>
                       <div class="dm-actions">
                         <button v-if="dmProposal.kind === 'roll'" class="btn primary" :disabled="segBusy || dmBusy" @click="dmAcceptRoll">
                           🎲 采纳并掷骰 → 自动写正文
@@ -311,6 +325,39 @@
                         <button class="btn small" @click="dmResetProposal" :disabled="segBusy || dmBusy">不采纳</button>
                       </div>
                     </div>
+                  </div>
+                  <div class="ankai-panel">
+                    <div class="ankai-title">🎯 安价盒 <span class="muted">收集读者建议 → 去重加权 → 真实结算 → 写进正文</span></div>
+                    <div class="ankai-row">
+                      <input v-model="ankaiTopic" placeholder="安价主题,如:祥子的狂野魔法浪涌" :disabled="ankaiBusy" />
+                      <button class="btn small" :disabled="ankaiBusy" @click="ankaiMergeRaw">➕ 整理粘入的建议</button>
+                      <button class="btn small ai-btn" :disabled="ankaiBusy || !ankaiTopic.trim()" @click="ankaiDraft">🤖 导游起草候选</button>
+                    </div>
+                    <textarea v-model="ankaiRaw" rows="3" :disabled="ankaiBusy"
+                              placeholder="每行一条读者安价,可写成:1安价:一件能飞的扫帚&#10;2安价:雷鸣波法杖——加权2"></textarea>
+                    <div v-if="!ankaiItems.length && !ankaiBusy" class="muted ankai-empty">
+                      暂无选项:把读者楼层里提的建议按行粘到上面,点“整理粘入的建议”即可收进列表;加权项会自动识别。
+                    </div>
+                    <div v-if="ankaiItems.length" class="ankai-list">
+                      <div v-for="(it, i) in ankaiItems" :key="it.id" class="ankai-item">
+                        <b class="ankai-no">{{ i + 1 }}</b>
+                        <span>{{ it.text }}</span>
+                        <em v-if="(it.weight || 1) > 1" class="ankai-w">×{{ it.weight }}</em>
+                        <span class="ankai-ops">
+                          <button class="btn mini" title="加权+1" @click="ankaiWeight(i, 1)">+1</button>
+                          <button class="btn mini" title="减权" @click="ankaiWeight(i, -1)">-1</button>
+                          <button class="btn mini" title="删除" @click="ankaiRemove(i)">✕</button>
+                        </span>
+                      </div>
+                      <div class="ankai-foot">
+                        <button class="btn primary" :disabled="ankaiBusy" @click="ankaiSettle">🎲 结算(加权真实掷骰)</button>
+                        <button v-if="ankaiHit" class="btn ai-btn" :disabled="segBusy" @click="ankaiWriteResult">✍️ 按结果写正文</button>
+                        <button class="btn small" @click="ankaiClear" :disabled="ankaiBusy">🗑 清空</button>
+                        <span v-if="ankaiHit" class="ankai-hit">命中:<b>{{ ankaiHit.item.text }}</b></span>
+                      </div>
+                    </div>
+                    <div v-if="ankaiErr" class="seg-err">{{ ankaiErr }}</div>
+                    <p v-if="ankaiBusy" class="muted ankai-loading">⏳ {{ ankaiTopic ? '导游正在起草候选…' : '正在结算…' }}</p>
                   </div>
                   <p class="muted seg-tip">流程:生成一段 → 在正文框里修改 → 掷骰判定 → 再生成下一段;保存剧情后本段的掷骰也会关联记录。</p>
                 </template>

@@ -10,6 +10,8 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from anko.ai import AIService
+from anko.ai import dm as dm_assets
+from anko.ai import corpus as corpus_assets
 from anko.ai.client import AIError
 from anko.config import AISettings
 from anko.schemas.ai import AIParseRequest, AIStatus, CharacterDraft
@@ -57,6 +59,17 @@ class StorySegmentRequest(BaseModel):
     cast: Optional[str] = Field("", description="登场角色卡片摘要")
     instruction: Optional[str] = Field("", description="本段指示(可空)")
     roll_note: Optional[str] = Field("", description="最近一次掷骰结果文本")
+    persona: Optional[str] = Field(None, description="导游人格 id(缺省用楼主式)")
+
+
+class DMAnkaiRequest(BaseModel):
+    """安价起草请求:让导游以读者口吻给出候选选项。"""
+
+    topic: str = Field(..., min_length=1, description="安价主题")
+    context: Optional[str] = Field("", description="当前正文")
+    cast: Optional[str] = Field("", description="登场角色")
+    count: int = Field(6, ge=2, le=12, description="候选条数")
+    persona: Optional[str] = Field(None, description="导游人格 id")
 
 
 class DMProposeRequest(BaseModel):
@@ -66,6 +79,7 @@ class DMProposeRequest(BaseModel):
     cast: Optional[str] = Field("", description="登场角色卡片摘要")
     instruction: Optional[str] = Field("", description="玩家倾向/遭遇提示(可空)")
     roll_note: Optional[str] = Field("", description="最近一次掷骰结果文本")
+    persona: Optional[str] = Field(None, description="导游人格 id(缺省用楼主式)")
 
 
 @router.get("/status", response_model=AIStatus)
@@ -247,6 +261,7 @@ async def generate_segment_stream(
                 instruction=payload.instruction or "",
                 roll_note=payload.roll_note or "",
                 extra_rules=extra_rules,
+                persona_id=payload.persona or dm_assets.PERSONA_ID,
             ):
                 yield f"data: {json.dumps({'type': 'delta', 'text': delta}, ensure_ascii=False)}\n\n"
             yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
@@ -260,6 +275,33 @@ async def generate_segment_stream(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.get("/dm/personas")
+def dm_personas() -> dict:
+    """可选的导游人格列表 + 楼主语料检索规模。"""
+    return {"personas": dm_assets.build_dm_persona_list(), "corpus": corpus_assets.corpus_stats()}
+
+
+@router.post("/dm/ankai-draft")
+async def dm_ankai_draft(payload: DMAnkaiRequest, request: Request) -> dict:
+    """安价起草:导游以读者口吻给出一批候选(玩家/导游再编辑确认)。"""
+    service = request.app.state.ai_service
+    if not service.enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="AI 尚未配置。请到「设置」页填写 AI 服务地址、API Key 与模型。",
+        )
+    try:
+        return await service.dm_ankai_draft(
+            topic=payload.topic,
+            context=payload.context or "",
+            cast=payload.cast or "",
+            count=payload.count,
+            persona_id=payload.persona or dm_assets.PERSONA_ID,
+        )
+    except (ValueError, AIError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.post("/dm/propose")
@@ -296,6 +338,7 @@ async def dm_propose(payload: DMProposeRequest, request: Request) -> dict:
             instruction=payload.instruction or "",
             roll_note=payload.roll_note or "",
             extra_rules=extra_rules,
+            persona_id=payload.persona or dm_assets.PERSONA_ID,
         )
     except (ValueError, AIError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc

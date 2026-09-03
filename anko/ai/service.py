@@ -15,6 +15,7 @@ from typing import Any, Callable, Optional
 
 from anko.ai.client import AIError, AIClient
 from anko.ai import dm as dm_assets
+from anko.ai import corpus as corpus_assets
 from anko.config import AISettings
 
 # 允许的最大输入长度(字符)
@@ -523,11 +524,12 @@ class AIService:
         instruction: str = "",
         roll_note: str = "",
         extra_rules: str = "",
+        persona_id: str = dm_assets.PERSONA_ID,
     ):
         """续写一段安科正文(流式):供“逐段生成、玩家可中途修改”流程使用。"""
         client = AIClient(self._current())
         prompt = build_story_segment_prompt(context, cast, instruction, roll_note)
-        prompt += "\n\n【导游人格参考】\n" + dm_assets.PERSONA_RULES
+        prompt += "\n\n【导游人格参考】\n" + dm_assets.persona_rules(persona_id)
         if extra_rules.strip():
             prompt += (
                 "\n\n【本地规则参考(保证世界观/规则一致)】\n"
@@ -545,14 +547,28 @@ class AIService:
         instruction: str = "",
         roll_note: str = "",
         extra_rules: str = "",
+        persona_id: str = dm_assets.PERSONA_ID,
     ) -> dict:
         """导游提案:判断下一步该叙述、掷骰,还是把选择权交还玩家。
 
         返回 JSON 提案(kind=roll/narrate/ask),由前端展示给玩家确认后再执行真实掷骰或写正文。
         """
+        refs = []
+        try:
+            query = f"{instruction or ''} {cast or ''} {context or ''}"
+            refs = corpus_assets.search_corpus(query, top=3)
+        except Exception:  # noqa: BLE001 语料缺失不阻断
+            refs = []
+        corpus_refs = corpus_assets.format_corpus_refs(refs)
         client = AIClient(self._current())
         prompt = dm_assets.build_dm_propose_prompt(
-            context, cast, instruction, roll_note, extra_rules
+            context,
+            cast,
+            instruction,
+            roll_note,
+            extra_rules,
+            corpus_refs,
+            persona_id,
         )
         content = await client.chat([{"role": "user", "content": prompt}])
         data = extract_json(content)
@@ -573,5 +589,41 @@ class AIService:
             "options": [str(x).strip() for x in options if str(x).strip()][:20],
             "thresholds": [str(x).strip() for x in thresholds if str(x).strip()][:12],
             "hint": str(data.get("hint") or "").strip()[:300],
-            "persona": dm_assets.PERSONA_ID,
+            "persona": persona_id,
+            "references": [
+                {
+                    "date": r.get("date", ""),
+                    "page": r.get("page"),
+                    "floor": r.get("floor"),
+                    "category": r.get("category", ""),
+                    "snippet": (r.get("snippet") or "")[:160],
+                }
+                for r in refs
+            ],
         }
+
+    async def dm_ankai_draft(
+        self,
+        topic: str,
+        context: str = "",
+        cast: str = "",
+        count: int = 6,
+        persona_id: str = dm_assets.PERSONA_ID,
+    ) -> dict:
+        """安价工作流:让导游以热心读者口吻起草候选选项(最终列表由导游/玩家编辑确认)。"""
+        count = max(2, min(count, 12))
+        client = AIClient(self._current())
+        prompt = dm_assets.build_ankai_draft_prompt(
+            topic, context, cast, count, persona_id
+        )
+        content = await client.chat([{"role": "user", "content": prompt}])
+        data = extract_json(content)
+        items = data.get("items") or []
+        if not isinstance(items, list):
+            items = []
+        clean: list[str] = []
+        for it in items:
+            s = str(it).strip()
+            if s:
+                clean.append(s)
+        return {"topic": topic.strip()[:60], "items": clean[:count]}

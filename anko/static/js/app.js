@@ -664,17 +664,8 @@ createApp({
         return { names, cards: [...cards, ...baseCards], isSubLevel: true };
       }
       // 子职在该级没有专属能力时,回显主职该级成长(如属性值提升),使 1-20 表连续
-      // 灵光增效为通用光环提升:复仇之誓无专属灵光,子职视图回显时不再带入
-      const base = this.classViewFeats(data, 'base', lv);
-      const notAuraGen = n => !(/^灵光/.test(n) && n.indexOf('增效') > 0);
-      return {
-        names: base.names.filter(notAuraGen),
-        cards: base.cards.filter(c => {
-          const zh = this.classZh(c.title);
-          return notAuraGen(zh);
-        }),
-        isSubLevel: base.isSubLevel,
-      };
+      // 复仇之誓(黑骑)无专属光环但仍受益原职灵光增效 → 直接回显原职的"灵光增效"圈与说明
+      return this.classViewFeats(data, 'base', lv);
     },
     classNextSubLv(data, viewId, lv) {
       const s = this.classSubs(data).find(x => 's' + x.id === viewId);

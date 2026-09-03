@@ -394,20 +394,241 @@
             <div v-if="!kbRaces.parents || !kbRaces.parents.length" class="inline-empty">暂未导入种族数据,请先在设置中导入规则包。</div>
           </div>
 
-          <!-- 职业:知识卡 -->
-          <div v-else-if="kbTab === 'classes'">
-            <div class="kb-race-grid">
-              <div v-for="c in kbClasses" :key="c.id" class="kb-race-card" @click="openKbClass(c)">
-                <div class="kb-race-name">{{ classZh(c.title) }}</div>
-                <div class="kb-race-en">{{ c.title }}</div>
-                <p class="kb-race-preview">{{ truncate(c.preview, 60) }}</p>
-                <span class="kb-chip">第{{ c.page }}页</span>
+          <!-- 职业:直接进入职业仪表盘(页面内置职业导航,免卡片/弹窗两层) -->
+          <div v-else-if="kbTab === 'classes'" class="kb-class-page">
+            <template v-if="kbClsPage">
+          <div class="cls-frame">
+            <aside class="cls-nav">
+              <div class="cls-nav-title">选择职业</div>
+              <button v-for="c in kbClasses" :key="c.id"
+                      :class="['cls-nav-item', { on: c.id === kbClsPage.id }]"
+                      :title="c.title" @click="openKbClass(c)">
+                <span class="cls-nav-zh">{{ classZh(c.title) }}</span>
+                <span class="cls-nav-en">{{ c.title }}</span>
+              </button>
+            </aside>
+
+            <div class="cls-main">
+              <div class="cls-head">
+                <div class="cls-title-line">
+                  <h3 class="cls-title">{{ classViewName(kbClsPage) }}</h3>
+                  <span class="tag">{{ kbClsPage.title }}</span>
+                  <span class="tag">玩家手册 · 第{{ kbClsPage.page }}页</span>
+                </div>
+                <p v-if="clsCurrentIntro(kbClsPage)" class="cls-intro">{{ clsReflow(clsCurrentIntro(kbClsPage)) }}</p>
+                <div class="cls-badges">
+                  <div class="cls-badge"><span>主属性</span><b>{{ clsMeta(kbClsPage).main }}</b></div>
+                  <div class="cls-badge"><span>施法</span><b>{{ clsCastText(kbClsPage) }}</b></div>
+                  <div class="cls-badge" v-if="clsMeta(kbClsPage).ab"><span>施法关键</span><b>{{ clsMeta(kbClsPage).ab }}</b></div>
+                  <div class="cls-badge"><span>生命骰</span><b>{{ clsHitDie(kbClsPage) }}</b></div>
+                  <div class="cls-badge"><span>熟练加值</span><b>{{ classRowProf(kbClsLv, kbClsPage) }}</b></div>
+                  <div class="cls-badge" v-if="clsCastKind(kbClsPage)"><span>施法方式</span><b>{{ clsCastKind(kbClsPage) }}</b></div>
+                </div>
+              </div>
+
+              <div class="kb-cls-switch cls-view-tabs">
+                <button v-for="v in classViews(kbClsPage)" :key="v.id"
+                        :class="['kb-cls-sel', { on: kbClsView === v.id }]"
+                        @click="kbClsView = v.id">
+                  {{ v.sub ? '🎯 ' : '🧙 ' }}{{ v.name }}
+                </button>
+              </div>
+
+              <div class="cls-stage">
+                <div class="cls-stage-title">等级进度(点选某级查看该级获得的能力)</div>
+                <div class="kb-lv-band cls-lv-grid">
+                  <button v-for="n in classLevelList()" :key="n"
+                          :class="['kb-lv-btn', 'cls-lv-cell', { on: kbClsLv === n, has: classRowChips(n, kbClsPage).length || classResMini(n, kbClsPage).length }]"
+                          :title="classRowFeatsTitle(n, kbClsPage)"
+                          @click="kbClsLv = n">
+                    <span class="cls-lv-num">{{ n }}</span>
+                    <span v-for="(nm, i) in classRowChips(n, kbClsPage)" :key="i" class="cls-lv-chip">{{ nm }}</span>
+                    <span v-if="classResMini(n, kbClsPage).length" class="cls-lv-sp">
+                      <i v-for="(m, i) in classResMini(n, kbClsPage)" :key="'m' + i" :title="m.t">{{ m.s }}</i>
+                    </span>
+                    <span v-if="!classRowChips(n, kbClsPage).length && !classResMini(n, kbClsPage).length" class="cls-lv-chip dim">—</span>
+                  </button>
+                </div>
+
+                <div class="kb-lv-panel">
+                  <div class="kb-lv-panel-head">{{ classViewName(kbClsPage) }} · Lv {{ kbClsLv }} 获得</div>
+                  <div class="kb-lv-feat-chips">
+                    <span v-if="classRowProf(kbClsLv, kbClsPage)" class="kb-lv-feat-chip kb-prof">熟练加值 {{ classRowProf(kbClsLv, kbClsPage) }}</span>
+                    <span v-for="(n, i) in classViewFeats(kbClsPage, kbClsView, kbClsLv).names" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
+                  </div>
+                  <div class="kb-res-bar" v-if="classRowResParts(kbClsLv, kbClsPage).length">
+                    <span class="kb-res-title">🔮 施法资源</span>
+                    <span v-for="(p, i) in classRowResParts(kbClsLv, kbClsPage)" :key="i" class="kb-res-chip">{{ p }}</span>
+                  </div>
+                  <div v-if="classViewFeats(kbClsPage, kbClsView, kbClsLv).cards.length" class="kb-subtraits">
+                    <div v-for="f in classViewFeats(kbClsPage, kbClsView, kbClsLv).cards" :key="f.id" class="kb-trait-item">
+                      <div class="kb-trait-title">{{ f.title }}</div>
+                      <template v-if="featOptions(f.content)">
+                        <div class="kb-choice-tabs">
+                          <button v-for="(o, i) in featOptions(f.content).options" :key="i"
+                                  :class="['kb-choice-tab', { on: (clsChoice[f.id] || 0) === i }]"
+                                  @click="clsChoice[f.id] = i">{{ o.name }}</button>
+                        </div>
+                        <p class="kb-choice-body">{{ featOptions(f.content).options[clsChoice[f.id] || 0].text }}</p>
+                      </template>
+                      <template v-else-if="isLongContent(f.content)">
+                        <p class="kb-long-preview">{{ previewLong(f.content) }}</p>
+                        <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><p>{{ nice(f.content) }}</p></details>
+                      </template>
+                      <p v-else>{{ nice(f.content) }}</p>
+                    </div>
+                  </div>
+                  <template v-else>
+                    <p class="kb-lv-note" v-if="kbClsView !== 'base'">
+                      🎯 该等级此子职业未获得新能力
+                      <span v-if="classNextSubLv(kbClsPage, kbClsView, kbClsLv)">;下一个能力在 Lv{{ classNextSubLv(kbClsPage, kbClsView, kbClsLv) }}</span>
+                    </p>
+                    <p class="kb-lv-note" v-else-if="classViewFeats(kbClsPage, kbClsView, kbClsLv).names.length">
+                      {{ classViewFeats(kbClsPage, kbClsView, kbClsLv).names.join('、') }}
+                    </p>
+                    <p class="kb-lv-note" v-else>
+                      📖 该等级职业表未列新增能力(可能为法术位/熟练项提升,详见下方职业特性与子职)。
+                    </p>
+                  </template>
+                  <div v-if="kbClsView === 'base' && classViewFeats(kbClsPage, kbClsView, kbClsLv).isSubLevel" class="kb-sub-choice">
+                    <div class="kb-lv-note">💡 上方为"选择入口"说明;选定下方任一子职业后,该等级实际将获得:</div>
+                    <div v-for="o in classSubChoices(kbClsPage, kbClsLv)" :key="o.s.id" class="kb-sub-choice-item">
+                      <button class="kb-choice-btn" @click="kbClsView = 's' + o.s.id">{{ classZh(o.s.title) }}</button>
+                      <span v-for="(c, i) in o.cards" :key="i" class="kb-lv-feat-chip">{{ classZh(c.title) }}</span>
+                      <span class="kb-choice-hint">点子职查看该级能力详情</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="cls-below">
+                <div class="cls-cols">
+                  <details v-if="raceParts(kbClsPage.content).story" class="kb-story">
+                    <summary>📜 职业设定</summary>
+                    <div class="kb-story-body">{{ nice(raceParts(kbClsPage.content).story) }}</div>
+                  </details>
+
+                  <div v-if="classGuide(kbClsPage).length" class="kb-race-block kb-guide-block">
+                    <div class="kb-race-block-label">🎓 如何创建该职业(AI 建档参考)</div>
+                    <div v-for="g in classGuide(kbClsPage)" :key="g.id" class="kb-trait-item">
+                      <div class="kb-trait-title">{{ g.title }}</div>
+                      <p>{{ nice(g.content) }}</p>
+                    </div>
+                    <p class="kb-guide-tip">💡 创建人物卡时,可在「AI 快速建档」描述里注明本职业名,系统会参考属性建议 / 背景 / 装备自动预填。</p>
+                  </div>
+
+                  <div v-if="classBases(kbClsPage).length" class="kb-race-block">
+                    <div class="kb-race-block-label">🛡 职业基础</div>
+                    <div v-for="b in classBases(kbClsPage)" :key="b.id" class="kb-race-sub">
+                      <details>
+                        <summary>{{ b.title }}</summary>
+                        <p>{{ nice(b.content) }}</p>
+                      </details>
+                    </div>
+                  </div>
+
+                  <div v-if="sortedClassFeats(kbClsPage).length" class="kb-race-block">
+                    <div class="kb-race-block-label">⚔️ 职业特性(按获得等级)</div>
+                    <div v-for="f in sortedClassFeats(kbClsPage)" :key="f.id" class="kb-race-sub">
+                      <details>
+                        <summary>
+                          {{ f.title }}
+                          <span v-if="classFeatLv(f, kbClsPage)" class="kb-chip">Lv{{ classFeatLv(f, kbClsPage) }}</span>
+                        </summary>
+                        <template v-if="featOptions(f.content)">
+                          <div class="kb-choice-tabs">
+                            <button v-for="(o, i) in featOptions(f.content).options" :key="i"
+                                    :class="['kb-choice-tab', { on: (clsChoice[f.id] || 0) === i }]"
+                                    @click="clsChoice[f.id] = i">{{ o.name }}</button>
+                          </div>
+                          <p class="kb-choice-body">{{ featOptions(f.content).options[clsChoice[f.id] || 0].text }}</p>
+                        </template>
+                        <template v-else-if="isLongContent(f.content)">
+                          <p class="kb-long-preview">{{ previewLong(f.content) }}</p>
+                          <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><p>{{ nice(f.content) }}</p></details>
+                        </template>
+                        <p v-else>{{ nice(f.content) }}</p>
+                      </details>
+                    </div>
+                  </div>
+                  <div v-if="classSubs(kbClsPage).length" class="kb-race-block">
+                    <div class="kb-race-block-label">🎯 子职业(3 级起选择;每个子职按等级获得能力)</div>
+                    <div v-for="s in classSubs(kbClsPage)" :key="s.id" class="kb-subclass-card">
+                      <details class="kb-subclass-main" :open="classSubs(kbClsPage).length === 1">
+                        <summary class="kb-subclass-name">
+                          {{ s.title }}
+                          <span v-if="subCastTag(s.title)" class="kb-sub-cast">{{ subCastTag(s.title) }}</span>
+                        </summary>
+                        <p v-if="s.content" class="kb-subclass-intro">{{ clsReflow(nice(s.content)) }}</p>
+                        <div class="kb-race-sub">
+                          <details v-for="c in subFeatures(s)" :key="c.id" class="kb-sub-feat">
+                            <summary>
+                              <span class="kb-lv-feat-chip">{{ subFeatLv(c, subFeatures(s)) ? 'Lv' + subFeatLv(c, subFeatures(s)) : '基础' }}</span>
+                              {{ c.title }}
+                            </summary>
+                            <template v-if="featOptions(c.content)">
+                              <div class="kb-choice-tabs">
+                                <button v-for="(o, i) in featOptions(c.content).options" :key="i"
+                                        :class="['kb-choice-tab', { on: (clsChoice[c.id] || 0) === i }]"
+                                        @click="clsChoice[c.id] = i">{{ o.name }}</button>
+                              </div>
+                              <p class="kb-choice-body">{{ featOptions(c.content).options[clsChoice[c.id] || 0].text }}</p>
+                            </template>
+                            <template v-else-if="isLongContent(c.content)">
+                              <p class="kb-long-preview">{{ previewLong(c.content) }}</p>
+                              <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(c.content) }} 字)</summary><p>{{ nice(c.content) }}</p></details>
+                            </template>
+                            <p v-else>{{ nice(c.content) }}</p>
+                          </details>
+                        </div>
+                        <details v-if="classSpellCols(s).length" class="kb-spell-table kb-artbox">
+                          <summary>🧪 {{ classZh(s.title) }} 施法资源(环位/已知法术 · 3-20 级,据原书施法表)</summary>
+                          <div class="kb-spell-grid" :style="{ gridTemplateColumns: 'repeat(' + (classSpellCols(s).length + 1) + ', auto)' }">
+                            <div class="kb-sg-h">等级</div>
+                            <div v-for="(c, ci) in classSpellCols(s)" :key="'hc' + ci" class="kb-sg-h">{{ c }}</div>
+                            <template v-for="lv in classSpellLevels(s)" :key="'r' + lv">
+                              <div class="kb-sg-lv">{{ lv }}</div>
+                              <div v-for="(c, ci) in classSpellCols(s)" :key="'c' + lv + '-' + ci" class="kb-sg-c">{{ classSpellVal(s, lv, c) }}</div>
+                            </template>
+                          </div>
+                          <a v-if="classTableImg(s)" :href="classTableImg(s)" target="_blank" rel="noopener">
+                            <img :src="classTableImg(s)" class="kb-art-tall" alt="施法资源原图" />
+                          </a>
+                        </details>
+                      </details>
+                    </div>
+                  </div>
+                </div>
+
+                <aside class="cls-side">
+                  <details v-if="classTableImg(kbClsPage)" class="kb-artbox">
+                    <summary>📊 原书职业等级表(图片可放大)</summary>
+                    <a :href="classTableImg(kbClsPage)" target="_blank" rel="noopener">
+                      <img :src="classTableImg(kbClsPage)" class="kb-art-tall" alt="职业等级表原图" />
+                    </a>
+                  </details>
+                  <details v-if="classSpellCols(kbClsPage).length" class="kb-spell-table">
+                    <summary>🧪 施法资源表(每级戏法/法术/环位)</summary>
+                    <div class="kb-spell-grid" :style="{ gridTemplateColumns: 'repeat(' + (classSpellCols(kbClsPage).length + 1) + ', auto)' }">
+                      <div class="kb-sg-h">等级</div>
+                      <div v-for="(c, ci) in classSpellCols(kbClsPage)" :key="'hc' + ci" class="kb-sg-h">{{ c }}</div>
+                      <template v-for="lv in classSpellLevels(kbClsPage)" :key="'r' + lv">
+                        <div class="kb-sg-lv">{{ lv }}</div>
+                        <div v-for="(c, ci) in classSpellCols(kbClsPage)" :key="'c' + lv + '-' + ci" class="kb-sg-c">{{ classSpellVal(kbClsPage, lv, c) }}</div>
+                      </template>
+                    </div>
+                  </details>
+                  <div class="cls-side-note">💡 已展示职业成长全貌:上部为 1-20 级等级进度,右侧卡片可展开原书表格;下方为特性/子职业详情。</div>
+                </aside>
               </div>
             </div>
-            <div v-if="!kbClasses.length" class="inline-empty">暂未导入职业数据,请先在设置中导入规则包。</div>
+          </div>
+        
+            </template>
+            <div v-else-if="!kbClasses.length" class="inline-empty">暂未导入职业数据,请先在设置中导入规则包。</div>
           </div>
 
-          <!-- 怪物:按类型分组 -->
+<!-- 怪物:按类型分组 -->
           <div v-else-if="kbTab === 'monsters'">
             <div v-for="type in kbMonsterTypes()" :key="type" class="kb-group">
               <div class="kb-group-head">{{ type }} <span class="kb-count">{{ kbMonstersGrouped(type).length }}</span></div>
@@ -963,236 +1184,6 @@
           <div v-for="(k, i) in kbDetail.data" :key="i" class="kb-kno-item">
             <b>{{ k.book }} · 第{{ k.page }}页</b>
             <p v-html="linkify(nice(k.content))"></p>
-          </div>
-        </template>
-
-        <!-- 职业详情:仪表盘布局(左职业导航 · 中央等级网格 · 右数据栏) -->
-        <template v-else-if="kbDetail.type === 'class' && kbDetail.data">
-          <div class="cls-frame">
-            <aside class="cls-nav">
-              <div class="cls-nav-title">选择职业</div>
-              <button v-for="c in kbClasses" :key="c.id"
-                      :class="['cls-nav-item', { on: c.id === kbDetail.data.id }]"
-                      :title="c.title" @click="openKbClass(c)">
-                <span class="cls-nav-zh">{{ classZh(c.title) }}</span>
-                <span class="cls-nav-en">{{ c.title }}</span>
-              </button>
-            </aside>
-
-            <div class="cls-main">
-              <div class="cls-head">
-                <div class="cls-title-line">
-                  <h3 class="cls-title">{{ classViewName(kbDetail.data) }}</h3>
-                  <span class="tag">{{ kbDetail.data.title }}</span>
-                  <span class="tag">玩家手册 · 第{{ kbDetail.data.page }}页</span>
-                </div>
-                <p v-if="clsCurrentIntro(kbDetail.data)" class="cls-intro">{{ clsReflow(clsCurrentIntro(kbDetail.data)) }}</p>
-                <div class="cls-badges">
-                  <div class="cls-badge"><span>主属性</span><b>{{ clsMeta(kbDetail.data).main }}</b></div>
-                  <div class="cls-badge"><span>施法</span><b>{{ clsCastText(kbDetail.data) }}</b></div>
-                  <div class="cls-badge" v-if="clsMeta(kbDetail.data).ab"><span>施法关键</span><b>{{ clsMeta(kbDetail.data).ab }}</b></div>
-                  <div class="cls-badge"><span>生命骰</span><b>{{ clsHitDie(kbDetail.data) }}</b></div>
-                  <div class="cls-badge"><span>熟练加值</span><b>{{ classRowProf(kbClsLv, kbDetail.data) }}</b></div>
-                  <div class="cls-badge" v-if="clsCastKind(kbDetail.data)"><span>施法方式</span><b>{{ clsCastKind(kbDetail.data) }}</b></div>
-                </div>
-              </div>
-
-              <div class="kb-cls-switch cls-view-tabs">
-                <button v-for="v in classViews(kbDetail.data)" :key="v.id"
-                        :class="['kb-cls-sel', { on: kbClsView === v.id }]"
-                        @click="kbClsView = v.id">
-                  {{ v.sub ? '🎯 ' : '🧙 ' }}{{ v.name }}
-                </button>
-              </div>
-
-              <div class="cls-stage">
-                <div class="cls-stage-title">等级进度(点选某级查看该级获得的能力)</div>
-                <div class="kb-lv-band cls-lv-grid">
-                  <button v-for="n in classLevelList()" :key="n"
-                          :class="['kb-lv-btn', 'cls-lv-cell', { on: kbClsLv === n, has: classRowChips(n, kbDetail.data).length || classResMini(n, kbDetail.data).length }]"
-                          :title="classRowFeatsTitle(n, kbDetail.data)"
-                          @click="kbClsLv = n">
-                    <span class="cls-lv-num">{{ n }}</span>
-                    <span v-for="(nm, i) in classRowChips(n, kbDetail.data)" :key="i" class="cls-lv-chip">{{ nm }}</span>
-                    <span v-if="classResMini(n, kbDetail.data).length" class="cls-lv-sp">
-                      <i v-for="(m, i) in classResMini(n, kbDetail.data)" :key="'m' + i" :title="m.t">{{ m.s }}</i>
-                    </span>
-                    <span v-if="!classRowChips(n, kbDetail.data).length && !classResMini(n, kbDetail.data).length" class="cls-lv-chip dim">—</span>
-                  </button>
-                </div>
-
-                <div class="kb-lv-panel">
-                  <div class="kb-lv-panel-head">{{ classViewName(kbDetail.data) }} · Lv {{ kbClsLv }} 获得</div>
-                  <div class="kb-lv-feat-chips">
-                    <span v-if="classRowProf(kbClsLv, kbDetail.data)" class="kb-lv-feat-chip kb-prof">熟练加值 {{ classRowProf(kbClsLv, kbDetail.data) }}</span>
-                    <span v-for="(n, i) in classViewFeats(kbDetail.data, kbClsView, kbClsLv).names" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
-                  </div>
-                  <div class="kb-res-bar" v-if="classRowResParts(kbClsLv, kbDetail.data).length">
-                    <span class="kb-res-title">🔮 施法资源</span>
-                    <span v-for="(p, i) in classRowResParts(kbClsLv, kbDetail.data)" :key="i" class="kb-res-chip">{{ p }}</span>
-                  </div>
-                  <div v-if="classViewFeats(kbDetail.data, kbClsView, kbClsLv).cards.length" class="kb-subtraits">
-                    <div v-for="f in classViewFeats(kbDetail.data, kbClsView, kbClsLv).cards" :key="f.id" class="kb-trait-item">
-                      <div class="kb-trait-title">{{ f.title }}</div>
-                      <template v-if="featOptions(f.content)">
-                        <div class="kb-choice-tabs">
-                          <button v-for="(o, i) in featOptions(f.content).options" :key="i"
-                                  :class="['kb-choice-tab', { on: (clsChoice[f.id] || 0) === i }]"
-                                  @click="clsChoice[f.id] = i">{{ o.name }}</button>
-                        </div>
-                        <p class="kb-choice-body">{{ featOptions(f.content).options[clsChoice[f.id] || 0].text }}</p>
-                      </template>
-                      <template v-else-if="isLongContent(f.content)">
-                        <p class="kb-long-preview">{{ previewLong(f.content) }}</p>
-                        <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><p>{{ nice(f.content) }}</p></details>
-                      </template>
-                      <p v-else>{{ nice(f.content) }}</p>
-                    </div>
-                  </div>
-                  <template v-else>
-                    <p class="kb-lv-note" v-if="kbClsView !== 'base'">
-                      🎯 该等级此子职业未获得新能力
-                      <span v-if="classNextSubLv(kbDetail.data, kbClsView, kbClsLv)">;下一个能力在 Lv{{ classNextSubLv(kbDetail.data, kbClsView, kbClsLv) }}</span>
-                    </p>
-                    <p class="kb-lv-note" v-else-if="classViewFeats(kbDetail.data, kbClsView, kbClsLv).names.length">
-                      {{ classViewFeats(kbDetail.data, kbClsView, kbClsLv).names.join('、') }}
-                    </p>
-                    <p class="kb-lv-note" v-else>
-                      📖 该等级职业表未列新增能力(可能为法术位/熟练项提升,详见下方职业特性与子职)。
-                    </p>
-                  </template>
-                  <div v-if="kbClsView === 'base' && classViewFeats(kbDetail.data, kbClsView, kbClsLv).isSubLevel" class="kb-sub-choice">
-                    <div class="kb-lv-note">💡 上方为"选择入口"说明;选定下方任一子职业后,该等级实际将获得:</div>
-                    <div v-for="o in classSubChoices(kbDetail.data, kbClsLv)" :key="o.s.id" class="kb-sub-choice-item">
-                      <button class="kb-choice-btn" @click="kbClsView = 's' + o.s.id">{{ classZh(o.s.title) }}</button>
-                      <span v-for="(c, i) in o.cards" :key="i" class="kb-lv-feat-chip">{{ classZh(c.title) }}</span>
-                      <span class="kb-choice-hint">点子职查看该级能力详情</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="cls-below">
-                <div class="cls-cols">
-                  <details v-if="raceParts(kbDetail.data.content).story" class="kb-story">
-                    <summary>📜 职业设定</summary>
-                    <div class="kb-story-body">{{ nice(raceParts(kbDetail.data.content).story) }}</div>
-                  </details>
-
-                  <div v-if="classGuide(kbDetail.data).length" class="kb-race-block kb-guide-block">
-                    <div class="kb-race-block-label">🎓 如何创建该职业(AI 建档参考)</div>
-                    <div v-for="g in classGuide(kbDetail.data)" :key="g.id" class="kb-trait-item">
-                      <div class="kb-trait-title">{{ g.title }}</div>
-                      <p>{{ nice(g.content) }}</p>
-                    </div>
-                    <p class="kb-guide-tip">💡 创建人物卡时,可在「AI 快速建档」描述里注明本职业名,系统会参考属性建议 / 背景 / 装备自动预填。</p>
-                  </div>
-
-                  <div v-if="classBases(kbDetail.data).length" class="kb-race-block">
-                    <div class="kb-race-block-label">🛡 职业基础</div>
-                    <div v-for="b in classBases(kbDetail.data)" :key="b.id" class="kb-race-sub">
-                      <details>
-                        <summary>{{ b.title }}</summary>
-                        <p>{{ nice(b.content) }}</p>
-                      </details>
-                    </div>
-                  </div>
-
-                  <div v-if="sortedClassFeats(kbDetail.data).length" class="kb-race-block">
-                    <div class="kb-race-block-label">⚔️ 职业特性(按获得等级)</div>
-                    <div v-for="f in sortedClassFeats(kbDetail.data)" :key="f.id" class="kb-race-sub">
-                      <details>
-                        <summary>
-                          {{ f.title }}
-                          <span v-if="classFeatLv(f, kbDetail.data)" class="kb-chip">Lv{{ classFeatLv(f, kbDetail.data) }}</span>
-                        </summary>
-                        <template v-if="featOptions(f.content)">
-                          <div class="kb-choice-tabs">
-                            <button v-for="(o, i) in featOptions(f.content).options" :key="i"
-                                    :class="['kb-choice-tab', { on: (clsChoice[f.id] || 0) === i }]"
-                                    @click="clsChoice[f.id] = i">{{ o.name }}</button>
-                          </div>
-                          <p class="kb-choice-body">{{ featOptions(f.content).options[clsChoice[f.id] || 0].text }}</p>
-                        </template>
-                        <template v-else-if="isLongContent(f.content)">
-                          <p class="kb-long-preview">{{ previewLong(f.content) }}</p>
-                          <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><p>{{ nice(f.content) }}</p></details>
-                        </template>
-                        <p v-else>{{ nice(f.content) }}</p>
-                      </details>
-                    </div>
-                  </div>
-                  <div v-if="classSubs(kbDetail.data).length" class="kb-race-block">
-                    <div class="kb-race-block-label">🎯 子职业(3 级起选择;每个子职按等级获得能力)</div>
-                    <div v-for="s in classSubs(kbDetail.data)" :key="s.id" class="kb-subclass-card">
-                      <details class="kb-subclass-main" :open="classSubs(kbDetail.data).length === 1">
-                        <summary class="kb-subclass-name">
-                          {{ s.title }}
-                          <span v-if="subCastTag(s.title)" class="kb-sub-cast">{{ subCastTag(s.title) }}</span>
-                        </summary>
-                        <p v-if="s.content" class="kb-subclass-intro">{{ clsReflow(nice(s.content)) }}</p>
-                        <div class="kb-race-sub">
-                          <details v-for="c in subFeatures(s)" :key="c.id" class="kb-sub-feat">
-                            <summary>
-                              <span class="kb-lv-feat-chip">{{ subFeatLv(c, subFeatures(s)) ? 'Lv' + subFeatLv(c, subFeatures(s)) : '基础' }}</span>
-                              {{ c.title }}
-                            </summary>
-                            <template v-if="featOptions(c.content)">
-                              <div class="kb-choice-tabs">
-                                <button v-for="(o, i) in featOptions(c.content).options" :key="i"
-                                        :class="['kb-choice-tab', { on: (clsChoice[c.id] || 0) === i }]"
-                                        @click="clsChoice[c.id] = i">{{ o.name }}</button>
-                              </div>
-                              <p class="kb-choice-body">{{ featOptions(c.content).options[clsChoice[c.id] || 0].text }}</p>
-                            </template>
-                            <template v-else-if="isLongContent(c.content)">
-                              <p class="kb-long-preview">{{ previewLong(c.content) }}</p>
-                              <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(c.content) }} 字)</summary><p>{{ nice(c.content) }}</p></details>
-                            </template>
-                            <p v-else>{{ nice(c.content) }}</p>
-                          </details>
-                        </div>
-                        <details v-if="classSpellCols(s).length" class="kb-spell-table kb-artbox">
-                          <summary>🧪 {{ classZh(s.title) }} 施法资源(环位/已知法术 · 3-20 级,据原书施法表)</summary>
-                          <div class="kb-spell-grid" :style="{ gridTemplateColumns: 'repeat(' + (classSpellCols(s).length + 1) + ', auto)' }">
-                            <div class="kb-sg-h">等级</div>
-                            <div v-for="(c, ci) in classSpellCols(s)" :key="'hc' + ci" class="kb-sg-h">{{ c }}</div>
-                            <template v-for="lv in classSpellLevels(s)" :key="'r' + lv">
-                              <div class="kb-sg-lv">{{ lv }}</div>
-                              <div v-for="(c, ci) in classSpellCols(s)" :key="'c' + lv + '-' + ci" class="kb-sg-c">{{ classSpellVal(s, lv, c) }}</div>
-                            </template>
-                          </div>
-                          <a v-if="classTableImg(s)" :href="classTableImg(s)" target="_blank" rel="noopener">
-                            <img :src="classTableImg(s)" class="kb-art-tall" alt="施法资源原图" />
-                          </a>
-                        </details>
-                      </details>
-                    </div>
-                  </div>
-                </div>
-
-                <aside class="cls-side">
-                  <details v-if="classTableImg(kbDetail.data)" class="kb-artbox">
-                    <summary>📊 原书职业等级表(图片可放大)</summary>
-                    <a :href="classTableImg(kbDetail.data)" target="_blank" rel="noopener">
-                      <img :src="classTableImg(kbDetail.data)" class="kb-art-tall" alt="职业等级表原图" />
-                    </a>
-                  </details>
-                  <details v-if="classSpellCols(kbDetail.data).length" class="kb-spell-table">
-                    <summary>🧪 施法资源表(每级戏法/法术/环位)</summary>
-                    <div class="kb-spell-grid" :style="{ gridTemplateColumns: 'repeat(' + (classSpellCols(kbDetail.data).length + 1) + ', auto)' }">
-                      <div class="kb-sg-h">等级</div>
-                      <div v-for="(c, ci) in classSpellCols(kbDetail.data)" :key="'hc' + ci" class="kb-sg-h">{{ c }}</div>
-                      <template v-for="lv in classSpellLevels(kbDetail.data)" :key="'r' + lv">
-                        <div class="kb-sg-lv">{{ lv }}</div>
-                        <div v-for="(c, ci) in classSpellCols(kbDetail.data)" :key="'c' + lv + '-' + ci" class="kb-sg-c">{{ classSpellVal(kbDetail.data, lv, c) }}</div>
-                      </template>
-                    </div>
-                  </details>
-                  <div class="cls-side-note">💡 已展示职业成长全貌:上部为 1-20 级等级进度,右侧卡片可展开原书表格;下方为特性/子职业详情。</div>
-                </aside>
-              </div>
-            </div>
           </div>
         </template>
 

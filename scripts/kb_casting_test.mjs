@@ -1,4 +1,4 @@
-/* 施法资源 UI 回归(战士-奥法骑士子职施法表) */
+/* 施法资源回归(页内仪表盘):战士-奥法骑士子职施法表。 */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -16,7 +16,6 @@ window.addEventListener('error', e => errors.push('error: ' + (e.message || e.er
 window.eval(fs.readFileSync(path.join(root, 'anko/static/vendor/vue.global.prod.js'), 'utf-8'));
 window.eval(fs.readFileSync(path.join(root, 'anko/static/js/api.js'), 'utf-8') + ';\n' + fs.readFileSync(path.join(root, 'anko/static/js/app.js'), 'utf-8'));
 await sleep(2200);
-
 const doc = window.document;
 const click = el => el.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 const kbNav = [...doc.querySelectorAll('.side-item')].find(el => el.textContent.includes('知识库'));
@@ -24,34 +23,22 @@ click(kbNav);
 await sleep(300);
 const classTab = [...doc.querySelectorAll('.kb-tabs .kb-tab')].find(el => el.textContent.includes('职业'));
 click(classTab);
-await sleep(2200);
-
-const cards = [...doc.querySelectorAll('.kb-race-card')];
-const card = cards.find(c => (c.querySelector('.kb-race-name') || { textContent: '' }).textContent.trim() === '战士');
-console.log('匹配卡:', card ? (card.querySelector('.kb-race-name') || {}).textContent.trim() : '无');
-click(card);
-await sleep(2000);
-
-const m2 = doc.querySelector('.kb-modal');
-console.log('战士弹窗:', !!m2);
-if (m2) {
-  const subCards = [...m2.querySelectorAll('.kb-subclass-card')];
-  console.log('子职卡数:', subCards.length);
-  console.log('子职名:', subCards.map(c => (c.querySelector('.kb-subclass-name') || { textContent: '?' }).textContent.trim()).join(' | '));
-  const ek = subCards.find(c => c.textContent.includes('奥法骑士'));
-  const champion = subCards.find(c => c.textContent.includes('勇士'));
-  console.log('奥法骑士有施法资源折叠:', !!ek);
-  if (ek) {
-    console.log('奥法骑士有施法资源折叠:', !!ek.querySelector('.kb-spell-table'));
-    const grid = ek.querySelector('.kb-spell-grid');
-    const cell = grid ? [...ek.querySelectorAll('.kb-sg-lv')] : [];
-    console.log('奥法骑士网格行数:', cell.length);
-    const img = ek.querySelector('.kb-spell-table img');
-    console.log('原书施法表图:', img ? img.getAttribute('src') : '无');
-  }
-  console.log('勇士无施法资源折叠:', champion ? !champion.querySelector('.kb-spell-table') : '?');
-  const rawJson = [...m2.querySelectorAll('.kb-sub-feat summary')].some(s => s.textContent.includes('施法资源表'));
-  console.log('能力列表未出现 JSON 施法资源表:', !rawJson);
+await sleep(2600);
+const frame = doc.querySelector('.cls-frame');
+const navFighter = [...(frame ? frame.querySelectorAll('.cls-nav-item') : [])].find(b => b.textContent.includes('战士'));
+if (navFighter) { click(navFighter); await sleep(1800); }
+const f2 = doc.querySelector('.cls-frame');
+console.log('战士页:', !!f2 && f2.querySelector('.cls-title').textContent.includes('战士'));
+const subCards = f2 ? [...f2.querySelectorAll('.kb-subclass-card')] : [];
+console.log('子职名:', subCards.map(c => (c.querySelector('.kb-subclass-name') || { textContent: '?' }).textContent.trim()).join(' | '));
+const ek = subCards.find(c => c.textContent.includes('奥法骑士'));
+const champion = subCards.find(c => c.textContent.includes('勇士'));
+console.log('奥法骑士有施法资源折叠:', !!ek && !!ek.querySelector('.kb-spell-table'));
+if (ek) {
+  const cell = [...ek.querySelectorAll('.kb-sg-lv')];
+  console.log('奥法骑士网格行数:', cell.length);
+  console.log('原书施法表图:', (ek.querySelector('.kb-spell-table img') || { getAttribute: () => '无' }).getAttribute('src'));
 }
+console.log('勇士无施法资源折叠:', champion ? !champion.querySelector('.kb-spell-table') : '?');
 console.log('errors:', errors.length ? errors : '无');
 process.exit(0);

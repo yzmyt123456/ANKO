@@ -120,6 +120,7 @@ createApp({
       kbRaces: [],
       kbRaceResults: [],
       kbClasses: [],
+      kbClsPage: null,
       kbClsLv: 1,
       kbClsView: 'base',
       clsChoice: {},
@@ -450,7 +451,14 @@ createApp({
       this.kbCategory = '';
       if (tab === 'knowledge' && !this.kbKnowledge.length) this.loadKbKnowledge();
       if (tab === 'races' && !this.kbRaces.length) this.loadKbRaces();
-      if (tab === 'classes' && !this.kbClasses.length) this.loadKbClasses();
+      if (tab === 'classes') {
+        // 职业页直接进入仪表盘(内置 12 职业导航),默认打开首个职业
+        const boot = async () => {
+          if (!this.kbClasses.length) await this.loadKbClasses();
+          if (!this.kbClsPage && this.kbClasses.length) await this.openKbClass(this.kbClasses[0]);
+        };
+        boot();
+      }
     },
 
     async loadKbClasses() {
@@ -466,12 +474,14 @@ createApp({
     },
 
     async openKbClass(k) {
+      // 职业改为页内仪表盘展示(知识库-职业 tab),左侧导航切换即调用本方法
+      this.kbTab = 'classes';
       this.kbClsLv = 1;
       this.kbClsView = 'base';
       this.clsChoice = {};
       try {
         const data = await API.get(`/rules/knowledge/${k.id}`);
-        this.kbDetail = { type: 'class', data };
+        this.kbClsPage = data;
       } catch (e) { this.showToast(e.message, 'error'); }
     },
 

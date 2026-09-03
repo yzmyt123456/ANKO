@@ -626,11 +626,21 @@ createApp({
       let cards = kids.filter(c => this.subFeatLv(c, kids) === lv);
       if (s && !cards.length) {
         // 该级无独立子职卡时,把"正文写明第 N 级"的成长卡带到该级(如战术大师18级=卓越骰d12)
-        cards = kids.filter(c => {
-          const base = this.subFeatLv(c, kids);
-          if (base == null || base >= lv) return false;
-          return new RegExp('第\\s*' + lv + '\\s*级').test(String(c.content || ''));
-        });
+        // 并只截取该级那一段,不再整卡复述更早等级
+        cards = kids
+          .filter(c => {
+            const base = this.subFeatLv(c, kids);
+            if (base == null || base >= lv) return false;
+            return new RegExp('第\\s*' + lv + '\\s*级').test(String(c.content || ''));
+          })
+          .map(c => {
+            const m = new RegExp('第\\s*' + lv + '\\s*级').exec(String(c.content || ''));
+            if (!m) return c;
+            let seg = String(c.content || '').slice(m.index);
+            const dot = seg.indexOf('。');
+            if (dot > 0) seg = seg.slice(0, dot + 1);
+            return Object.assign({}, c, { content: seg.trim() });
+          });
       }
       if (cards.length) {
         // 子职有专属能力时,同时保留该级主职的核心成长(如诗人3级"专精"、6级"反迷惑"),

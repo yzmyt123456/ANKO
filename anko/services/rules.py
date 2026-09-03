@@ -15,6 +15,7 @@ class RuleService:
 
     def __init__(self, session_factory: sessionmaker[Session]) -> None:
         self._sf = session_factory
+        self._term_cache: Optional[dict] = None
 
     def _session(self) -> Session:
         return self._sf()
@@ -300,6 +301,74 @@ class RuleService:
                 }
                 for x in rows
             ]
+
+    def _term_index(self) -> dict:
+        """懒加载词条表(法术名/怪物名/知识标题),供正文词条发现。"""
+        if self._term_cache is not None:
+            return self._term_cache
+        spells: list[tuple[str, str]] = []
+        monsters: list[str] = []
+        knowledge: list[tuple[str, int, str, int]] = []
+        with self._session() as s:
+            for name, name_en in s.execute(select(RuleSpell.name, RuleSpell.name_en)).all():
+                if name:
+                    spells.append((name, name_en or ""))
+            monsters = list(s.execute(select(RuleMonster.name)).scalars().all())
+            for title, kid, book, page in s.execute(
+                select(RuleKnowledge.title, RuleKnowledge.id, RuleKnowledge.book, RuleKnowledge.page)
+            ).all():
+                if title:
+                    knowledge.append((title, kid, book or "", page))
+        self._term_cache = {"spells": spells, "monsters": monsters, "knowledge": knowledge}
+        return self._term_cache
+
+    def find_mentions(self, text: str, limit: int = 24) -> list[dict]:
+        """从一段正文里找出知识库收录的词条(法术/怪物/规则标题)。"""
+        if not text or not text.strip():
+            return []
+        idx = self._term_index()
+        out: list[dict] = []
+        seen: set[tuple[str, str]] = set()
+
+        def _match(name: str, hay: str) -> bool:
+            if not name or len(name) < 2:
+                return False
+            if name.isascii():
+                import re as _re
+                return _re.search(rf"(?<![A-Za-z]){_re.escape(name)}(?![A-Za-z])", hay) is not None
+            return name in hay
+
+        for name, name_en in sorted(idx["spells"], key=lambda x: -len(x[0] or "")):
+            if _match(name, text) and (("spell", name) not in seen):
+                seen.add(("spell", name))
+                out.append({"type": "spell", "name": name, "url": f"/api/rules/spells/{name}"})
+                if len(out) >= limit:
+                    return out
+            elif name_en and len(name_en) >= 2 and _match(name_en, text) and (("spell", name) not in seen):
+                seen.add(("spell", name))
+                out.append({"type": "spell", "name": name, "url": f"/api/rules/spells/{name}"})
+                if len(out) >= limit:
+                    return out
+        for name in sorted(idx["monsters"], key=lambda x: -len(x or "")):
+            if name and _match(name, text) and ("monster", name) not in seen:
+                seen.add(("monster", name))
+                out.append({"type": "monster", "name": name, "url": f"/api/rules/monsters/{name}"})
+                if len(out) >= limit:
+                    return out
+        for title, kid, book, page in sorted(idx["knowledge"], key=lambda x: -len(x[0] or "")):
+            if title and _match(title, text) and ("kb", title) not in seen:
+                seen.add(("kb", title))
+                out.append({
+                    "type": "knowledge",
+                    "name": title,
+                    "id": kid,
+                    "book": book,
+                    "page": page,
+                    "url": f"/api/rules/knowledge/{kid}",
+                })
+                if len(out) >= limit:
+                    return out
+        return out
 
     def search_knowledge(
         self,

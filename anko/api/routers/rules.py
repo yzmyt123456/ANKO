@@ -93,6 +93,16 @@ def get_knowledge_item(kid: int, request: Request) -> dict:
     return obj
 
 
+@router.get("/mentions")
+def find_mentions(
+    text: str = Query(..., min_length=2),
+    limit: int = Query(24, ge=1, le=60),
+    request: Request = None,
+) -> list[dict]:
+    """从一段正文里发现知识库词条(法术/怪物/规则标题),供内联悬浮。"""
+    return _svc(request).find_mentions(text, limit)
+
+
 @router.get("/maps")
 def list_maps(request: Request) -> list[dict]:
     """地图素材列表。"""

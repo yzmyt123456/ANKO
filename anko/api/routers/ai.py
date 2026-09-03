@@ -20,6 +20,27 @@ from anko.schemas.ai import AIParseRequest, AIStatus, CharacterDraft
 router = APIRouter(prefix="/ai", tags=["AI 助手"])
 
 
+def _retrieve_rule_ref_meta(request: Request, query_text: str, top: int = 4) -> list[dict]:
+    """返回规则引用元数据(供前端在 DM 提示卡里展示引用了哪些规则)。"""
+    rag: KnowledgeRag | None = getattr(request.app.state, "knowledge_rag", None)
+    try:
+        if rag is not None and (query_text or "").strip():
+            refs = rag.search(query_text, top=top)
+            return [
+                {
+                    "title": r.get("title", ""),
+                    "book": r.get("book", ""),
+                    "page": r.get("page"),
+                    "category": r.get("category", ""),
+                    "snippet": (r.get("snippet") or "")[:140],
+                }
+                for r in refs
+            ]
+    except Exception:  # noqa: BLE001
+        pass
+    return []
+
+
 def _retrieve_rule_refs(request: Request, query_text: str, top: int = 4) -> str:
     """让 DM/生成器调动知识库:先用 n-gram 向量按语义取 Top-N,失败则退回关键词。"""
     rag: KnowledgeRag | None = getattr(request.app.state, "knowledge_rag", None)
@@ -309,13 +330,10 @@ async def dm_propose(payload: DMProposeRequest, request: Request) -> dict:
             status_code=503,
             detail="AI 尚未配置。请到「设置」页填写 AI 服务地址、API Key 与模型。",
         )
-    extra_rules = _retrieve_rule_refs(
-        request,
-        f"{payload.context or ''} {payload.cast or ''} {payload.instruction or ''}",
-        top=5,
-    )
+    query_text = f"{payload.context or ''} {payload.cast or ''} {payload.instruction or ''}"
+    extra_rules = _retrieve_rule_refs(request, query_text, top=5)
     try:
-        return await service.dm_propose(
+        result = await service.dm_propose(
             context=payload.context or "",
             cast=payload.cast or "",
             instruction=payload.instruction or "",
@@ -323,6 +341,8 @@ async def dm_propose(payload: DMProposeRequest, request: Request) -> dict:
             extra_rules=extra_rules,
             persona_id=payload.persona or dm_assets.PERSONA_ID,
         )
+        result["rule_refs"] = _retrieve_rule_ref_meta(request, query_text, top=5)
+        return result
     except (ValueError, AIError) as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 

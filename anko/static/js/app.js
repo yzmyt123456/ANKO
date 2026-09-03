@@ -319,14 +319,23 @@ createApp({
     this.loadGlossary();
     this.loadAiConfig();
     this.loadKnowledge();
-    // 词条点击事件委托:本地词条打开内部详情
+    // 词条点击事件委托:本地词条打开内部详情;正文内联词条(kb-term)同
     document.addEventListener('click', (e) => {
+      const kb = e.target.closest('.kb-term');
+      if (kb) {
+        e.preventDefault();
+        const type = kb.dataset.type === 'monster' ? 'monster' : (kb.dataset.type === 'spell' ? 'spell' : '');
+        this.openLocalTerm(kb.dataset.name, type);
+        return;
+      }
       const a = e.target.closest('.term-link');
       if (a) {
         e.preventDefault();
         this.openLocalTerm(a.dataset.term, a.dataset.type);
       }
     });
+    // 正文内联词条悬浮 → 知识库小卡
+    document.addEventListener('mouseover', (e) => this.onKbTermOver(e));
   },
 
   methods: {
@@ -2622,6 +2631,8 @@ createApp({
       window.scrollTo({ top: 0 });
       try {
         this.entries = await API.get(`/stories/${s.id}/entries`);
+        await this.$nextTick();
+        this.decorateStoryTerms();
       } catch (e) { this.showToast(e.message, 'error'); }
     },
 
@@ -2650,7 +2661,104 @@ createApp({
         this.segRollLog = [];
         this.showToast('剧情已保存 ✍️');
         this.entries = await API.get(`/stories/${this.currentStory.id}/entries`);
+        await this.$nextTick();
+        this.decorateStoryTerms();
       } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    /* ---------------- 知识库内联词条:正文悬浮卡 ---------------- */
+    _escRe(s) {
+      return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    },
+    async decorateStoryTerms() {
+      const nodes = this.$root.$el ? document.querySelectorAll('.entry-content') : [];
+      for (const el of nodes) {
+        if (el.dataset.terms === '1') continue;
+        el.dataset.terms = '1';
+        const text = (el.textContent || '').trim();
+        if (!text) continue;
+        try {
+          const mentions = await API.get('/rules/mentions?text=' + encodeURIComponent(text.slice(0, 5000)) + '&limit=16');
+          if (!mentions || !mentions.length) continue;
+          let h = el.innerHTML;
+          let changed = false;
+          for (const m of mentions.slice(0, 12)) {
+            const name = String(m.name || '');
+            if (name.length < 2) continue;
+            if (h.includes('data-name="' + name.replace(/"/g, '&quot;') + '"')) continue;
+            const re = new RegExp(this._escRe(name), 'i');
+            if (!re.test(h)) continue;
+            const safe = this._escHtml(name);
+            h = h.replace(re,
+              `<span class="kb-term" data-type="${this._escHtml(m.type || 'knowledge')}" ` +
+              `data-name="${safe}" data-id="${Number(m.id) || ''}">${safe}</span>`);
+            changed = true;
+          }
+          if (changed) el.innerHTML = h;
+        } catch (e) { /* 词条装饰失败不打扰阅读 */ }
+      }
+    },
+    kbTipHtml(type, data) {
+      const esc = this._escHtml;
+      const t = v => v == null || v === '' ? '' : String(v);
+      if (type === 'spell') {
+        const lv = data.level === 0 ? '戏法' : `${data.level || '?'} 环`;
+        return `<b class="kb-tip-title">${esc(data.name)}</b> <span class="muted">${esc(data.name_en || '')}</span>
+          <div class="kb-tip-meta">${esc(lv)} · ${esc(data.school || '')}</div>
+          <div class="kb-tip-row">施法:${esc(t(data.casting_time))} 距离:${esc(t(data.range))} 成分:${esc(t(data.components))} 持续:${esc(t(data.duration))}</div>
+          <p class="kb-tip-body">${esc(t(data.description).slice(0, 260))}${t(data.description).length > 260 ? '…' : ''}</p>
+          <span class="muted kb-tip-hint">点击词条查看完整详情</span>`;
+      }
+      if (type === 'monster') {
+        return `<b class="kb-tip-title">${esc(data.name)}</b> <span class="muted">${esc(data.name_en || '')}</span>
+          <div class="kb-tip-row">${esc(t(data.meta))} · AC ${esc(t(data.ac))} · HP ${esc(t(data.hp))}</div>
+          <p class="kb-tip-body">${esc((t(data.description) || t(data.meta)).slice(0, 260))}</p>
+          <span class="muted kb-tip-hint">点击词条查看完整详情</span>`;
+      }
+      const title = t(data.title) || t(data[0] && data[0].title);
+      const content = t(data.content) || t(data[0] && data[0].content);
+      const book = t(data.book) || t(data[0] && data[0].book);
+      return `<b class="kb-tip-title">${esc(title)}</b> <span class="muted">${esc(book)}${data.page ? ` · 第${data.page}页` : ''}</span>
+        <p class="kb-tip-body">${esc(content.slice(0, 300))}${content.length > 300 ? '…' : ''}</p>
+        <span class="muted kb-tip-hint">点击词条查看完整详情</span>`;
+    },
+    async onKbTermOver(ev) {
+      const el = ev.target.closest('.kb-term');
+      if (!el) {
+        if (this._kbTipHide) clearTimeout(this._kbTipHide);
+        this._kbTipHide = setTimeout(() => { if (this._kbTip) this._kbTip.style.display = 'none'; }, 260);
+        return;
+      }
+      if (this._kbTipHide) clearTimeout(this._kbTipHide);
+      if (!this._kbTip) {
+        const tip = document.createElement('div');
+        tip.className = 'kb-tip';
+        document.body.appendChild(tip);
+        this._kbTip = tip;
+      }
+      const type = el.dataset.type || 'knowledge';
+      const name = el.dataset.name || '';
+      const kid = el.dataset.id;
+      const cacheKey = type + '|' + name + '|' + kid;
+      this._kbTip.style.left = Math.min(ev.clientX + 14, window.innerWidth - 340) + 'px';
+      this._kbTip.style.top = Math.min(ev.clientY + 16, window.innerHeight - 260) + 'px';
+      this._kbTip.style.display = 'block';
+      if (this._kbTip.dataset.key === cacheKey) return;
+      this._kbTip.dataset.key = cacheKey;
+      this._kbTip.innerHTML = '<span class="muted">📖 加载词条…</span>';
+      try {
+        let typeUse = type, data;
+        if (type === 'spell' || type === 'monster') {
+          data = await API.get(`/rules/${type}s/${encodeURIComponent(name)}`);
+        } else {
+          data = await API.get(`/rules/knowledge/${kid || name}`);
+          typeUse = 'knowledge';
+        }
+        if (this._kbTip.dataset.key !== cacheKey) return;
+        this._kbTip.innerHTML = this.kbTipHtml(typeUse, data);
+      } catch (e) {
+        this._kbTip.innerHTML = `<span class="muted">词条读取失败</span>`;
+      }
     },
 
     /* ---------------- 骰娘 ---------------- */

@@ -268,6 +268,16 @@
                         </li>
                       </ul>
                     </details>
+                    <details v-if="dmProposal.rule_refs && dmProposal.rule_refs.length" class="dm-refs">
+                      <summary>📚 规则库参考 {{ dmProposal.rule_refs.length }} 条(裁决依据)</summary>
+                      <ul class="dm-refs-list">
+                        <li v-for="(rf, i) in dmProposal.rule_refs" :key="i">
+                          <b>{{ rf.title }}</b>
+                          <span class="muted"> · {{ rf.book }} · 第{{ rf.page }}页</span><br/>
+                          {{ rf.snippet }}
+                        </li>
+                      </ul>
+                    </details>
                     <div class="dm-actions">
                       <button v-if="dmProposal.kind === 'roll'" type="button" class="btn primary" :disabled="segBusy || dmBusy" @click="dmAcceptRoll">
                         🎲 采纳并掷骰 → 自动写正文

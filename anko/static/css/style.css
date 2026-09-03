@@ -1261,8 +1261,12 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .pf-rows { display: grid; grid-template-columns: 116px repeat(20, minmax(30px, 1fr)); column-gap: 3px; row-gap: 0; min-width: 820px; align-items: stretch; }
 .pf-rows .pf-rowhead { align-self: center; }
 .pf-rows .pf-lvcell { position: relative; z-index: 1; }
-.pf-rows .pf-lvcell::after { display: none; }
-.pf-colsep { width: 1px; align-self: stretch; justify-self: center; transform: translateX(-.5px); background: linear-gradient(180deg, rgba(140, 110, 60, .03), rgba(140, 110, 60, .5) 50%, rgba(140, 110, 60, .03)); z-index: 0; }
+.pf-rows .pf-scale { position: relative; }
+.pf-rows .pf-lvcell::after, .pf-rows .pf-scale::after {
+  content: ''; position: absolute; top: 0; bottom: 0; right: -1.5px; width: 1px;
+  background: linear-gradient(180deg, rgba(140, 110, 60, .04), rgba(140, 110, 60, .5) 50%, rgba(140, 110, 60, .04));
+}
+.pf-rows .pf-lastcol::after { display: none; }
 .pf-hline { position: relative; z-index: 0; }
 .pf-hline::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: #94a3b8; }
 .pf-hline.kind-sub::after { background: #a78bfa; }

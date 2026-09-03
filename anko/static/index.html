@@ -501,23 +501,23 @@
                     </div>
                   </div>
 
-                  <div v-for="lane in clsTableLanes(kbClsPage)" :key="lane.key"
-                       :class="'pf-lane-row lane-' + lane.key">
-                    <span class="pf-ll-label">{{ lane.label }}</span>
-                    <div class="pf-lane-grid">
-                      <template v-if="lane.lines.length">
-                        <i v-for="(ln, i) in lane.lines" :key="'ln' + i"
-                           class="pf-line" :class="'kind-' + ln.kind"
-                           :style="{ left: ((ln.a - 0.5) * 5) + '%', width: ((ln.b - ln.a) * 5) + '%' }"></i>
-                      </template>
-                      <template v-for="n in classLevelList()" :key="'lc' + n">
+                  <div class="pf-rows">
+                    <template v-for="(lane, li) in clsTableLanes(kbClsPage)" :key="lane.key">
+                      <span class="pf-ll-label pf-rowhead">{{ lane.label }}</span>
+                      <i v-for="(ln, x) in lane.lines" :key="'h' + li + '-' + x"
+                         class="pf-hline" :class="'kind-' + ln.kind"
+                         :style="{ gridRow: li + 1, gridColumn: (ln.a + 2) + ' / ' + (ln.b + 2) }"></i>
+                      <template v-for="n in classLevelList()" :key="'u' + n">
                         <div class="pf-lvcell" :class="{ on: kbClsLv === n, has: lane.cells[n].length }"
                              @click="kbClsLv = n" :title="lane.cells[n].length ? 'Lv' + n : ''">
                           <span v-for="(nd, i) in lane.cells[n]" :key="'nd' + i"
                                 class="pf-node" :class="'kind-' + nd.kind" :title="nd.title">{{ nd.badge }}</span>
                         </div>
                       </template>
-                    </div>
+                    </template>
+                    <i v-for="ci in 19" :key="'v' + ci" class="pf-colsep"
+                       :style="{ gridColumn: (ci + 2) + ' / ' + (ci + 2), gridRow: '1 / ' + (clsTableLanes(kbClsPage).length + 1) }"></i>
+                  </div>
                   </div>
                 </div>
 

@@ -1055,6 +1055,51 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-sub-feat[open] summary::before { content: '▾ '; color: var(--text-3, #98a2b3); }
 .kb-sub-feat p { padding: 0 14px 10px; font-size: 13.5px; color: var(--text-2); line-height: 2; white-space: pre-line; }
 
+/* ===== 职业详情:仪表盘布局(仿《开拓者》职业选择页) ===== */
+.kb-class-modal { width: 1180px; max-width: 97vw; }
+.cls-frame { display: grid; grid-template-columns: 188px minmax(0, 1fr); gap: 16px; align-items: start; }
+.cls-nav { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 10px; position: sticky; top: 0; max-height: 78vh; overflow-y: auto; }
+.cls-nav-title { font-size: 14px; font-weight: 800; color: var(--text); padding: 4px 6px 10px; }
+.cls-nav-item { display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left; padding: 7px 10px; margin: 2px 0; border-radius: 10px; border: 1px solid transparent; background: transparent; cursor: pointer; }
+.cls-nav-item:hover { background: var(--primary-soft); }
+.cls-nav-item.on { background: var(--primary); border-color: var(--primary); }
+.cls-nav-zh { font-size: 14.5px; font-weight: 700; color: var(--text-1); }
+.cls-nav-en { font-size: 10.5px; color: var(--text-3, #98a2b3); word-break: break-all; }
+.cls-nav-item.on .cls-nav-zh, .cls-nav-item.on .cls-nav-en { color: #fff; }
+.cls-main { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cls-head { background: linear-gradient(135deg, var(--primary-soft), #fff); border: 1px solid var(--border); border-radius: 14px; padding: 12px 16px; }
+.cls-title-line { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.cls-title { font-size: 20px; color: var(--primary-dark); margin: 0; }
+.cls-intro { margin: 8px 0 0; font-size: 13.5px; color: var(--text-2); line-height: 1.9; white-space: pre-line; }
+.cls-badges { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 8px; margin-top: 10px; }
+.cls-badge { background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px; text-align: center; }
+.cls-badge span { display: block; font-size: 11px; color: var(--text-3, #98a2b3); }
+.cls-badge b { font-size: 14px; color: var(--text-1); }
+.cls-view-tabs { flex-wrap: wrap; }
+.cls-stage { border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; background: var(--card); }
+.cls-stage-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+.cls-lv-grid { display: grid; grid-template-columns: repeat(20, minmax(86px, 1fr)); gap: 6px; overflow-x: auto; padding-bottom: 6px; margin: 0; flex-wrap: nowrap; }
+.cls-lv-cell { width: auto; height: auto; min-height: 62px; padding: 6px 8px; border-radius: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px; text-align: left; box-sizing: border-box; }
+.cls-lv-num { font-weight: 800; font-size: 13px; line-height: 1; }
+.cls-lv-cell .cls-lv-chip { display: block; width: 100%; box-sizing: border-box; background: var(--primary-soft); border: 1px solid var(--border); color: var(--primary-dark); font-size: 10.5px; font-weight: 600; border-radius: 999px; padding: 0 6px; line-height: 1.7; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cls-lv-cell .cls-lv-chip.dim { background: transparent; color: var(--text-3, #b0b7c3); }
+.cls-lv-cell:hover { transform: none; }
+.cls-lv-cell.on { background: var(--primary); border-color: var(--primary); }
+.cls-lv-cell.on .cls-lv-chip { background: rgba(255, 255, 255, .22); border-color: transparent; color: #fff; }
+.cls-lv-cell.on .cls-lv-chip.dim { color: rgba(255, 255, 255, .72); }
+.cls-below { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+.cls-side { position: sticky; top: 0; display: flex; flex-direction: column; gap: 10px; }
+.cls-side-note { font-size: 12px; color: var(--text-3, #98a2b3); line-height: 1.7; }
+
+@media (max-width: 1080px) {
+  .cls-frame { grid-template-columns: 1fr; }
+  .cls-nav { position: static; max-height: none; display: flex; flex-wrap: wrap; gap: 4px; }
+  .cls-nav .cls-nav-title { width: 100%; }
+  .cls-nav-item { width: auto; padding: 5px 12px; }
+  .cls-below { grid-template-columns: 1fr; }
+  .cls-side { position: static; }
+}
+
 .ai-test-result.err { background: var(--danger-soft); color: var(--danger); }
 .ai-tip {
   margin-top: 16px; background: var(--primary-soft); color: var(--primary-dark);

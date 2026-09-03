@@ -650,6 +650,31 @@ createApp({
       if (!r || !r.res || !(col in r.res)) return '';
       return r.res[col] === null ? '—' : r.res[col];
     },
+    classRowChips(lv, data) {
+      return this.classViewFeats(data, this.kbClsView, lv).names.slice(0, 3);
+    },
+    clsCastText(data) {
+      const c = this.clsMeta(data).cast;
+      if (c === 'full9') return '9 环施法者';
+      if (c === 'half5') return '半施法(至5环)';
+      return '纯战系';
+    },
+    clsHitDie(data) {
+      for (const b of this.classBases(data)) {
+        if (b.title.includes('生命')) {
+          const m = String(b.content || '').match(/\d+\s*d\s*\d+/);
+          if (m) return m[0].replace(/\s+/g, '');
+        }
+      }
+      return '—';
+    },
+    clsCurrentIntro(data) {
+      if (this.kbClsView !== 'base') {
+        const s = this.classSubs(data).find(x => 's' + x.id === this.kbClsView);
+        if (s && s.content) return s.content.trim();
+      }
+      return '';
+    },
     subFeatures(sub) {
       return (sub && sub.children || []).filter(x => x.kind !== 'class_levels');
     },

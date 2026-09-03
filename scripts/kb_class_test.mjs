@@ -39,9 +39,10 @@ if (modal) {
   const switches = [...modal.querySelectorAll('.kb-cls-sel')].map(b => b.textContent.trim());
   console.log('切换选项:', switches.join(' | '));
   console.log('面板默认:', modal.querySelector('.kb-lv-panel-head').textContent.trim());
+  const lvBtn = num => [...modal.querySelectorAll('.kb-lv-btn')].find(b =>
+    (b.querySelector('.cls-lv-num') || { textContent: '' }).textContent.trim() === String(num));
   // 原职业 Lv5
-  const lv5 = [...modal.querySelectorAll('.kb-lv-btn')].find(b => b.textContent.trim() === '5');
-  lv5.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  lvBtn(5).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await sleep(250);
   console.log('原职业 Lv5 面板:', modal.querySelector('.kb-lv-panel-head').textContent.trim());
   // 切到狂战士道途
@@ -49,12 +50,10 @@ if (modal) {
   berserk.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await sleep(250);
   console.log('切狂战士后默认面板:', modal.querySelector('.kb-lv-panel-head').textContent.trim());
-  const lv6 = [...modal.querySelectorAll('.kb-lv-btn')].find(b => b.textContent.trim() === '6');
-  lv6.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  lvBtn(6).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await sleep(250);
   console.log('狂战士 Lv6 面板含无我狂暴:', modal.querySelector('.kb-lv-panel').textContent.includes('无我狂暴'));
-  const lv5b = [...modal.querySelectorAll('.kb-lv-btn')].find(b => b.textContent.trim() === '5');
-  lv5b.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+  lvBtn(5).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
   await sleep(250);
   console.log('狂战士 Lv5 提示未获得:', modal.querySelector('.kb-lv-panel').textContent.includes('未获得新能力'));
   console.log('子职卡数:', modal.querySelectorAll('.kb-subclass-card').length);

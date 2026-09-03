@@ -302,7 +302,10 @@ _CLASS_HP = {
 def _strip_story_table_junk(zh: str, content: str) -> str | None:
     """职业简介误并等级表文字时,按该职业页面段落锚点重建简介(仅德鲁伊/野蛮人/术士)。"""
     lines = (content or "").split("\n")
-    junk = next((i for i, l in enumerate(lines) if l.strip() == "职业"), None)
+    junk = next(
+        (i for i, l in enumerate(lines) if l.strip() == "职业" or l.strip().startswith("职业等级")),
+        None,
+    )
     if junk is None:
         return None
 
@@ -351,6 +354,18 @@ def _strip_story_table_junk(zh: str, content: str) -> str | None:
             "\n".join(lines[:p2]),
             "\n".join(lines[p2:p3]),
             "\n".join(lines[p3:h2]),
+            "\n".join(lines[h2:junk]),
+            "\n".join(lines[tail:]),
+        ]).strip()
+    if zh == "圣武士":
+        p2s = find("圣武士经年累月")
+        h2 = find("超凡脱俗")
+        tail = find("冒险中的圣武士", junk + 1)
+        if None in (p2s, h2, tail) or not (p2s < h2 < junk < tail):
+            return None
+        return "\n\n".join([
+            "\n".join(lines[:p2s]),
+            "\n".join(lines[p2s:h2]),
             "\n".join(lines[h2:junk]),
             "\n".join(lines[tail:]),
         ]).strip()

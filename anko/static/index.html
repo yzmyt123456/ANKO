@@ -585,15 +585,7 @@
                     <p class="kb-guide-tip">💡 创建人物卡时,可在「AI 快速建档」描述里注明本职业名,系统会参考属性建议 / 背景 / 装备自动预填。</p>
                   </div>
 
-                  <div v-if="classBases(kbClsPage).length" class="kb-race-block">
-                    <div class="kb-race-block-label">🛡 职业基础</div>
-                    <div v-for="b in classBases(kbClsPage)" :key="b.id" class="kb-race-sub">
-                      <details>
-                        <summary>{{ b.title }}</summary>
-                        <p>{{ nice(b.content) }}</p>
-                      </details>
-                    </div>
-                  </div>
+                  
 
                   <div v-if="sortedClassFeats(kbClsPage).length" class="kb-race-block">
                     <div class="kb-race-block-label">⚔️ 职业特性(按获得等级)</div>

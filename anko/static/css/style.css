@@ -418,6 +418,13 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .ankai-hit { font-size: 12.5px; color: var(--success); }
 .btn.mini { padding: 0 6px; font-size: 11px; line-height: 18px; }
 .ankai-loading { font-size: 12px; margin: 4px 0; }
+.dm-zone { margin: 8px 0; padding: 10px 12px; border: 1px solid #c9d8ee; border-left: 3px solid var(--primary); border-radius: 8px; background: var(--primary-soft); }
+.dm-zone-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+.dm-welcome { font-size: 12px; line-height: 1.8; margin: 4px 0; }
+.compose-actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.compose-inline-btns { margin-left: auto; display: inline-flex; gap: 6px; }
+.cast-edit { margin: 10px 0 4px; padding: 8px 10px; border: 1px dashed var(--border); border-radius: 8px; }
+.cast-edit textarea { width: 100%; }
 .seg-rolls { list-style: none; margin: 4px 0; padding: 0; }
 .seg-rolls li { font-size: 12px; color: var(--text-2); padding: 2px 0; border-bottom: 1px dashed var(--border); }
 .ai-btn { background: linear-gradient(135deg, #7c5cff, #5b47d0); border-color: transparent; color: #fff; }

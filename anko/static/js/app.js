@@ -1943,6 +1943,16 @@ createApp({
       if (Array.isArray(d.tags) && d.tags.length) lines.push(`标签:${d.tags.join('、')}`);
       return lines.join('\n');
     },
+    storyContext() {
+      // 生成上下文 = 已保存剧情(最近 4 段)+ 当前草稿,让导游知道整条故事线
+      const parts = (this.entries || [])
+        .slice(-4)
+        .map(e => (e.content || '').trim())
+        .filter(Boolean);
+      const cur = (this.entryForm.content || '').trim();
+      if (cur) parts.push(cur);
+      return parts.join('\n\n').slice(-6000);
+    },
     async segDice() {
       if (!this.segExpr.trim()) { this.showToast('请输入骰子表达式', 'error'); return; }
       try {
@@ -1965,7 +1975,6 @@ createApp({
       } catch (e) { this.showToast(e.message, 'error'); }
     },
     async segGenerate() {
-      if (!this.segCast) { this.showToast('请先生成一位登场角色', 'error'); return; }
       if (this.segBusy) return;
       this.segBusy = true; this.segErr = ''; this.segLive = '';
       this.segController = new AbortController();
@@ -1975,7 +1984,7 @@ createApp({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            context: this.entryForm.content,
+            context: this.storyContext(),
             cast: this.segCast,
             instruction: this.segWant.trim(),
             roll_note: lastRoll,
@@ -2024,14 +2033,20 @@ createApp({
       if (this.segController) this.segController.abort();
     },
     /* ---------------- 导游人格(提案驱动,蒸馏自经典安科) ---------------- */
+    async dmStart() {
+      // 从零开团:不要求先有角色/正文,让 DM 决定怎样开场
+      if (this.dmBusy || this.segBusy) return;
+      this.dmResetProposal();
+      this.segWant = '这是故事的起点,目前还没有正文。请判断如何开团:能自然写一段有画面感的开场就提案 narrate;若开场需要靠骰子决定要素(地点/氛围/不速之客)就提案 roll;不要替玩家定死主角是谁。';
+      await this.dmPropose();
+    },
     async dmPropose() {
-      if (!this.segCast) { this.showToast('请先生成/确认一位登场角色', 'error'); return; }
       if (this.dmBusy || this.segBusy) return;
       this.dmBusy = true; this.dmErr = '';
       const lastRoll = this.segRollLog.length ? this.segRollLog[this.segRollLog.length - 1] : '';
       try {
         this.dmProposal = await API.post('/ai/dm/propose', {
-          context: this.entryForm.content,
+          context: this.storyContext(),
           cast: this.segCast,
           instruction: this.segWant.trim(),
           roll_note: lastRoll,
@@ -2383,7 +2398,7 @@ createApp({
         const resp = await fetch('/api/ai/generate-segment/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ context: this.entryForm.content, cast: summary, instruction, roll_note: noteText, persona: this.segPersona }),
+          body: JSON.stringify({ context: this.storyContext(), cast: summary, instruction, roll_note: noteText, persona: this.segPersona }),
         });
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
@@ -2513,7 +2528,7 @@ createApp({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            context: this.entryForm.content,
+            context: this.storyContext(),
             cast: castText,
             instruction,
             roll_note: `${hit.expr}=${hit.total}`,

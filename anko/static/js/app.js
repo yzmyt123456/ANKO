@@ -95,6 +95,15 @@ const CLASS_META = {
   '法师': { main: '智力', cast: 'full9', ab: '智力', note: '9 环全施法者' },
 };
 // 战系职业中获得 1/3 施法的子职业(至 4 环)
+const DEC_ROUNDS = [
+  { key: 'name', q: '先给她/他起个名字?', expr: '' },
+  { key: 'race', q: '这位登场者的种族是?', expr: '1d9', preset: '人类\n精灵\n矮人\n半精灵\n半兽人\n侏儒\n提夫林\n龙裔\n半身人' },
+  { key: 'klass', q: '她/他以何职业踏上冒险?', expr: '1d12', preset: '野蛮人\n吟游诗人\n牧师\n德鲁伊\n战士\n武僧\n圣武士\n游侠\n游荡者\n术士\n邪术师\n法师' },
+  { key: 'background', q: '出身与背景是?', expr: '1d13', preset: '侍僧\n骗子\n罪犯\n艺人\n平民英雄\n公会工匠\n隐者\n贵族\n化外之民\n智者\n水手\n士兵\n流浪儿' },
+  { key: 'alignment', q: '阵营呢?', expr: '1d9', preset: '守序善良\n守序中立\n守序邪恶\n中立善良\n绝对中立\n中立邪恶\n混乱善良\n混乱中立\n混乱邪恶' },
+];
+const RACE_OPTIONS = DEC_ROUNDS[1].preset;
+const CLASS_OPTIONS = DEC_ROUNDS[2].preset;
 const SUBCAST_META = {
   '奥法骑士': { cast: '1/3', ab: '智力', ring: '法术至 4 环' },
   '秘法骗子': { cast: '1/3', ab: '智力', ring: '法术至 4 环' },
@@ -188,6 +197,21 @@ createApp({
       segRollLog: [],        // 已掷骰历史(文本)
       segLive: '',           // 正在生成的下一段预览
       segController: null,
+
+      // 安科决策台(逐项掷骰定角色)
+      decOpen: false,
+      decIdx: 0,
+      decName: '',
+      decOpts: '',           // 当前步骤的选项(每行一个,可增删)
+      decRollInput: '1d9',
+      decLast: '',           // 最近掷出的结果(选项)
+      decHit: null,
+      decLog: [],            // 决策流水
+      decChoices: {},
+      decBusy: false,
+      decErr: '',
+      decDraftName: '',
+      decDone: false,
 
       // 知识库
       kbTab: 'spells',
@@ -1969,6 +1993,140 @@ createApp({
       if (this.segController) this.segController.abort();
     },
 
+    /* ---------------- 安科决策台(逐项掷骰定角色) ---------------- */
+    openDecision() {
+      this.decIdx = 0;
+      this.decName = '';
+      this.decOpts = '';
+      this.decRollInput = '';
+      this.decHit = null;
+      this.decLog = [];
+      this.decChoices = {};
+      this.decBusy = false;
+      this.decErr = '';
+      this.decDone = false;
+      this.decOpen = true;
+    },
+    closeDecision() {
+      if (this.decBusy) return;
+      this.decOpen = false;
+    },
+    decPrep(idx) {
+      const r = DEC_ROUNDS[idx];
+      this.decIdx = idx;
+      this.decHit = null;
+      this.decErr = '';
+      if (r && r.key !== 'name' && r.preset) {
+        this.decOpts = r.preset;
+        this.decRollInput = r.expr;
+      }
+    },
+    decCommitName() {
+      const name = this.decName.trim();
+      if (!name) { this.decErr = '先给角色起个名字'; return; }
+      this.decChoices.name = name;
+      this.decLog.push(`名字:${name}`);
+      this.decPrep(1);
+    },
+    async decRoll() {
+      const r = DEC_ROUNDS[this.decIdx];
+      if (!r || r.key === 'name') return;
+      const opts = this.decOpts.split('\n').map(x => x.trim()).filter(Boolean);
+      if (!opts.length) { this.decErr = '请至少保留一个选项'; return; }
+      const input = (this.decRollInput || '').trim() || `1d${opts.length}`;
+      let total;
+      try {
+        if (/^\d+$/.test(input)) {
+          total = parseInt(input, 10);
+        } else {
+          const resp = await API.post('/rolls', {
+            expression: input,
+            maid_id: this.rollMaidId,
+            save: true,
+          });
+          total = (resp.record || {}).total;
+          if (this.segRollIds.indexOf((resp.record || {}).id) < 0) this.segRollIds.push(resp.record.id);
+        }
+      } catch (e) { this.decErr = e.message; return; }
+      if (!total || total < 1 || total > opts.length) {
+        this.decErr = `点数 ${total} 超出选项范围 1~${opts.length},请改表达式或重掷`;
+        return;
+      }
+      this.decHit = { key: r.key, expr: input, total, selected: opts[total - 1] };
+      this.decRollInput = input;
+    },
+    async decWriteNext() {
+      if (this.decBusy) return;
+      const r = DEC_ROUNDS[this.decIdx];
+      if (r.key === 'name') { this.decCommitName(); return; }
+      const hit = this.decHit;
+      if (!hit) { this.decErr = '先掷骰得到结果'; return; }
+      this.decBusy = true; this.decErr = '';
+      const summary = this.decSummary();
+      const instruction =
+        `刚才的决策:${r.q} 掷骰 ${hit.expr}=${hit.total},选中「${hit.selected}」。` +
+        `请写一小段 80~160 字的安科正文(世界观感+自然登场),只输出正文。`;
+      try {
+        const resp = await fetch('/api/ai/generate-segment/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ context: this.entryForm.content, cast: summary, instruction, roll_note: `${hit.expr}=${hit.total}` }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error((err.detail && (typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail))) || 'HTTP ' + resp.status);
+        }
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '', full = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const parts = buf.split('\n\n');
+          buf = parts.pop() || '';
+          for (const part of parts) {
+            const line = part.replace(/^data:\s*/, '').trim();
+            if (!line) continue;
+            const obj = JSON.parse(line);
+            if (obj.type === 'delta') full += obj.text;
+            else if (obj.type === 'error') throw new Error(obj.message);
+          }
+        }
+        if (full) {
+          const prefix = this.entryForm.content ? '\n\n' : '';
+          this.entryForm.content += prefix + full.trim();
+        }
+      } catch (e) { this.decErr = e.message; this.decBusy = false; return; }
+      this.decChoices[hit.key] = hit.selected;
+      this.decLog.push(`${r.q} → ${hit.selected} [${hit.expr}=${hit.total}]`);
+      if (this.decIdx + 1 < DEC_ROUNDS.length) {
+        this.decPrep(this.decIdx + 1);
+      } else {
+        // 全部定案:同步给逐段续写用
+        this.segCast = this.decSummary();
+        this.decDone = true;
+      }
+      this.decBusy = false;
+    },
+    decSummary() {
+      const c = this.decChoices;
+      const lines = [];
+      if (c.name) lines.push(`姓名:${c.name}`);
+      if (c.race) lines.push(`种族:${c.race}`);
+      if (c.klass) lines.push(`职业:${c.klass}`);
+      if (c.background) lines.push(`背景:${c.background}`);
+      if (c.alignment) lines.push(`阵营:${c.alignment}`);
+      return lines.join('\n');
+    },
+    decQ() {
+      const r = DEC_ROUNDS[this.decIdx];
+      return r ? r.q : '';
+    },
+    decRestart() {
+      this.openDecision();
+    },
+
     /* ---------------- 剧情 ---------------- */
     async loadStories() {
       try {
@@ -2008,6 +2166,11 @@ createApp({
       this.segErr = '';
       this.segRollIds = [];
       this.segRollLog = [];
+      this.decOpen = false;
+      this.decDone = false;
+      this.decIdx = 0;
+      this.decHit = null;
+      this.decBusy = false;
       if (this.segController) { this.segController.abort(); this.segController = null; }
       window.scrollTo({ top: 0 });
       try {

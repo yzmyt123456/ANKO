@@ -1033,7 +1033,8 @@ createApp({
     },
     layoutColLines() {
       // 量测:竖线=各等级数字列右缘;横向连线=节点中心到节点中心(覆盖层绘制,永不错位)
-      this.$nextTick(() => {
+      // 切子职后立即切主职时,首帧量测可能取自旧布局 → 做两轮延迟复测校准
+      const measure = () => {
         const rows = this.$refs && this.$refs.pfRows;
         if (!rows) return;
         const box = rows.getBoundingClientRect();
@@ -1068,6 +1069,12 @@ createApp({
           });
         });
         this.pfHLines = hs;
+      };
+      this.$nextTick(() => {
+        measure();
+        // 字体/布局彻底落定后再复测两轮(覆盖点子职→主职切换时量到旧表的情况)
+        setTimeout(() => measure(), 120);
+        setTimeout(() => measure(), 350);
       });
     },
     clsCurrentIntro(data) {

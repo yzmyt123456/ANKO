@@ -289,10 +289,21 @@ _DESTROY_UNDEAD_TEXT = (
 )
 
 
+_CLASS_HP = {
+    "野蛮人": ("1d12", "12", "7"), "吟游诗人": ("1d8", "8", "5"),
+    "牧师": ("1d8", "8", "5"), "德鲁伊": ("1d8", "8", "5"),
+    "战士": ("1d10", "10", "6"), "武僧": ("1d8", "8", "5"),
+    "圣武士": ("1d10", "10", "6"), "游侠": ("1d10", "10", "6"),
+    "游荡者": ("1d8", "8", "5"), "术士": ("1d6", "6", "4"),
+    "邪术师": ("1d8", "8", "5"), "法师": ("1d6", "6", "4"),
+}
+
+
 def _fix_known_class_texts(node: dict) -> None:
     """文本层勘误(玩家手册 PDF 矢量字抽取常见丢字):不依赖视觉识图二次兜底。"""
     import json
 
+    zh = (node.get("title") or "").split(" ")[0]
     for k in node.get("children", []):
         if k.get("kind") == "class_levels":
             rows = json.loads(k["content"])
@@ -306,6 +317,19 @@ def _fix_known_class_texts(node: dict) -> None:
         ):
             k["content"] = _DESTROY_UNDEAD_TEXT
             k["lv"] = 5
+        # 战士等职业表与右侧"生命值"同高重叠时,正文易被误当作表格丢弃 → 自动回填
+        if (
+            k.get("kind") == "class_base"
+            and k.get("title", "").startswith("生命值 Hit Points")
+            and not (k.get("content") or "").strip()
+            and zh in _CLASS_HP
+        ):
+            die, first, fixed = _CLASS_HP[zh]
+            k["content"] = (
+                f"生命骰：每{zh}等级{die}\n"
+                f"首级生命值：{first}＋你的体质调整值\n"
+                f"升级生命值：首级生命值之外，对应每个{zh}等级{fixed}（{die}）＋你的体质调整值"
+            )
 
 
 def _build_class(c: dict) -> dict:

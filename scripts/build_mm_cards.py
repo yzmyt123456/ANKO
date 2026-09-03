@@ -162,6 +162,8 @@ def main() -> None:
         return
 
     IMG_DIR.mkdir(parents=True, exist_ok=True)
+    for f in IMG_DIR.glob("mm_cn_*"):
+        f.unlink()  # 重新生成,避免旧命名残留
     # 给每只怪物配图:同页插图按 y 就近分配
     page_images: dict[int, list[dict]] = {}
     for pno in range(doc.page_count):
@@ -169,11 +171,29 @@ def main() -> None:
             infos = [x for x in doc[pno].get_image_info() if x.get("bbox")]
         except Exception:  # noqa: BLE001
             continue
+        # 本页文本行(用于衡量“图内文字量”)
+        spans: list[tuple[float, float, float, float, int]] = []
+        try:
+            for b in doc[pno].get_text("dict")["blocks"]:
+                for l in b.get("lines", []):
+                    spans.append((l["bbox"][0], l["bbox"][1], l["bbox"][2], l["bbox"][3], sum(len(s["text"]) for s in l.get("spans", []))))
+        except Exception:  # noqa: BLE001
+            spans = []
+        pg_area = doc[pno].rect.width * doc[pno].rect.height
         big = []
         for x in infos:
             x0, y0, x1, y1 = x["bbox"]
             if (x1 - x0) >= 90 and (y1 - y0) >= 80:
-                big.append({"bbox": x["bbox"], "cy": (y0 + y1) / 2})
+                area = (x1 - x0) * (y1 - y0)
+                # 图内文字重叠量
+                inner = 0
+                for sx0, sy0, sx1, sy1, n in spans:
+                    if sx1 >= x0 and sx0 <= x1 and sy1 >= y0 and sy0 <= y1:
+                        inner += n
+                big.append({
+                    "bbox": x["bbox"], "cy": (y0 + y1) / 2, "top": y0,
+                    "area": area, "pg_area": pg_area, "text": inner,
+                })
         if big:
             page_images[pno] = big
 
@@ -182,34 +202,68 @@ def main() -> None:
     old = cur_db.execute("select count(*) from rule_knowledge where book=?", (BOOK,)).fetchone()[0]
     cur_db.execute("delete from rule_knowledge where book=?", (BOOK,))
 
+    # 每页候选按“图内文字量”升序:最“干净”(几乎无文字)的图当怪物立绘,次干净或顶部横幅当介绍图
+    def _page_pool(pno: int) -> list[dict]:
+        pool0 = page_images.get(pno) or []
+        pool = [x for x in pool0 if x["area"] < 0.72 * x["pg_area"]]
+        return sorted(pool or pool0, key=lambda x: (x["text"], x["top"]))
+
+    side_of_page: dict[int, dict] = {}
+    for pno, cands in page_images.items():
+        pool = _page_pool(pno)
+        if len(pool) >= 2:
+            by_top = sorted(pool, key=lambda x: x["top"])
+            a, b = by_top[0], by_top[1]
+            if b["top"] - a["top"] >= 120:
+                # 上方的图通常是介绍/横幅,下方留给怪物立绘
+                side_of_page[pno] = a
+            else:
+                # 两张同排:把“最干净”留给怪物,另一张当介绍
+                side_of_page[pno] = pool[1] if pool[0]["text"] < pool[1]["text"] else pool[0]
     rows = []
+    used: dict[int, list[dict]] = {}
+    side_done: set[int] = set()
+
+    def crop_to(cand: dict, fname: str) -> str:
+        b = cand["bbox"]
+        pix = doc[pno].get_pixmap(matrix=pymupdf.Matrix(2, 2), clip=pymupdf.Rect(b))
+        from io import BytesIO
+        from PIL import Image as PILImage
+        img = PILImage.open(BytesIO(pix.tobytes("png"))).convert("RGB")
+        img.save(IMG_DIR / fname, quality=82, optimize=True)
+        return f"/static/img/kb/monsters/{fname}"
+
     for i, c in enumerate(cards):
         pno = c.get("pno", 0)
+        pool = _page_pool(pno)
+        side = side_of_page.get(pno)
+        used_now = used.setdefault(pno, [])
+        # 最干净的可用图优先给怪物
+        avail = [x for x in pool if x not in used_now and x is not side]
+        best = avail[0] if avail else (next((x for x in pool if x not in used_now), None))
         img_path = None
-        cands = page_images.get(pno) or []
-        if cands:
-            best = min(cands, key=lambda im: abs(im["cy"] - c.get("anchor_y", 0)))
-            b = best["bbox"]
-            clip = pymupdf.Rect(b)
-            pix = doc[pno].get_pixmap(matrix=pymupdf.Matrix(2, 2), clip=clip)
-            from io import BytesIO
-            from PIL import Image as PILImage
-            img = PILImage.open(BytesIO(pix.tobytes("png"))).convert("RGB")
-            fname = f"mm_cn_{i:04d}.jpg"
-            img.save(IMG_DIR / fname, quality=82, optimize=True)
-            img_path = f"/static/img/kb/monsters/{fname}"
+        if best is not None:
+            used_now.append(best)
+            img_path = crop_to(best, f"mm_cn_{i:04d}_monster.jpg")
+        side_path = None
+        if side is not None and pno not in side_done and side not in used_now:
+            side_done.add(pno)
+            side_path = crop_to(side, f"mm_cn_{i:04d}_intro.jpg")
         rows.append((
             BOOK, c["page"], c["title"][:200], "怪物资料", "monster",
-            c["content"][:12000], img_path,
+            c["content"][:12000], img_path, side_path,
         ))
 
     cur_db.executemany(
-        "insert into rule_knowledge (book,page,title,category,kind,content,image) values (?,?,?,?,?,?,?)",
+        "insert into rule_knowledge (book,page,title,category,kind,content,image,image_side) "
+        "values (?,?,?,?,?,?,?,?)",
         rows,
     )
     conn.commit()
     conn.close()
-    print(f"已替换:旧卡 {old} → 新怪物图文卡 {len(rows)}(配图 {sum(1 for r in rows if r[6])})")
+    monsters = sum(1 for r in rows if r[6])
+    intros = sum(1 for r in rows if r[7])
+    print(f"已替换:旧卡 {old} → 新怪物图文卡 {len(rows)}(怪物图 {monsters} + 介绍图 {intros})")
 
 
 if __name__ == "__main__":

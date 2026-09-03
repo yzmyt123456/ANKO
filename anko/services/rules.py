@@ -234,6 +234,7 @@ class RuleService:
                     "kind": x.kind,
                     "parent_id": x.parent_id,
                     "image": x.image,
+                    "image_side": x.image_side,
                     "preview": (x.content or "")[:160],
                 }
                 for x in s.execute(stmt).scalars().all()
@@ -254,6 +255,7 @@ class RuleService:
                 "kind": x.kind,
                 "parent_id": x.parent_id,
                 "image": x.image,
+                "image_side": x.image_side,
                 "content": x.content,
             }
             if x.kind in ("race", "race_part", "class", "subclass"):
@@ -396,6 +398,8 @@ class RuleService:
                     "title": x.title,
                     "category": x.category,
                     "kind": x.kind,
+                    "image": x.image,
+                    "image_side": x.image_side,
                     "content": x.content,
                 }
                 for x in s.execute(stmt).scalars().all()

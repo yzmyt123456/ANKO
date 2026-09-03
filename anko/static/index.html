@@ -1512,7 +1512,14 @@
         <!-- 规则知识(Wiki 式) -->
         <template v-else-if="kbDetail.type === 'knowledge'">
           <div v-for="(k, i) in kbDetail.data" :key="i" class="kb-kno-item">
-            <img v-if="k.image" :src="k.image" class="kb-art" alt="知识卡插图" />
+            <div v-if="k.image" class="kb-art-box">
+              <img :src="k.image" class="kb-art" alt="怪物插图" />
+              <span class="kb-art-cap">怪物插图</span>
+            </div>
+            <div v-if="k.image_side" class="kb-art-box">
+              <img :src="k.image_side" class="kb-art" alt="介绍插图" />
+              <span class="kb-art-cap">介绍插图</span>
+            </div>
             <b>{{ k.book }} · 第{{ k.page }}页</b>
             <p v-html="linkify(nice(k.content))"></p>
           </div>

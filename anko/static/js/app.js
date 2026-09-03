@@ -198,6 +198,10 @@ createApp({
       segRollLog: [],        // 已掷骰历史(文本)
       segLive: '',           // 正在生成的下一段预览
       segController: null,
+      // 导游人格(蒸馏版):提案驱动
+      dmBusy: false,
+      dmErr: '',
+      dmProposal: null,
 
       // 安科决策台(逐项掷骰定角色 + 数值判定)
       decOpen: false,
@@ -2004,6 +2008,91 @@ createApp({
     segStop() {
       if (this.segController) this.segController.abort();
     },
+    /* ---------------- 导游人格(提案驱动,蒸馏自经典安科) ---------------- */
+    async dmPropose() {
+      if (!this.segCast) { this.showToast('请先生成/确认一位登场角色', 'error'); return; }
+      if (this.dmBusy || this.segBusy) return;
+      this.dmBusy = true; this.dmErr = '';
+      const lastRoll = this.segRollLog.length ? this.segRollLog[this.segRollLog.length - 1] : '';
+      try {
+        this.dmProposal = await API.post('/ai/dm/propose', {
+          context: this.entryForm.content,
+          cast: this.segCast,
+          instruction: this.segWant.trim(),
+          roll_note: lastRoll,
+        });
+      } catch (e) { this.dmErr = e.message; }
+      finally { this.dmBusy = false; }
+    },
+    dmResetProposal() {
+      this.dmProposal = null;
+      this.dmErr = '';
+    },
+    dmJudge(total, lines) {
+      const list = lines || [];
+      let above = '', aboveNum = -1, below = '', belowNum = Infinity;
+      for (const raw of list) {
+        const line = String(raw || '').trim();
+        if (!line) continue;
+        let m = line.match(/^(\d+)\s*(?:以上|≥|>=)\s*[:：]?\s*(.*)$/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (total >= n && n > aboveNum) { aboveNum = n; above = m[2].trim(); }
+          continue;
+        }
+        m = line.match(/^(\d+)\s*(?:以下|≤|<=)\s*[:：]?\s*(.*)$/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (total <= n && n < belowNum) { belowNum = n; below = m[2].trim(); }
+        }
+      }
+      return above || below;
+    },
+    async dmAcceptProse() {
+      const p = this.dmProposal;
+      if (!p || this.segBusy) return;
+      const prefix = p.question ? p.question + '\n' : '';
+      this.segWant = (prefix + (p.hint || '')).trim();
+      this.dmProposal = null;
+      this.dmErr = '';
+      await this.segGenerate();
+    },
+    async dmAcceptRoll() {
+      const p = this.dmProposal;
+      if (!p || this.segBusy || this.dmBusy) return;
+      const options = Array.isArray(p.options) ? p.options.filter(Boolean) : [];
+      const expr = (p.expr || '').trim() || (options.length ? `1d${options.length}` : '1d100');
+      this.dmBusy = true; this.dmErr = '';
+      try {
+        const resp = await API.post('/rolls', {
+          expression: expr,
+          maid_id: this.rollMaidId,
+          save: true,
+        });
+        const rec = resp.record || {};
+        const total = rec.total;
+        if (this.segRollIds.indexOf(rec.id) < 0) this.segRollIds.push(rec.id);
+        let note = '';
+        if (options.length) {
+          if (!total || total < 1 || total > options.length) {
+            throw new Error(`点数 ${total} 超出选项 1~${options.length},可换一版提案`);
+          }
+          note = `${p.question || '选择'} → ${options[total - 1]} [${rec.expression}=${total}]`;
+        } else {
+          const result = this.dmJudge(total, p.thresholds || []);
+          note = `${p.question || '判定'} ${rec.expression} = ${total}${result ? ' · ' + result : ''}`;
+        }
+        this.segRollLog.push(note);
+        const prefix = this.entryForm.content ? '\n\n' : '';
+        this.entryForm.content += `${prefix}🎲 ${note}`;
+        if (this.segRollIds.length === 1) await this.loadRollHistory();
+      } catch (e) { this.dmErr = e.message; this.dmBusy = false; return; }
+      // 掷骰完成:导游自动写下一段(以提案 hint 为方向)
+      this.segWant = (p.hint || p.question || '').trim();
+      this.dmProposal = null;
+      this.dmBusy = false;
+      await this.segGenerate();
+    },
 
     /* ---------------- 安科决策台(逐项掷骰定角色) ---------------- */
     openDecision() {
@@ -2365,6 +2454,9 @@ createApp({
       this.segErr = '';
       this.segRollIds = [];
       this.segRollLog = [];
+      this.dmProposal = null;
+      this.dmBusy = false;
+      this.dmErr = '';
       this.decOpen = false;
       this.decDone = false;
       this.decIdx = 0;

@@ -279,6 +279,39 @@
                   <ul v-if="segRollLog.length" class="seg-rolls">
                     <li v-for="(r, i) in segRollLog" :key="i">🎲 {{ r }}</li>
                   </ul>
+                  <div class="dm-panel">
+                    <div class="dm-row">
+                      <button class="btn small ai-btn" :disabled="segBusy || dmBusy || !segCast" @click="dmPropose">
+                        🎮 导游提案(先判断:叙述 / 掷骰 / 问你)
+                      </button>
+                      <button v-if="dmProposal" class="btn small" @click="dmPropose" :disabled="segBusy || dmBusy">🔄 换一种</button>
+                    </div>
+                    <p v-if="dmBusy && !dmProposal" class="muted dm-loading">⏳ 导游正在读正文、想下一步…</p>
+                    <div v-if="dmErr" class="seg-err">{{ dmErr }}</div>
+                    <div v-if="dmProposal" class="dm-proposal">
+                      <div class="dm-prop-title">
+                        <b>{{ dmProposal.kind === 'roll' ? '🎲 导游要掷骰' : (dmProposal.kind === 'ask' ? '❓ 导游来问你' : '✍️ 导游想先写一段') }}</b>
+                        <span class="muted">{{ dmProposal.summary }}</span>
+                      </div>
+                      <p v-if="dmProposal.question" class="dm-q">{{ dmProposal.question }}</p>
+                      <p v-if="dmProposal.kind === 'roll'" class="dm-expr">表达式:<b>{{ dmProposal.expr || '由选项数决定(1dn)' }}</b></p>
+                      <ul v-if="dmProposal.options && dmProposal.options.length" class="dm-options">
+                        <li v-for="(o, i) in dmProposal.options" :key="i">{{ i + 1 }}.{{ o }}</li>
+                      </ul>
+                      <ul v-if="dmProposal.thresholds && dmProposal.thresholds.length" class="seg-rolls">
+                        <li v-for="(t, i) in dmProposal.thresholds" :key="i">🎯 {{ t }}</li>
+                      </ul>
+                      <div class="dm-actions">
+                        <button v-if="dmProposal.kind === 'roll'" class="btn primary" :disabled="segBusy || dmBusy" @click="dmAcceptRoll">
+                          🎲 采纳并掷骰 → 自动写正文
+                        </button>
+                        <button v-else class="btn primary" :disabled="segBusy || dmBusy" @click="dmAcceptProse">
+                          ✍️ 采纳,继续写
+                        </button>
+                        <button class="btn small" @click="dmResetProposal" :disabled="segBusy || dmBusy">不采纳</button>
+                      </div>
+                    </div>
+                  </div>
                   <p class="muted seg-tip">流程:生成一段 → 在正文框里修改 → 掷骰判定 → 再生成下一段;保存剧情后本段的掷骰也会关联记录。</p>
                 </template>
               </div>

@@ -14,6 +14,7 @@ import re
 from typing import Any, Callable, Optional
 
 from anko.ai.client import AIError, AIClient
+from anko.ai import dm as dm_assets
 from anko.config import AISettings
 
 # 允许的最大输入长度(字符)
@@ -526,6 +527,7 @@ class AIService:
         """续写一段安科正文(流式):供“逐段生成、玩家可中途修改”流程使用。"""
         client = AIClient(self._current())
         prompt = build_story_segment_prompt(context, cast, instruction, roll_note)
+        prompt += "\n\n【导游人格参考】\n" + dm_assets.PERSONA_RULES
         if extra_rules.strip():
             prompt += (
                 "\n\n【本地规则参考(保证世界观/规则一致)】\n"
@@ -535,3 +537,41 @@ class AIService:
             [{"role": "user", "content": prompt}]
         ):
             yield delta
+
+    async def dm_propose(
+        self,
+        context: str,
+        cast: str,
+        instruction: str = "",
+        roll_note: str = "",
+        extra_rules: str = "",
+    ) -> dict:
+        """导游提案:判断下一步该叙述、掷骰,还是把选择权交还玩家。
+
+        返回 JSON 提案(kind=roll/narrate/ask),由前端展示给玩家确认后再执行真实掷骰或写正文。
+        """
+        client = AIClient(self._current())
+        prompt = dm_assets.build_dm_propose_prompt(
+            context, cast, instruction, roll_note, extra_rules
+        )
+        content = await client.chat([{"role": "user", "content": prompt}])
+        data = extract_json(content)
+        kind = str(data.get("kind") or "").strip()
+        if kind not in {"roll", "narrate", "ask"}:
+            raise ValueError(f"导游提案格式不正确(kind={kind or '空'}),请重试")
+        options = data.get("options") or []
+        if not isinstance(options, list):
+            options = []
+        thresholds = data.get("thresholds") or []
+        if not isinstance(thresholds, list):
+            thresholds = []
+        return {
+            "kind": kind,
+            "summary": str(data.get("summary") or "").strip()[:200],
+            "question": str(data.get("question") or "").strip()[:200],
+            "expr": str(data.get("expr") or "").strip()[:40],
+            "options": [str(x).strip() for x in options if str(x).strip()][:20],
+            "thresholds": [str(x).strip() for x in thresholds if str(x).strip()][:12],
+            "hint": str(data.get("hint") or "").strip()[:300],
+            "persona": dm_assets.PERSONA_ID,
+        }

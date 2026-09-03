@@ -59,6 +59,15 @@ class StorySegmentRequest(BaseModel):
     roll_note: Optional[str] = Field("", description="最近一次掷骰结果文本")
 
 
+class DMProposeRequest(BaseModel):
+    """导游提案请求:让 AI 判断下一步是叙述、掷骰还是抛回给玩家。"""
+
+    context: Optional[str] = Field("", description="当前正文")
+    cast: Optional[str] = Field("", description="登场角色卡片摘要")
+    instruction: Optional[str] = Field("", description="玩家倾向/遭遇提示(可空)")
+    roll_note: Optional[str] = Field("", description="最近一次掷骰结果文本")
+
+
 @router.get("/status", response_model=AIStatus)
 def ai_status(request: Request) -> AIStatus:
     """查询 AI 服务是否已配置。"""
@@ -251,6 +260,45 @@ async def generate_segment_stream(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.post("/dm/propose")
+async def dm_propose(payload: DMProposeRequest, request: Request) -> dict:
+    """导游提案:自动判断下一步该掷骰、叙述还是交还玩家(玩家确认后才执行)。"""
+    service = request.app.state.ai_service
+    if not service.enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="AI 尚未配置。请到「设置」页填写 AI 服务地址、API Key 与模型。",
+        )
+    extra_rules = ""
+    try:
+        rule_svc = request.app.state.rule_service
+        kws = ["检定", "豁免", "规则", "安科"]
+        refs = []
+        for kw in kws:
+            refs += rule_svc.search_knowledge(kw, limit=1)
+        parts = []
+        seen = set()
+        for r in refs:
+            key = r.get("page")
+            if key in seen:
+                continue
+            seen.add(key)
+            parts.append(f"[规则库 p{r.get('page')}] {r.get('title', '')[:24]}\n{(r.get('content') or '')[:300]}")
+        extra_rules = "\n\n".join(parts[:4])
+    except Exception:  # noqa: BLE001 规则库缺失不阻断
+        extra_rules = ""
+    try:
+        return await service.dm_propose(
+            context=payload.context or "",
+            cast=payload.cast or "",
+            instruction=payload.instruction or "",
+            roll_note=payload.roll_note or "",
+            extra_rules=extra_rules,
+        )
+    except (ValueError, AIError) as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.post("/generate-character", response_model=CharacterDraft)

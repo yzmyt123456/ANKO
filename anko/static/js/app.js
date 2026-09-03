@@ -823,7 +823,17 @@ createApp({
         if (view === 'base') return [];
         const s = this.classSubs(data).find(x => 's' + x.id === view);
         if (!s) return [];
-        return (s.children || []).filter(c => this.subFeatLv(c, s.children) === lv);
+        const kids = (s.children || []).filter(c => (c.kind || '') !== 'class_levels');
+        let list = kids.filter(c => this.subFeatLv(c, kids) === lv);
+        if (!list.length) {
+          // 与面板一致:该级无独立卡时,带出正文写明"第 N 级"的成长卡(战术大师18级=卓越骰d12)
+          list = kids.filter(c => {
+            const base = this.subFeatLv(c, kids);
+            if (base == null || base >= lv) return false;
+            return new RegExp('第\\s*' + lv + '\\s*级').test(String(c.content || ''));
+          });
+        }
+        return list;
       };
       for (let lv = 1; lv <= 20; lv++) {
         const names = this.classViewFeats(data, view, lv).names;

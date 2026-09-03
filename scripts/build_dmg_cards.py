@@ -99,7 +99,7 @@ def main() -> None:
         anchors.sort(key=lambda a: a["y"])
 
         # 正文阅读顺序:普通页按“左栏→右栏”;含跨栏表格的页退回 sort=True(行序优先)
-        def page_ordered_lines() -> list[str]:
+        def page_items() -> list[dict]:
             try:
                 tabs = page.find_tables()
                 wide = [t for t in tabs.tables if (t.bbox[2] - t.bbox[0]) > page.rect.width * 0.55]
@@ -108,18 +108,36 @@ def main() -> None:
                     raw = [x for x in raw if x]
                     while raw and raw[-1].isdigit() and len(raw[-1]) <= 3:
                         raw.pop()
-                    return raw
+                    return [{"text": x, "y": None} for x in raw]
             except Exception:  # noqa: BLE001 表检测失败就按两栏处理
                 pass
             mid = page.rect.width / 2
-            left = [ln for ln in body_lines if ln["x"] < mid]
-            right = [ln for ln in body_lines if ln["x"] >= mid]
-            return [ln["text"] for ln in left] + [ln["text"] for ln in right]
+            left = sorted([ln for ln in body_lines if ln["x"] < mid], key=lambda a: a["y"])
+            right = sorted([ln for ln in body_lines if ln["x"] >= mid], key=lambda a: a["y"])
+            return [{"text": ln["text"], "y": ln["y"]} for ln in left + right]
 
-        raw_lines = page_ordered_lines()
-
+        items = page_items()
         used = [False] * len(anchors)
-        for rline in raw_lines:
+        _last_y: float | None = None
+
+        def append_paragraph(cur: dict, text: str, y: float | None) -> None:
+            nonlocal _last_y
+            if not cur["content"]:
+                cur["content"] = text
+            elif y is not None and _last_y is not None and abs(y - _last_y) < 18:
+                # 同一段落内的折行:直接续接(中英之间补空格)
+                prev_ch = cur["content"][-1]
+                next_ch = text[:1]
+                sep = " " if (prev_ch.isascii() and prev_ch.isalnum() and next_ch.isascii() and next_ch.isalnum()) else ""
+                cur["content"] += sep + text
+            else:
+                cur["content"] += "\n" + text
+            if y is not None:
+                _last_y = y
+
+        for item in items:
+            rline = item["text"]
+            y = item["y"]
             rn = re.sub(r"\s+", "", rline)
             if not rn or (rn.isdigit() and len(rn) <= 3):
                 continue
@@ -134,10 +152,12 @@ def main() -> None:
                 used[hit] = True
                 flush()
                 cur = {"title": rline, "size": round(anchors[hit]["sz"], 1), "page": printed, "content": ""}
+                _last_y = None
                 continue
             if cur is None:
                 cur = {"title": f"(无标题 p{printed})", "size": 0, "page": printed, "content": ""}
-            cur["content"] += (("\n" if cur["content"] else "") + rline)
+                _last_y = None
+            append_paragraph(cur, rline, y)
     flush()
 
     # 跳过封面/目录产生的散卡:从印刷第 6 页(第1章)才开始正文

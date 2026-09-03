@@ -936,6 +936,14 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-race-sub .kb-subtraits .kb-trait-item { margin-bottom: 6px; }
 .kb-race-sub .kb-sub-sub { margin: 6px 0; border-color: var(--primary-soft); }
 
+/* 特性正文里的真正的表格 */
+.kb-tbl { width: 100%; border-collapse: collapse; margin: 6px 0 4px; font-size: 12.5px; }
+.kb-tbl caption { caption-side: top; text-align: left; font-size: 12.5px; font-weight: 700; color: #6a5329; padding: 2px 0 4px; }
+.kb-tbl th, .kb-tbl td { border: 1px solid #e0d6b8; padding: 3px 12px; text-align: left; }
+.kb-tbl th { background: #f3ecd7; color: #4a351a; font-weight: 700; }
+.kb-tbl td { color: #3f3a33; }
+.kb-tbl tr:nth-child(even) td { background: #fbf7ea; }
+
 /* ---- 职业等级能力表 ---- */
 .kb-lv-row { margin-bottom: 5px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); overflow: hidden; }
 .kb-lv-row summary { display: flex; align-items: baseline; gap: 10px; cursor: pointer; padding: 6px 12px; font-size: 13.5px; list-style: none; }
@@ -984,6 +992,10 @@ input[type="checkbox"] { width: auto; margin: 0; }
 }
 .kb-lv-panel .kb-trait-item { margin-bottom: 6px; }
 .kb-lv-note { font-size: 12.5px; color: var(--text-2); margin: 6px 0 2px; line-height: 1.9; }
+.kb-term-hint {
+  font-size: 12px; color: #6a5329; background: rgba(247, 233, 190, .35);
+  border-bottom: 1px dashed #e5cf9c; padding: 4px 0 7px; margin: -6px 0 8px; line-height: 1.9;
+}
 .kb-lv-entry { font-size: 12.5px; color: #8a6d3b; background: rgba(247, 201, 72, .12); border: 1px dashed #e5cf9c; border-radius: 8px; padding: 5px 10px; margin: 4px 0 8px; line-height: 1.8; }
 .kb-entry-intro { font-size: 13px; color: #5a4a33; line-height: 1.95; margin: -2px 0 10px; padding: 8px 12px; background: rgba(240, 232, 210, .32); border-left: 3px solid #d9c9a4; border-radius: 0 8px 8px 0; white-space: pre-line; }
 .kb-sub-choice .kb-entry-opt { align-items: center; padding: 7px 0; border-bottom: 1px dashed #ece2c8; flex-wrap: wrap; }

@@ -524,6 +524,7 @@
                     <span v-if="classRowProf(kbClsLv, kbClsPage)" class="kb-lv-feat-chip kb-prof">熟练加值 {{ classRowProf(kbClsLv, kbClsPage) }}</span>
                     <span v-for="(n, i) in clsVisibleChips(kbClsPage, kbClsLv)" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
                   </div>
+                  <p v-if="clsTermNotes(kbClsPage, kbClsLv)" class="kb-term-hint">{{ clsTermNotes(kbClsPage, kbClsLv) }}</p>
                   <div class="kb-res-bar" v-if="classRowResParts(kbClsLv, clsActiveRes(kbClsPage)).length">
                     <span class="kb-res-title">🔮 施法资源</span>
                     <span v-for="(p, i) in classRowResParts(kbClsLv, clsActiveRes(kbClsPage))" :key="i" class="kb-res-chip">{{ p }}</span>
@@ -553,9 +554,9 @@
                       </template>
                       <template v-else-if="isLongContent(f.content)">
                         <p class="kb-long-preview">{{ previewLong(f.content) }}</p>
-                        <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><p>{{ nice(f.content) }}</p></details>
+                        <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><div v-html="contentHtml(f.content)"></div></details>
                       </template>
-                      <p v-else>{{ nice(f.content) }}</p>
+                      <div v-else v-html="contentHtml(f.content)"></div>
                     </div>
                   </div>
                   <template v-else>
@@ -611,9 +612,9 @@
                         </template>
                         <template v-else-if="isLongContent(f.content)">
                           <p class="kb-long-preview">{{ previewLong(f.content) }}</p>
-                          <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><p>{{ nice(f.content) }}</p></details>
+                          <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(f.content) }} 字)</summary><div v-html="contentHtml(f.content)"></div></details>
                         </template>
-                        <p v-else>{{ nice(f.content) }}</p>
+                        <div v-else v-html="contentHtml(f.content)"></div>
                       </details>
                     </div>
                   </div>
@@ -643,9 +644,9 @@
                             </template>
                             <template v-else-if="isLongContent(c.content)">
                               <p class="kb-long-preview">{{ previewLong(c.content) }}</p>
-                              <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(c.content) }} 字)</summary><p>{{ nice(c.content) }}</p></details>
+                              <details class="kb-fold"><summary>展开完整内容(约 {{ contentChars(c.content) }} 字)</summary><div v-html="contentHtml(c.content)"></div></details>
                             </template>
-                            <p v-else>{{ nice(c.content) }}</p>
+                            <div v-else v-html="contentHtml(c.content)"></div>
                           </details>
                         </div>
                         <details v-if="classSpellCols(s).length" class="kb-spell-table kb-artbox">

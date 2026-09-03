@@ -279,7 +279,7 @@ _DESTROY_UNDEAD_TEXT = (
     "第 5 级起，当不死生物进行对抗你驱散特性的豁免失败时，"
     "如果其挑战等级等于或低于一个既定的下限，则该不死生物将被立即摧毁。"
     "相应的数值列在表格“摧毁不死生物”中。\n\n"
-    "摧毁不死生物（表）\n"
+    "【表】摧毁不死生物\n"
     "牧师等级 | 摧毁不死生物的挑战等级\n"
     "5 | 1/2 或更低\n"
     "8 | 1 或更低\n"
@@ -305,6 +305,7 @@ def _fix_known_class_texts(node: dict) -> None:
             "摧毁不死生物"
         ):
             k["content"] = _DESTROY_UNDEAD_TEXT
+            k["lv"] = 5
 
 
 def _build_class(c: dict) -> dict:

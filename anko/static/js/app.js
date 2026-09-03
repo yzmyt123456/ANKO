@@ -574,7 +574,7 @@ createApp({
       const zh = this.classZh(feat.title);
       const rows = this.classLevelRows(data);
       for (const r of rows) {
-        for (const f of String(r.feats || '').split(/[，,、/]/)) {
+        for (const f of String(r.feats || '').split(/[，,、]/)) {
           if (f.trim() === zh) return r.lv;
         }
       }
@@ -1101,14 +1101,14 @@ createApp({
     classLevelRowFeats(lv, data) {
       const row = this.classLevelRows(data).find(r => r.lv === lv);
       if (!row) return [];
-      return String(row.feats || '').split(/[，,、/]/).map(s => s.trim()).filter(Boolean);
+      return String(row.feats || '').split(/[，,、]/).map(s => s.trim()).filter(Boolean);
     },
     classLevelFeats(lv, data) {
       // 某等级获得的特性卡(表名匹配)
       const row = this.classLevelRows(data).find(r => r.lv === lv);
       if (!row) return [];
       const feats = this.classFeats(data);
-      const names = String(row.feats || '').split(/[，,、/]/).map(s => s.trim()).filter(Boolean);
+      const names = String(row.feats || '').split(/[，,、]/).map(s => s.trim()).filter(Boolean);
       return names
         .map(n => {
           if (/^选择/.test(n)) return undefined; // 选择入口:不展示正文卡
@@ -1161,6 +1161,53 @@ createApp({
     },
     previewLong(c) {
       return this.nice(c).slice(0, 220) + '…';
+    },
+    contentHtml(c) {
+      // 把“【表】标题 + '|' 分隔行”转成真正的 HTML 表格;其余保持自然段落(同 nice 的合并规则)
+      if (!c) return '';
+      const esc = s => String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      const blocks = [];
+      String(c).replace(/\r/g, '').split(/\n{2,}/).forEach(para => {
+        const lines = para.split('\n').map(s => s.trim()).filter(Boolean);
+        if (!lines.length) return;
+        let caption = '';
+        if (/^【表】/.test(lines[0])) caption = esc(lines.shift().replace(/^【表】/, '').trim());
+        const pipe = lines.filter(l => l.split('|').length >= 2);
+        if (pipe.length >= 2 && pipe.length === lines.length) {
+          const cells = lines.map(l => l.split('|').map(x => esc(x.trim())));
+          const [head, ...body] = cells;
+          let html = '<table class="kb-tbl">';
+          if (caption) html += `<caption>${caption}</caption>`;
+          if (body.length) {
+            html += `<thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead>`;
+            html += `<tbody>${body.map(r => `<tr>${r.map(x => `<td>${x}</td>`).join('')}</tr>`).join('')}</tbody>`;
+          } else {
+            html += `<tbody><tr>${head.map(x => `<td>${x}</td>`).join('')}</tr></tbody>`;
+          }
+          blocks.push(html + '</table>');
+          return;
+        }
+        const text = caption
+          ? `${caption}<br>${esc(lines.join(''))}`
+          : esc(lines.join(''));
+        blocks.push(`<p>${text}</p>`);
+      });
+      return blocks.join('');
+    },
+    clsTermNotes(data, lv) {
+      // 术语注释:等级能力里出现“短休/长休”等缩写时给出简介
+      if (this.kbClsView !== 'base') return '';
+      const names = this.classViewFeats(data, 'base', lv).names;
+      const notes = [];
+      if (names.some(n => n.includes('短休'))) {
+        notes.push('💬 “短休”=短休息:至少 1 小时,期间可消耗生命骰回复生命值;引导神力等能力在短休结束后恢复使用次数。');
+      }
+      if (names.some(n => n.includes('长休'))) {
+        notes.push('💬 “长休”=长时间休息:至少 8 小时(其中睡眠不少于 6 小时),结束后恢复全部生命值与多数能力。');
+      }
+      return notes.join('\n');
     },
     featOptions(content) {
       // 能力文本内“多选一段”(如图腾精魄的熊/鹰/狼)拆成选项卡

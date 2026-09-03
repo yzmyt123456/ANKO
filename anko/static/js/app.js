@@ -813,10 +813,10 @@ createApp({
           });
         });
       }
-      // 去重(同一级重复同能力名只留一个)
+      // 去重(同名同能力才去重;同一槽位同级的多个不同能力各自保留,如附赠熟练项+语出惊人)
       const seenK = {};
       const featNodes2 = featNodes.filter(nd => {
-        const key = nd.lv + '|' + nd.group + '|' + nd.kind;
+        const key = nd.lv + '|' + nd.title + '|' + nd.kind;
         if (seenK[key]) return false;
         seenK[key] = 1;
         return true;

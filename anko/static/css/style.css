@@ -1246,9 +1246,10 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .pf-lv-badge { width: auto; height: auto; background: transparent; color: #7a6533; font-size: 13px; font-weight: 800; border: none; padding: 0 2px; box-shadow: none; }
 
 /* ---- 学原图:竖线连续贯穿整表;去掉行间横线 ---- */
-.pf-lane-row { border-bottom: none !important; }
+.pf-lane-row { border-bottom: none !important; margin: 0; padding: 0; }
+.pf-lane-grid { align-items: stretch !important; }
+.pf-lvcell { align-self: stretch; height: auto; border-radius: 0; }
 .pf-lvcell::after { top: 0; bottom: 0; }
-.pf-lvcell { border-radius: 0; }
 
 .pf-lvcell { position: relative; background: transparent; box-shadow: none; }
 .pf-lvcell::after { content: ''; position: absolute; top: 5px; bottom: 5px; right: -2px; width: 1px; background: linear-gradient(180deg, rgba(140, 110, 60, .04), rgba(140, 110, 60, .42) 50%, rgba(140, 110, 60, .04)); }

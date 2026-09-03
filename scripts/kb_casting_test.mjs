@@ -25,7 +25,8 @@ const classTab = [...doc.querySelectorAll('.kb-tabs .kb-tab')].find(el => el.tex
 click(classTab);
 await sleep(2600);
 const frame = doc.querySelector('.cls-frame');
-const navFighter = [...(frame ? frame.querySelectorAll('.cls-nav-item') : [])].find(b => b.textContent.includes('战士'));
+const navFighter = [...(frame ? frame.querySelectorAll('.pf-cls') : [])].find(b =>
+  (b.querySelector('.cls-nav-zh') || { textContent: '' }).textContent.trim() === '战士');
 if (navFighter) { click(navFighter); await sleep(1800); }
 const f2 = doc.querySelector('.cls-frame');
 console.log('战士页:', !!f2 && f2.querySelector('.cls-title').textContent.includes('战士'));

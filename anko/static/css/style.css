@@ -1109,6 +1109,55 @@ input[type="checkbox"] { width: auto; margin: 0; }
   border-radius: 10px; padding: 12px 14px; font-size: 13px; line-height: 1.7;
 }
 
+/* ============================================================
+   PF 式职业页(仿《开拓者:正义之怒》选择职业界面,置于文件尾覆盖细节)
+   ============================================================ */
+.kb-class-page .cls-frame { grid-template-columns: 238px minmax(0, 1fr); gap: 14px; align-items: start; }
+.kb-class-page .cls-nav { background: #fdf9ee; border: 1px solid #e3d5af; border-radius: 12px; padding: 8px; box-shadow: 0 8px 18px rgba(120, 90, 30, .08); }
+.cls-nav-title { letter-spacing: 2px; font-size: 15px; }
+.pf-grp { margin: 2px 0 6px; border-radius: 10px; }
+.pf-grp.cur { background: linear-gradient(180deg, #fff8e6, #fcf1d4); border: 1px solid #ead9ae; padding: 4px 4px 6px; }
+.kb-class-page .cls-nav-item { padding: 7px 10px; }
+.kb-class-page .cls-nav-item.on { background: var(--primary); box-shadow: 0 3px 10px rgba(59, 130, 246, .25); }
+.pf-sub { margin-left: 10px; width: calc(100% - 10px); }
+.pf-sub::before { content: '◦ '; color: var(--text-3, #98a2b3); font-weight: 700; }
+.pf-sub .cls-nav-zh { font-size: 13px; font-weight: 600; }
+
+.pf-head { display: grid; grid-template-columns: minmax(0, 1fr) 264px; gap: 18px; align-items: start; background: linear-gradient(140deg, #fffdf6, #fdf3dc 78%); border-color: #e8d8ae; box-shadow: 0 8px 22px rgba(120, 90, 30, .07); }
+.pf-title-block { min-width: 0; }
+.pf-kicker { font-size: 12px; font-weight: 800; color: #a0762b; letter-spacing: 3px; text-transform: uppercase; }
+.pf-title { font-size: 30px; color: #4a351a; margin: 2px 0 0; line-height: 1.15; }
+.pf-en { font-size: 13px; color: #9a7d47; font-weight: 600; margin: 2px 0 8px; }
+.pf-head .cls-intro { margin: 6px 0 0; font-size: 13.5px; color: #5a4a33; line-height: 2; }
+
+.pf-stat { background: #f6efd9; border: 1px solid #dfd0a6; border-radius: 12px; padding: 10px 14px 12px; }
+.pf-stat-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px dashed #e6dbc0; font-size: 13px; }
+.pf-stat-row span { color: #94773e; font-size: 12.5px; }
+.pf-stat-row b { color: #3d2c1a; font-size: 14px; }
+.pf-cast-title { margin: 10px 0 2px; font-size: 13px; font-weight: 800; color: #6d4a9e; letter-spacing: 1px; }
+.pf-cast-title::before { content: '✦ '; }
+
+.cls-side { gap: 8px; }
+.pf-side-label { font-weight: 800; font-size: 14px; color: #4a351a; letter-spacing: 1px; margin: 2px 0 6px; }
+.pf-side-card { background: #fdfaf1; border: 1px solid #e6dabf; border-radius: 10px; padding: 0 12px 2px; }
+.pf-side-card details summary { cursor: pointer; font-weight: 700; font-size: 13px; color: #6a5329; padding: 7px 0; list-style: none; }
+.pf-side-card details summary::before { content: '▸ '; color: #c9a961; }
+.pf-side-card details[open] summary::before { content: '▾ '; }
+.pf-side-card p { font-size: 12px; color: #5c4b30; line-height: 1.9; margin: 0 0 8px; white-space: pre-line; }
+
+.kb-class-page .cls-stage { border: 1px solid #e6dabf; background: linear-gradient(180deg, #fffdf6, #fbf5e4); }
+.cls-stage-title { letter-spacing: 1px; color: #6a5329; }
+.cls-lv-cell { border-color: #e3d3a6 !important; background: #fffaf0 !important; }
+.cls-lv-cell:hover { border-color: var(--primary) !important; }
+.cls-lv-num { color: #6a5329; }
+.cls-lv-cell.on { background: var(--primary) !important; }
+.cls-lv-cell.on .cls-lv-num { color: #fff; }
+
+@media (max-width: 1080px) {
+  .pf-head { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 900px) {
   .settings-grid { grid-template-columns: 1fr; }
 }
+

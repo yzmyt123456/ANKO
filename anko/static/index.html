@@ -435,38 +435,48 @@
           <div class="cls-frame">
             <aside class="cls-nav">
               <div class="cls-nav-title">选择职业</div>
-              <button v-for="c in kbClasses" :key="c.id"
-                      :class="['cls-nav-item', { on: c.id === kbClsPage.id }]"
-                      :title="c.title" @click="openKbClass(c)">
-                <span class="cls-nav-zh">{{ classZh(c.title) }}</span>
-                <span class="cls-nav-en">{{ c.title }}</span>
-              </button>
+              <div class="pf-tree">
+                <div v-for="c in pfTreeClasses(kbClsPage)" :key="'g' + c.id" class="pf-grp" :class="{ cur: c.id === kbClsPage.id }">
+                  <button :class="['cls-nav-item', 'pf-cls', { on: c.id === kbClsPage.id && kbClsView === 'base' }]"
+                          :title="c.title" @click="openKbClass(c)">
+                    <span class="cls-nav-zh">{{ classZh(c.title) }}</span>
+                    <span class="cls-nav-en">{{ c.title }}</span>
+                  </button>
+                  <template v-if="c.id === kbClsPage.id && classSubs(kbClsPage).length">
+                    <button v-for="s in classSubs(kbClsPage)" :key="'s' + s.id"
+                            :class="['cls-nav-item', 'pf-sub', { on: kbClsView === 's' + s.id }]"
+                            :title="s.title" @click="pfPickSub(s)">
+                      <span class="cls-nav-zh">{{ classZh(s.title) }}</span>
+                    </button>
+                  </template>
+                </div>
+              </div>
             </aside>
 
             <div class="cls-main">
-              <div class="cls-head">
-                <div class="cls-title-line">
-                  <h3 class="cls-title">{{ classViewName(kbClsPage) }}</h3>
-                  <span class="tag">{{ kbClsPage.title }}</span>
-                  <span class="tag">玩家手册 · 第{{ kbClsPage.page }}页</span>
+              <div class="cls-head pf-head">
+                <div class="pf-title-block">
+                  <div class="pf-kicker">{{ kbClsView === 'base' ? '玩家手册 · 第' + kbClsPage.page + ' 页' : '子职业变体' }}</div>
+                  <h3 class="cls-title pf-title">{{ classViewName(kbClsPage) }}</h3>
+                  <div class="pf-en">{{ kbClsPage.title }}</div>
+                  <p v-if="clsCurrentIntro(kbClsPage)" class="cls-intro">{{ clsReflow(clsCurrentIntro(kbClsPage)) }}</p>
+                  <p v-else-if="raceParts(kbClsPage.content).story" class="cls-intro">{{ clsReflow(raceParts(kbClsPage.content).story) }}</p>
                 </div>
-                <p v-if="clsCurrentIntro(kbClsPage)" class="cls-intro">{{ clsReflow(clsCurrentIntro(kbClsPage)) }}</p>
-                <div class="cls-badges">
-                  <div class="cls-badge"><span>主属性</span><b>{{ clsMeta(kbClsPage).main }}</b></div>
-                  <div class="cls-badge"><span>施法</span><b>{{ clsCastText(kbClsPage) }}</b></div>
-                  <div class="cls-badge" v-if="clsMeta(kbClsPage).ab"><span>施法关键</span><b>{{ clsMeta(kbClsPage).ab }}</b></div>
-                  <div class="cls-badge"><span>生命骰</span><b>{{ clsHitDie(kbClsPage) }}</b></div>
-                  <div class="cls-badge"><span>熟练加值</span><b>{{ classRowProf(kbClsLv, kbClsPage) }}</b></div>
-                  <div class="cls-badge" v-if="clsCastKind(kbClsPage)"><span>施法方式</span><b>{{ clsCastKind(kbClsPage) }}</b></div>
-                </div>
-              </div>
-
-              <div class="kb-cls-switch cls-view-tabs">
-                <button v-for="v in classViews(kbClsPage)" :key="v.id"
-                        :class="['kb-cls-sel', { on: kbClsView === v.id }]"
-                        @click="kbClsView = v.id">
-                  {{ v.sub ? '🎯 ' : '🧙 ' }}{{ v.name }}
-                </button>
+                <aside class="pf-stat">
+                  <div class="pf-stat-row"><span>主属性</span><b>{{ clsMeta(kbClsPage).main || '—' }}</b></div>
+                  <div class="pf-stat-row"><span>生命骰</span><b>{{ clsHitDie(kbClsPage) }}</b></div>
+                  <div class="pf-stat-row"><span>熟练加值</span><b>{{ classRowProf(kbClsLv, kbClsPage) }}</b></div>
+                  <template v-if="clsMeta(kbClsPage).cast !== 'none'">
+                    <div class="pf-cast-title">施法者信息</div>
+                    <div class="pf-stat-row"><span>最高法术</span><b>{{ clsCastLevel(kbClsPage) }}</b></div>
+                    <div class="pf-stat-row" v-if="clsMeta(kbClsPage).ab"><span>施法属性</span><b>{{ clsMeta(kbClsPage).ab }}</b></div>
+                    <div class="pf-stat-row"><span>施法方式</span><b>{{ clsCastKind(kbClsPage) || '—' }}</b></div>
+                  </template>
+                  <template v-else>
+                    <div class="pf-cast-title">战系</div>
+                    <div class="pf-stat-row"><span>施法</span><b>经子职获得</b></div>
+                  </template>
+                </aside>
               </div>
 
               <div class="cls-stage">
@@ -636,6 +646,13 @@
                 </div>
 
                 <aside class="cls-side">
+                  <div class="pf-side-label">🗡 本职与基础</div>
+                  <div v-for="b in classBases(kbClsPage)" :key="b.id" class="pf-side-card">
+                    <details>
+                      <summary>{{ b.title }}</summary>
+                      <p>{{ nice(b.content) }}</p>
+                    </details>
+                  </div>
                   <details v-if="classTableImg(kbClsPage)" class="kb-artbox">
                     <summary>📊 原书职业等级表(图片可放大)</summary>
                     <a :href="classTableImg(kbClsPage)" target="_blank" rel="noopener">

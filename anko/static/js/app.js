@@ -699,6 +699,21 @@ createApp({
       if (cols.includes('已知法术')) return '自发施法';
       return '准备施法';
     },
+    clsCastLevel(data) {
+      const cast = this.clsMeta(data).cast;
+      if (cast === 'full9') return '9 环';
+      if (cast === 'half5') return '5 环';
+      return '—';
+    },
+    pfTreeClasses(data) {
+      // 树排序:当前职业置顶(便于展示其变体),其余职业随后
+      if (!data || !this.kbClasses.length) return this.kbClasses || [];
+      return [data, ...this.kbClasses.filter(c => c.id !== data.id)];
+    },
+    pfPickSub(s) {
+      this.kbClsView = 's' + s.id;
+      this.clsChoice = {};
+    },
     clsCastText(data) {
       const c = this.clsMeta(data).cast;
       if (c === 'full9') return '9 环施法者';

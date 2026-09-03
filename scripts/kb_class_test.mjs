@@ -31,6 +31,8 @@ console.log('职业 tab 页内仪表盘(无弹窗):', !!frame);
 console.log('无外层卡片网格:', !doc.querySelector('.kb-class-page .kb-race-grid'));
 if (!frame) { console.log('errors:', errors.length ? errors : '无'); process.exit(0); }
 console.log('职业导航数:', frame.querySelectorAll('.cls-nav-item').length);
+console.log('右上属性卡行:', frame.querySelectorAll('.pf-stat-row').length);
+console.log('右侧本职基础卡:', frame.querySelectorAll('.pf-side-card').length);
 const barbNav = [...frame.querySelectorAll('.cls-nav-item')].find(b => b.textContent.includes('野蛮人'));
 if (barbNav) { click(barbNav); await sleep(1600); }
 const title = frame.querySelector('.cls-title');
@@ -40,7 +42,7 @@ const lvBtn = num => [...frame.querySelectorAll('.kb-lv-btn')].find(b =>
 lvBtn(5).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 await sleep(250);
 console.log('野蛮人 Lv5 面板:', frame.querySelector('.kb-lv-panel-head').textContent.trim());
-const berserk = [...frame.querySelectorAll('.kb-cls-sel')].find(b => b.textContent.includes('狂战士'));
+const berserk = [...frame.querySelectorAll('.pf-sub')].find(b => b.textContent.includes('狂战士'));
 click(berserk);
 await sleep(300);
 console.log('狂战士面板:', frame.querySelector('.kb-lv-panel-head').textContent.trim());

@@ -678,6 +678,108 @@ createApp({
     classRowChips(lv, data) {
       return this.classViewFeats(data, this.kbClsView, lv).names.slice(0, 3);
     },
+    clsAbbr(name) {
+      // 圈内简写:中文前两字(悬停/下方面板给全名)
+      const n = String(name || '');
+      if (/^选择/.test(n)) return '选道';
+      if (/属性值提升/.test(n)) return '属性';
+      if (/额外攻击/.test(n)) return '攻击';
+      if (/战斗风格/.test(n)) return '风格';
+      return n.replace(/[（(].*?[)）]/g, '').trim().slice(0, 2);
+    },
+    clsGroupKey(name) {
+      // 把"同一条成长线"归并:去掉括号数字差异(额外攻击 / 额外攻击(2) / 属性值提升)
+      return String(name || '').replace(/[（(]\d+[)）]|\s*\d+\s*/g, '').trim();
+    },
+    clsTableLanes(data) {
+      // 等级进度表的多行轨道:熟练加值 / 施法·环位(有则行) / 职业特性(随主职/子职视图)
+      const lanes = [];
+      const pageRows = this.classLevelRows(data);
+      const cellsOf = nodes => {
+        const cells = Array.from({ length: 21 }, () => []);
+        nodes.forEach(nd => cells[nd.lv].push(nd));
+        return cells;
+      };
+      const linesOf = nodes => {
+        const byG = {};
+        nodes.forEach(nd => { (byG[nd.group] = byG[nd.group] || []).push(nd.lv); });
+        const lines = [];
+        Object.values(byG).forEach(lvs => {
+          lvs.sort((a, b) => a - b);
+          for (let i = 0; i + 1 < lvs.length; i++) {
+            if (lvs[i + 1] > lvs[i]) lines.push({ a: lvs[i], b: lvs[i + 1], kind: nodes.find(n => n.lv === lvs[i]).kind });
+          }
+        });
+        return lines;
+      };
+
+      // ① 熟练加值:只在数值提升的等级打点
+      const profNodes = [];
+      let prevProf = '';
+      pageRows.forEach(r => {
+        if (r.prof && r.prof !== prevProf) {
+          profNodes.push({ lv: r.lv, badge: r.prof, kind: 'prof', group: 'prof', title: `熟练加值 ${r.prof}` });
+          prevProf = r.prof;
+        }
+      });
+      lanes.push({ key: 'prof', label: '熟练加值', cells: cellsOf(profNodes), lines: [] });
+
+      // ② 施法·环位:出现新环阶/戏法的等级打点(数据源随视图切换)
+      const src = this.clsActiveRes(data);
+      const resRows = this.classLevelRows(src);
+      const seenR = {};
+      const spellNodes = [];
+      resRows.forEach(r => {
+        if (!r.res) return;
+        const detail = Object.entries(r.res).filter(([, v]) => v != null && v !== 0)
+          .map(([k, v]) => `${k} ${v}`).join(' · ');
+        for (const [k, v] of Object.entries(r.res)) {
+          if (v === null || v === 0) continue;
+          let tag = null;
+          if (k === '已知戏法' && !seenR.c) { tag = '0'; seenR.c = 1; }
+          else {
+            const m = /^([1-9])环$/.exec(k);
+            if (m && !seenR['r' + m[1]]) { tag = m[1]; seenR['r' + m[1]] = 1; }
+            else if (k === '法术位环阶' && !seenR['r' + v]) { tag = String(v); seenR['r' + v] = 1; }
+          }
+          if (tag) spellNodes.push({ lv: r.lv, badge: tag, kind: 'spell', group: 'spell', title: detail });
+        }
+      });
+      if (spellNodes.length) {
+        lanes.push({ key: 'spell', label: '施法·环位', cells: cellsOf(spellNodes), lines: [] });
+      }
+
+      // ③ 职业特性 / 变体能力(视图内:子职能力替换"选择道途"占位)
+      const featNodes = [];
+      const view = this.kbClsView;
+      const subOn = lv => view !== 'base' && this.classSubs(data).some(s =>
+        ('s' + s.id) === view && (s.children || []).some(c => this.subFeatLv(c, s.children) === lv));
+      for (let lv = 1; lv <= 20; lv++) {
+        const names = this.classViewFeats(data, view, lv).names;
+        names.slice(0, 3).forEach(nm => {
+          const kind = subOn(lv) ? 'sub' : 'feat';
+          featNodes.push({
+            lv, kind, group: this.clsGroupKey(nm), badge: this.clsAbbr(nm),
+            title: `${nm}${kind === 'sub' ? '(子职能力)' : ''}`,
+          });
+        });
+      }
+      // 去重(同一级重复同能力名只留一个)
+      const seenK = {};
+      const featNodes2 = featNodes.filter(nd => {
+        const key = nd.lv + '|' + nd.group + '|' + nd.kind;
+        if (seenK[key]) return false;
+        seenK[key] = 1;
+        return true;
+      });
+      lanes.push({
+        key: 'feats',
+        label: view === 'base' ? '职业特性' : '变体能力',
+        cells: cellsOf(featNodes2),
+        lines: linesOf(featNodes2),
+      });
+      return lanes;
+    },
     clsCellItems(lv, data) {
       // 等级进度表单元格里的"圆形图标"清单(仿 PF 图:金=特性/紫=子职/蓝数字=环位/青=法术)
       const out = [];
@@ -803,6 +905,10 @@ createApp({
         }
       }
       return '—';
+    },
+    clsHitNum(data) {
+      const m = /(\d+)d(\d+)/.exec(this.clsHitDie(data));
+      return m ? m[2] : this.clsHitDie(data);
     },
     clsCurrentIntro(data) {
       if (this.kbClsView !== 'base') {

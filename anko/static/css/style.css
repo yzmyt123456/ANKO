@@ -1180,4 +1180,32 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .cls-lv-cell { align-items: flex-start; }
 .cls-lv-cell .pf-dots { justify-content: center; width: 100%; }
 
+/* ---- 等级表:多行轨道版(熟练/施法环位/职业特性),节点+成长线 ---- */
+.pf-lanes { overflow-x: auto; padding: 2px 0 4px; }
+.pf-lane-row { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 8px; margin: 2px 0; }
+.pf-ll-label { font-size: 12px; font-weight: 700; color: #7a6533; text-align: right; white-space: nowrap; }
+.pf-lane-grid { position: relative; display: grid; grid-template-columns: repeat(20, minmax(34px, 1fr)); min-width: 720px; gap: 3px 4px; align-items: center; }
+.pf-scale.kb-lv-btn { width: 100%; height: 26px; min-width: 0; padding: 0; border-radius: 6px; font-size: 12px; background: rgba(220, 205, 170, .25); }
+.pf-scale.kb-lv-btn .cls-lv-num { line-height: 1; }
+.pf-scale.kb-lv-btn.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.pf-lane-title-inner { display: flex; align-items: center; gap: 8px; min-width: 720px; padding: 4px 2px; border-top: 1px solid #e6dabf; border-bottom: 1px solid #e6dabf; }
+.pf-lv-badge { width: 22px; height: 22px; border-radius: 50%; background: var(--primary); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; }
+.pf-row-title { font-weight: 800; color: #4a351a; font-size: 14px; letter-spacing: 1px; }
+.pf-hp { margin-left: auto; font-weight: 700; color: #9a3f3f; font-size: 13px; }
+.pf-hp i { font-style: normal; color: #d64545; }
+.pf-lvcell { display: flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: wrap; min-height: 34px; border: 1px solid transparent; border-radius: 7px; cursor: pointer; padding: 2px; position: relative; z-index: 1; }
+.pf-lvcell:hover { border-color: #d9c9a4; background: rgba(240, 232, 210, .35); }
+.pf-lvcell.on { border-color: #a9c4f5; background: rgba(59, 130, 246, .10); }
+.pf-node { width: 23px; height: 23px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; color: #fff; border: 1px solid rgba(0, 0, 0, .16); box-shadow: inset 0 -2px 3px rgba(0, 0, 0, .10); line-height: 1; }
+.pf-node.kind-feat { background: linear-gradient(180deg, #f7c948, #d29a0b); color: #5a3c00; }
+.pf-node.kind-sub { background: linear-gradient(180deg, #b68cff, #7c3aed); }
+.pf-node.kind-spell { background: linear-gradient(180deg, #63a5fb, #245fdd); }
+.pf-node.kind-known { background: linear-gradient(180deg, #2dd4ee, #0f7f95); }
+.pf-node.kind-prof { background: linear-gradient(180deg, #f4efe2, #d9cdb0); color: #5c4a24; }
+.pf-line { position: absolute; top: 50%; height: 3px; margin-top: -2px; border-radius: 2px; z-index: 0; opacity: .8; }
+.pf-line.kind-feat { background: #e2ad2f; }
+.pf-line.kind-sub { background: #9a63f0; }
+.pf-line.kind-spell { background: #3b82f6; }
+
+
 

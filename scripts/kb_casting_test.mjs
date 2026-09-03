@@ -47,8 +47,9 @@ const navWiz = [...f2.querySelectorAll('.pf-cls')].find(b =>
 click(navWiz);
 await sleep(1500);
 const wf = doc.querySelector('.cls-frame');
-const sd = wf.querySelectorAll('.cls-lv-grid .pf-dot.kind-spell');
+const sd = wf.querySelectorAll('.pf-lanes .pf-node.kind-spell');
 console.log('法师蓝色环位圆点数:', sd.length, '| 首个圆内容:', sd[0] ? sd[0].textContent.trim() : '');
-console.log('法师青色法术圆点数:', wf.querySelectorAll('.cls-lv-grid .pf-dot.kind-known').length);
+console.log('法师青色法术圆点数:', wf.querySelectorAll('.pf-lanes .pf-node.kind-known').length);
 console.log('errors:', errors.length ? errors : '无');
 process.exit(0);
+

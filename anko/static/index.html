@@ -480,27 +480,45 @@
               </div>
 
               <div class="cls-stage">
-                <div class="cls-stage-title">等级进度(点击某级或圆点,下方展示完整内容)
-                      <span class="pf-legend">
-                        <i class="pf-dot kind-feat"></i>职业特性
-                        <i class="pf-dot kind-sub"></i>子职能力
-                        <i class="pf-dot kind-spell"></i>环位
-                        <i class="pf-dot kind-known"></i>法术/戏法
-                        <i class="pf-dot kind-empty"></i>无新增
-                      </span>
+                <div class="pf-lanes">
+                  <div class="pf-lane-row pf-lane-headrow">
+                    <span class="pf-ll-label">等级</span>
+                    <div class="pf-lane-grid">
+                      <button v-for="n in classLevelList()" :key="'s' + n"
+                              :class="['pf-scale', 'kb-lv-btn', { on: kbClsLv === n }]"
+                              @click="kbClsLv = n">
+                        <span class="cls-lv-num">{{ n }}</span>
+                      </button>
                     </div>
-                <div class="kb-lv-band cls-lv-grid">
-                  <button v-for="n in classLevelList()" :key="n"
-                          :class="['kb-lv-btn', 'cls-lv-cell', { on: kbClsLv === n, has: clsCellItems(n, kbClsPage).length }]"
-                          :title="classRowFeatsTitle(n, kbClsPage)"
-                          @click="kbClsLv = n">
-                    <span class="cls-lv-num">{{ n }}</span>
-                    <span class="pf-dots">
-                      <i v-for="it in clsCellItems(n, kbClsPage)" :key="'d' + it.key"
-                         :class="['pf-dot', 'kind-' + it.kind]" :title="it.title">{{ it.badge }}</i>
-                      <i v-if="!clsCellItems(n, kbClsPage).length" class="pf-dot kind-empty" title="该级未解锁新内容"></i>
-                    </span>
-                  </button>
+                  </div>
+
+                  <div class="pf-lane-row pf-lane-title">
+                    <span class="pf-ll-label"></span>
+                    <div class="pf-lane-title-inner">
+                      <span class="pf-lv-badge">{{ kbClsLv }}</span>
+                      <span class="pf-row-title">— {{ classViewName(kbClsPage) }} —</span>
+                      <span class="pf-hp">每级生命 +{{ clsHitNum(kbClsPage) }} <i>♥</i></span>
+                    </div>
+                  </div>
+
+                  <div v-for="lane in clsTableLanes(kbClsPage)" :key="lane.key"
+                       :class="'pf-lane-row lane-' + lane.key">
+                    <span class="pf-ll-label">{{ lane.label }}</span>
+                    <div class="pf-lane-grid">
+                      <template v-if="lane.lines.length">
+                        <i v-for="(ln, i) in lane.lines" :key="'ln' + i"
+                           class="pf-line" :class="'kind-' + ln.kind"
+                           :style="{ left: ((ln.a - 0.5) * 5) + '%', width: ((ln.b - ln.a) * 5) + '%' }"></i>
+                      </template>
+                      <template v-for="n in classLevelList()" :key="'lc' + n">
+                        <div class="pf-lvcell" :class="{ on: kbClsLv === n, has: lane.cells[n].length }"
+                             @click="kbClsLv = n" :title="lane.cells[n].length ? 'Lv' + n : ''">
+                          <span v-for="(nd, i) in lane.cells[n]" :key="'nd' + i"
+                                class="pf-node" :class="'kind-' + nd.kind" :title="nd.title">{{ nd.badge }}</span>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="kb-lv-panel">

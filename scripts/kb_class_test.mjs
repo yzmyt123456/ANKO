@@ -1,4 +1,4 @@
-/* 职业页回归:知识库-职业 tab 直接呈现仪表盘;切野蛮人→狂战士道途→等级面板。 */
+﻿/* 职业页回归:知识库-职业 tab 直接呈现仪表盘;切野蛮人→狂战士道途→等级面板。 */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -33,7 +33,7 @@ if (!frame) { console.log('errors:', errors.length ? errors : '无'); process.ex
 console.log('职业导航数:', frame.querySelectorAll('.cls-nav-item').length);
 console.log('右上属性卡行:', frame.querySelectorAll('.pf-stat-row').length);
 console.log('右侧本职基础卡:', frame.querySelectorAll('.pf-side-card').length);
-console.log('进度表金色特性圆点:', frame.querySelectorAll('.pf-dot.kind-feat').length);
+console.log('进度表金色特性圆点:', frame.querySelectorAll('.pf-lanes .pf-node.kind-feat').length);
 const barbNav = [...frame.querySelectorAll('.cls-nav-item')].find(b => b.textContent.includes('野蛮人'));
 if (barbNav) { click(barbNav); await sleep(1600); }
 const title = frame.querySelector('.cls-title');
@@ -62,3 +62,4 @@ console.log('图腾头部子职施法:', frame.querySelector('.pf-stat').textCon
 console.log('子职卡数:', frame.querySelectorAll('.kb-subclass-card').length);
 console.log('errors:', errors.length ? errors : '无');
 process.exit(0);
+

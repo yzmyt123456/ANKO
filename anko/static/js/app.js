@@ -622,7 +622,16 @@ createApp({
         };
       }
       const s = this.classSubs(data).find(x => 's' + x.id === viewId);
-      const cards = (s && s.children || []).filter(c => this.subFeatLv(c, s.children) === lv);
+      const kids = (s && s.children || []).filter(c => (c.kind || '') !== 'class_levels');
+      let cards = kids.filter(c => this.subFeatLv(c, kids) === lv);
+      if (s && !cards.length) {
+        // 该级无独立子职卡时,把"正文写明第 N 级"的成长卡带到该级(如战术大师18级=卓越骰d12)
+        cards = kids.filter(c => {
+          const base = this.subFeatLv(c, kids);
+          if (base == null || base >= lv) return false;
+          return new RegExp('第\\s*' + lv + '\\s*级').test(String(c.content || ''));
+        });
+      }
       if (cards.length) {
         // 子职有专属能力时,同时保留该级主职的核心成长(如诗人3级"专精"、6级"反迷惑"),
         // 只移除"选择…"占位与"…特性"占位

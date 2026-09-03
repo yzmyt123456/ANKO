@@ -24,6 +24,7 @@ class NoCacheStaticFiles(BaseStaticFiles):
         return response
 
 from anko.ai import AIService
+from anko.ai.knowledge_rag import KnowledgeRag
 from anko.api.routers import api_router
 from anko.config import Settings, load_settings
 from anko.dice.engine import DiceEngine
@@ -74,6 +75,7 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
     app.state.ai_service = ai_service
     app.state.config_service = config_service
     app.state.rule_service = rule_service
+    app.state.knowledge_rag = KnowledgeRag(rule_service)
 
     # ---- 内置路由 ----
     app.include_router(api_router, prefix=settings.server.api_prefix)

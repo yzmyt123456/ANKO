@@ -282,6 +282,25 @@ class RuleService:
             out.append(d)
         return out
 
+    def list_all_knowledge(self, limit: int = 5000) -> list[dict]:
+        """全量取回知识片段(标题+正文),供 RAG 建立本地索引。"""
+        with self._session() as s:
+            rows = s.execute(
+                select(RuleKnowledge).order_by(RuleKnowledge.page, RuleKnowledge.id).limit(limit)
+            ).scalars().all()
+            return [
+                {
+                    "id": x.id,
+                    "book": x.book,
+                    "page": x.page,
+                    "title": x.title,
+                    "category": x.category,
+                    "kind": x.kind,
+                    "content": x.content or "",
+                }
+                for x in rows
+            ]
+
     def search_knowledge(
         self,
         q: str,

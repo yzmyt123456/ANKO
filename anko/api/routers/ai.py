@@ -12,11 +12,40 @@ from pydantic import BaseModel, Field
 from anko.ai import AIService
 from anko.ai import dm as dm_assets
 from anko.ai import corpus as corpus_assets
+from anko.ai.knowledge_rag import KnowledgeRag, format_refs as format_kb_refs
 from anko.ai.client import AIError
 from anko.config import AISettings
 from anko.schemas.ai import AIParseRequest, AIStatus, CharacterDraft
 
 router = APIRouter(prefix="/ai", tags=["AI 助手"])
+
+
+def _retrieve_rule_refs(request: Request, query_text: str, top: int = 4) -> str:
+    """让 DM/生成器调动知识库:先用 n-gram 向量按语义取 Top-N,失败则退回关键词。"""
+    rag: KnowledgeRag | None = getattr(request.app.state, "knowledge_rag", None)
+    try:
+        if rag is not None and (query_text or "").strip():
+            refs = rag.search(query_text, top=top)
+            if refs:
+                return format_kb_refs(refs)
+    except Exception:  # noqa: BLE001 向量索引失败则回退
+        pass
+    try:
+        rule_svc = request.app.state.rule_service
+        refs = []
+        for kw in ("检定", "豁免", "规则", "属性", "法术"):
+            refs += rule_svc.search_knowledge(kw, limit=1)
+        parts = []
+        seen = set()
+        for r in refs:
+            key = r.get("page")
+            if key in seen:
+                continue
+            seen.add(key)
+            parts.append(f"[知识库 p{r.get('page')} {r.get('title', '')[:24]}]\n{(r.get('content') or '')[:280]}")
+        return "\n\n".join(parts[:4])
+    except Exception:  # noqa: BLE001 知识库缺失不阻断
+        return ""
 
 
 class AIConfigUpdate(BaseModel):
@@ -155,24 +184,8 @@ async def generate_character_stream(
 
     async def event_stream():
         buffer = payload.partial or ""
-        # 检索本地规则参考
-        extra_rules = ""
-        try:
-            rule_svc = request.app.state.rule_service
-            refs = []
-            for kw in ("六项属性", "种族", "阵营", "职业", "属性值"):
-                refs += rule_svc.search_knowledge(kw, limit=1)
-            seen = set()
-            parts = []
-            for r in refs:
-                key = r["page"]
-                if key in seen:
-                    continue
-                seen.add(key)
-                parts.append(f"[玩家手册 p{r['page']}]{r['content'][:220]}")
-            extra_rules = "\n".join(parts[:4])
-        except Exception:  # noqa: BLE001
-            extra_rules = ""
+        # 检索本地规则参考(DM 调动知识库)
+        extra_rules = _retrieve_rule_refs(request, f"{payload.story_context or ''} {payload.hint or ''}")
         try:
             async for delta in service.generate_character_stream(
                 story_context=payload.story_context or "",
@@ -233,28 +246,11 @@ async def generate_segment_stream(
 
     async def event_stream():
         try:
-            # 从知识库检索与当前角色/判定相关的参考片段
-            extra_rules = ""
-            try:
-                rule_svc = request.app.state.rule_service
-                kws = ["职业", "种族", "属性", "检定", "安科"]
-                refs = []
-                for kw in kws:
-                    refs += rule_svc.search_knowledge(kw, limit=1)
-                seen = set()
-                parts = []
-                for r in refs:
-                    key = r.get("page")
-                    if key in seen:
-                        continue
-                    seen.add(key)
-                    parts.append(
-                        f"[玩家手册 p{r.get('page')} {r.get('title', '')[:24]}]\n"
-                        f"{(r.get('content') or '')[:300]}"
-                    )
-                extra_rules = "\n\n".join(parts[:4])
-            except Exception:  # noqa: BLE001 知识库缺失不阻断生成
-                extra_rules = ""
+            # 从知识库检索与当前角色/判定相关的参考片段(DM 调动知识库)
+            extra_rules = _retrieve_rule_refs(
+                request,
+                f"{payload.context or ''} {payload.cast or ''} {payload.instruction or ''}",
+            )
             async for delta in service.generate_story_segment_stream(
                 context=payload.context or "",
                 cast=payload.cast or "",
@@ -313,24 +309,11 @@ async def dm_propose(payload: DMProposeRequest, request: Request) -> dict:
             status_code=503,
             detail="AI 尚未配置。请到「设置」页填写 AI 服务地址、API Key 与模型。",
         )
-    extra_rules = ""
-    try:
-        rule_svc = request.app.state.rule_service
-        kws = ["检定", "豁免", "规则", "安科"]
-        refs = []
-        for kw in kws:
-            refs += rule_svc.search_knowledge(kw, limit=1)
-        parts = []
-        seen = set()
-        for r in refs:
-            key = r.get("page")
-            if key in seen:
-                continue
-            seen.add(key)
-            parts.append(f"[规则库 p{r.get('page')}] {r.get('title', '')[:24]}\n{(r.get('content') or '')[:300]}")
-        extra_rules = "\n\n".join(parts[:4])
-    except Exception:  # noqa: BLE001 规则库缺失不阻断
-        extra_rules = ""
+    extra_rules = _retrieve_rule_refs(
+        request,
+        f"{payload.context or ''} {payload.cast or ''} {payload.instruction or ''}",
+        top=5,
+    )
     try:
         return await service.dm_propose(
             context=payload.context or "",

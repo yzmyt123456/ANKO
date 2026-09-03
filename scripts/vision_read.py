@@ -1,11 +1,16 @@
-"""用 deepseek-v4-flash-vision-exp 视觉模型读取截图内容与布局。"""
+"""用 deepseek-v4-flash-vision-exp 视觉模型读取截图内容与布局。
+
+用法: python scripts/vision_read.py [图片路径] [附加指令]
+"""
 import base64
 import json
 import sqlite3
+import sys
 import urllib.request
 from pathlib import Path
 
-PNG = Path("C:/Users/15634/Desktop/屏幕截图 2026-09-03 130426.png")
+PNG = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("C:/Users/15634/Desktop/屏幕截图 2026-09-03 130426.png")
+EXTRA = sys.argv[2] if len(sys.argv) > 2 else ""
 conn = sqlite3.connect("data/anko.db")
 ai = json.loads(conn.execute("select value from system_configs where key='ai'").fetchone()[0])
 conn.close()
@@ -19,6 +24,8 @@ prompt = (
     "3) 尽量读出可见的标题、按钮、文字内容(中文原样输出,英文保留)。"
     "请客观描述,不要臆测画面外内容。"
 )
+if EXTRA:
+    prompt += f"\n补充说明需求:{EXTRA}"
 body = {
     "model": model,
     "messages": [{
@@ -29,7 +36,7 @@ body = {
         ],
     }],
     "temperature": 0.1,
-    "max_tokens": 2000,
+    "max_tokens": 3000,
 }
 req = urllib.request.Request(
     url,

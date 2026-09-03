@@ -1086,10 +1086,13 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .cls-lv-cell:hover { transform: none; }
 .cls-lv-cell.on { background: var(--primary); border-color: var(--primary); }
 .cls-lv-cell.on .cls-lv-chip { background: rgba(255, 255, 255, .22); border-color: transparent; color: #fff; }
+.cls-lv-cell.on .cls-lv-sp i { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .35); color: #fff; }
 .cls-lv-cell.on .cls-lv-chip.dim { color: rgba(255, 255, 255, .72); }
 .cls-below { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
 .cls-side { position: sticky; top: 0; display: flex; flex-direction: column; gap: 10px; }
 .cls-side-note { font-size: 12px; color: var(--text-3, #98a2b3); line-height: 1.7; }
+.cls-lv-sp { display: flex; flex-wrap: wrap; gap: 3px; max-width: 100%; }
+.cls-lv-sp i { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 17px; padding: 0 5px; border-radius: 999px; background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; font-size: 10px; font-weight: 700; font-style: normal; line-height: 1; }
 
 @media (max-width: 1080px) {
   .cls-frame { grid-template-columns: 1fr; }

@@ -993,6 +993,7 @@
                   <div class="cls-badge" v-if="clsMeta(kbDetail.data).ab"><span>施法关键</span><b>{{ clsMeta(kbDetail.data).ab }}</b></div>
                   <div class="cls-badge"><span>生命骰</span><b>{{ clsHitDie(kbDetail.data) }}</b></div>
                   <div class="cls-badge"><span>熟练加值</span><b>{{ classRowProf(kbClsLv, kbDetail.data) }}</b></div>
+                  <div class="cls-badge" v-if="clsCastKind(kbDetail.data)"><span>施法方式</span><b>{{ clsCastKind(kbDetail.data) }}</b></div>
                 </div>
               </div>
 
@@ -1008,12 +1009,15 @@
                 <div class="cls-stage-title">等级进度(点选某级查看该级获得的能力)</div>
                 <div class="kb-lv-band cls-lv-grid">
                   <button v-for="n in classLevelList()" :key="n"
-                          :class="['kb-lv-btn', 'cls-lv-cell', { on: kbClsLv === n, has: classRowChips(n, kbDetail.data).length }]"
+                          :class="['kb-lv-btn', 'cls-lv-cell', { on: kbClsLv === n, has: classRowChips(n, kbDetail.data).length || classResMini(n, kbDetail.data).length }]"
                           :title="classRowFeatsTitle(n, kbDetail.data)"
                           @click="kbClsLv = n">
                     <span class="cls-lv-num">{{ n }}</span>
                     <span v-for="(nm, i) in classRowChips(n, kbDetail.data)" :key="i" class="cls-lv-chip">{{ nm }}</span>
-                    <span v-if="!classRowChips(n, kbDetail.data).length" class="cls-lv-chip dim">—</span>
+                    <span v-if="classResMini(n, kbDetail.data).length" class="cls-lv-sp">
+                      <i v-for="(m, i) in classResMini(n, kbDetail.data)" :key="'m' + i" :title="m.t">{{ m.s }}</i>
+                    </span>
+                    <span v-if="!classRowChips(n, kbDetail.data).length && !classResMini(n, kbDetail.data).length" class="cls-lv-chip dim">—</span>
                   </button>
                 </div>
 

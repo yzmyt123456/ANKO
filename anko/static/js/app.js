@@ -653,6 +653,32 @@ createApp({
     classRowChips(lv, data) {
       return this.classViewFeats(data, this.kbClsView, lv).names.slice(0, 3);
     },
+    classResMini(lv, data) {
+      // 等级格内的小法术徽:key→短标签,title→完整说明(仿 PF 每级圆形图标)
+      const r = this.classLevelRows(data).find(x => x.lv === lv);
+      if (!r || !r.res) return [];
+      const short = k => k
+        .replace('已知戏法', '戏法').replace('已知法术', '法术')
+        .replace('已知祈唤', '祈唤').replace('法术位环阶', '环阶');
+      const full = (k, v) => `${k} ${v === null ? '—' : v}`;
+      const items = [];
+      let overflow = false;
+      for (const [k, v] of Object.entries(r.res)) {
+        if (v === null || v === 0) continue;
+        if (items.length >= 6) { overflow = true; break; }
+        items.push({ s: short(k) + v, t: full(k, v) });
+      }
+      if (overflow) items.push({ s: '+…', t: '展开施法资源查看全部' });
+      return items;
+    },
+    clsCastKind(data) {
+      const cols = this.classSpellCols(data);
+      if (!cols.length) return '';
+      if (cols.includes('术法点')) return '自发施法';
+      if (cols.includes('法术位')) return '契约魔法';
+      if (cols.includes('已知法术')) return '自发施法';
+      return '准备施法';
+    },
     clsCastText(data) {
       const c = this.clsMeta(data).cast;
       if (c === 'full9') return '9 环施法者';

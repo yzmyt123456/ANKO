@@ -610,9 +610,14 @@ createApp({
       if (viewId === 'base') {
         const names = this.classLevelRowFeats(lv, data);
         const isSubLevel = names.some(n => /^选择/.test(n) || /特性$/.test(n));
+        const shared = this.clsSharedSubFeats(data, lv);
+        shared.forEach(s => { if (!names.includes(s.title)) names.push(s.title); });
+        const cards = this.classLevelFeats(lv, data).concat(
+          shared.map(s => ({ id: s.key, title: s.title, content: s.content, children: [] }))
+        );
         return {
           names,
-          cards: this.classLevelFeats(lv, data),
+          cards,
           isSubLevel,
         };
       }
@@ -927,6 +932,34 @@ createApp({
       // 顶部能力标签:剔除"选择…/…特性"占位名(占位内容由下方选项卡呈现)
       const names = this.classViewFeats(data, this.kbClsView, lv).names;
       return names.filter(n => !/^选择/.test(n) && !/特性$/.test(n));
+    },
+    clsSharedSubFeats(data, lv) {
+      // 主职表里按子职而变的"占位能力"(如牧师8级神圣打击):
+      // 若多个子职在同一级提供同名能力,且主职表行未列出,则补一条汇总说明
+      const by = {};
+      for (const s of this.classSubs(data)) {
+        for (const c of (s.children || [])) {
+          if (this.subFeatLv(c, s.children) !== lv) continue;
+          const zh = this.classZh(c.title);
+          (by[zh] = by[zh] || []).push({ sub: s, card: c });
+        }
+      }
+      const baseNames = this.classLevelRowFeats(lv, data);
+      const out = [];
+      for (const [zh, items] of Object.entries(by)) {
+        if (items.length < 2 || baseNames.includes(zh)) continue;
+        const body = items.map(it => {
+          const subName = this.classZh(it.sub.title);
+          const cardName = this.classZh(it.card.title);
+          return `${subName}·${cardName}：\n${(it.card.content || '').trim()}`;
+        }).join('\n\n');
+        out.push({
+          key: 'shared-' + lv + '-' + zh,
+          title: zh,
+          content: `这是随所选子职而变的能力，不同子职在该等级获得各自版本：\n\n${body}`,
+        });
+      }
+      return out;
     },
     clsEntryText(data, lv) {
       // 选择入口名(只列"选择…/…特性"占位,不混入专精等)

@@ -369,6 +369,45 @@ def _strip_story_table_junk(zh: str, content: str) -> str | None:
             "\n".join(lines[h2:junk]),
             "\n".join(lines[tail:]),
         ]).strip()
+    if zh == "武僧":
+        p2 = find("有的武僧彻底")
+        tail = find("武僧大多不拒绝", junk + 1)
+        if None in (p2, tail) or not (p2 < junk < tail):
+            return None
+        return "\n\n".join([
+            "\n".join(lines[:p2]),
+            "\n".join(lines[p2:junk]),
+            "\n".join(lines[tail:]),
+        ]).strip()
+    if zh == "法师":
+        p2 = find("法师们为魔法而生")
+        tail = find("法师的生活", junk + 1)
+        if None in (p2, tail) or not (p2 < junk < tail):
+            return None
+        return "\n\n".join([
+            "§故事",
+            "奥术学者 Scholars of the Arcane\n" + "\n".join(lines[2:p2]).strip(),
+            "知识的诱惑 The Lure of Knowledge\n" + "\n".join(lines[p2:junk]).strip(),
+            "\n".join(lines[tail:]).strip(),
+        ]).strip()
+    if zh == "游侠":
+        return "\n".join(lines[:junk]).strip()
+    if zh == "邪术师":
+        tail = find("立下契约后", junk + 1)
+        if tail is None:
+            return None
+        return "\n\n".join([
+            "\n".join(lines[:junk]),
+            "\n".join(lines[tail:]),
+        ]).strip()
+    if zh == "战士":
+        tail = find("某些战士认为", junk + 1)
+        if tail is None:
+            return None
+        return "\n\n".join([
+            "\n".join(lines[:junk]),
+            "\n".join(lines[tail:]),
+        ]).strip()
     return None
 
 

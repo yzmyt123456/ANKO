@@ -49,6 +49,15 @@ console.log('狂战士面板:', frame.querySelector('.kb-lv-panel-head').textCon
 lvBtn(6).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 await sleep(250);
 console.log('狂战士 Lv6 含无我狂暴:', frame.querySelector('.kb-lv-panel').textContent.includes('无我狂暴'));
+// 子职表连续性:狂战士 Lv4 无专属能力时回显主职"属性值提升"
+lvBtn(4).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+await sleep(250);
+console.log('狂战士 Lv4 回显主职ASI:', frame.querySelector('.kb-lv-panel').textContent.includes('属性值提升'));
+// 图腾武者道途:子职施法识别(兽语术仪式)
+const totem = [...frame.querySelectorAll('.pf-sub')].find(b => b.textContent.includes('图腾'));
+click(totem);
+await sleep(300);
+console.log('图腾头部子职施法:', frame.querySelector('.pf-stat').textContent.includes('动物交谈术'));
 console.log('子职卡数:', frame.querySelectorAll('.kb-subclass-card').length);
 console.log('errors:', errors.length ? errors : '无');
 process.exit(0);

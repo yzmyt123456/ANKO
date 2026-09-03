@@ -32,6 +32,7 @@ const CLASS_META = {
 const SUBCAST_META = {
   '奥法骑士': { cast: '1/3', ab: '智力', ring: '法术至 4 环' },
   '秘法骗子': { cast: '1/3', ab: '智力', ring: '法术至 4 环' },
+  '诡术师': { cast: '1/3', ab: '智力', ring: '法术至 4 环' },
 };
 
 createApp({
@@ -614,7 +615,11 @@ createApp({
       }
       const s = this.classSubs(data).find(x => 's' + x.id === viewId);
       const cards = (s && s.children || []).filter(c => this.subFeatLv(c, s.children) === lv);
-      return { names: cards.map(c => this.classZh(c.title)), cards };
+      if (cards.length) {
+        return { names: cards.map(c => this.classZh(c.title)), cards };
+      }
+      // 子职在该级没有专属能力时,回显主职该级成长(如属性值提升),使 1-20 表连续
+      return this.classViewFeats(data, 'base', lv);
     },
     classNextSubLv(data, viewId, lv) {
       const s = this.classSubs(data).find(x => 's' + x.id === viewId);
@@ -713,6 +718,38 @@ createApp({
     pfPickSub(s) {
       this.kbClsView = 's' + s.id;
       this.clsChoice = {};
+    },
+    clsActiveRes(data) {
+      // 施法资源数据源:选中子职且其带独立施法表(奥法骑士/诡术师)→用子职表;否则用主职表
+      if (this.kbClsView !== 'base') {
+        const s = this.classSubs(data).find(x => 's' + x.id === this.kbClsView);
+        if (s && this.classLevelRows(s).some(r => r.res)) return s;
+      }
+      return data;
+    },
+    clsSubCast(s) {
+      const t = this.classZh(s.title);
+      for (const key of Object.keys(SUBCAST_META)) {
+        if (t.includes(key) || key.includes(t)) return SUBCAST_META[key];
+      }
+      return null;
+    },
+    clsMartialLabel(data) {
+      if (this.kbClsView === 'base') return '战系(主职)';
+      const s = this.classSubs(data).find(x => 's' + x.id === this.kbClsView);
+      if (!s) return '战系(主职)';
+      const zh = this.classZh(s.title);
+      return zh.includes('图腾') || this.clsSubCast(s) ? '子职施法' : '战系(子职)';
+    },
+    clsMartialNote(data) {
+      if (this.kbClsView === 'base') return '主职无施法';
+      const s = this.classSubs(data).find(x => 's' + x.id === this.kbClsView);
+      if (!s) return '主职无施法';
+      const zh = this.classZh(s.title);
+      if (zh.includes('图腾')) return '动物交谈术·野兽感知(仪式施法)';
+      const m = this.clsSubCast(s);
+      if (m) return `施法 ${m.cast} · ${m.ab} · ${m.ring}`;
+      return '该子职无额外法术';
     },
     clsCastText(data) {
       const c = this.clsMeta(data).cast;

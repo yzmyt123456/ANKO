@@ -473,8 +473,8 @@
                     <div class="pf-stat-row"><span>施法方式</span><b>{{ clsCastKind(kbClsPage) || '—' }}</b></div>
                   </template>
                   <template v-else>
-                    <div class="pf-cast-title">战系</div>
-                    <div class="pf-stat-row"><span>施法</span><b>经子职获得</b></div>
+                    <div class="pf-cast-title">{{ clsMartialLabel(kbClsPage) }}</div>
+                    <div class="pf-stat-row"><span>施法</span><b>{{ clsMartialNote(kbClsPage) }}</b></div>
                   </template>
                 </aside>
               </div>
@@ -483,15 +483,15 @@
                 <div class="cls-stage-title">等级进度(点选某级查看该级获得的能力)</div>
                 <div class="kb-lv-band cls-lv-grid">
                   <button v-for="n in classLevelList()" :key="n"
-                          :class="['kb-lv-btn', 'cls-lv-cell', { on: kbClsLv === n, has: classRowChips(n, kbClsPage).length || classResMini(n, kbClsPage).length }]"
+                          :class="['kb-lv-btn', 'cls-lv-cell', { on: kbClsLv === n, has: classRowChips(n, kbClsPage).length || classResMini(n, clsActiveRes(kbClsPage)).length }]"
                           :title="classRowFeatsTitle(n, kbClsPage)"
                           @click="kbClsLv = n">
                     <span class="cls-lv-num">{{ n }}</span>
                     <span v-for="(nm, i) in classRowChips(n, kbClsPage)" :key="i" class="cls-lv-chip">{{ nm }}</span>
-                    <span v-if="classResMini(n, kbClsPage).length" class="cls-lv-sp">
-                      <i v-for="(m, i) in classResMini(n, kbClsPage)" :key="'m' + i" :title="m.t">{{ m.s }}</i>
+                    <span v-if="classResMini(n, clsActiveRes(kbClsPage)).length" class="cls-lv-sp">
+                      <i v-for="(m, i) in classResMini(n, clsActiveRes(kbClsPage))" :key="'m' + i" :title="m.t">{{ m.s }}</i>
                     </span>
-                    <span v-if="!classRowChips(n, kbClsPage).length && !classResMini(n, kbClsPage).length" class="cls-lv-chip dim">—</span>
+                    <span v-if="!classRowChips(n, kbClsPage).length && !classResMini(n, clsActiveRes(kbClsPage)).length" class="cls-lv-chip dim">—</span>
                   </button>
                 </div>
 
@@ -501,9 +501,9 @@
                     <span v-if="classRowProf(kbClsLv, kbClsPage)" class="kb-lv-feat-chip kb-prof">熟练加值 {{ classRowProf(kbClsLv, kbClsPage) }}</span>
                     <span v-for="(n, i) in classViewFeats(kbClsPage, kbClsView, kbClsLv).names" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
                   </div>
-                  <div class="kb-res-bar" v-if="classRowResParts(kbClsLv, kbClsPage).length">
+                  <div class="kb-res-bar" v-if="classRowResParts(kbClsLv, clsActiveRes(kbClsPage)).length">
                     <span class="kb-res-title">🔮 施法资源</span>
-                    <span v-for="(p, i) in classRowResParts(kbClsLv, kbClsPage)" :key="i" class="kb-res-chip">{{ p }}</span>
+                    <span v-for="(p, i) in classRowResParts(kbClsLv, clsActiveRes(kbClsPage))" :key="i" class="kb-res-chip">{{ p }}</span>
                   </div>
                   <div v-if="classViewFeats(kbClsPage, kbClsView, kbClsLv).cards.length" class="kb-subtraits">
                     <div v-for="f in classViewFeats(kbClsPage, kbClsView, kbClsLv).cards" :key="f.id" class="kb-trait-item">
@@ -659,14 +659,14 @@
                       <img :src="classTableImg(kbClsPage)" class="kb-art-tall" alt="职业等级表原图" />
                     </a>
                   </details>
-                  <details v-if="classSpellCols(kbClsPage).length" class="kb-spell-table">
+                  <details v-if="classSpellCols(clsActiveRes(kbClsPage)).length" class="kb-spell-table">
                     <summary>🧪 施法资源表(每级戏法/法术/环位)</summary>
-                    <div class="kb-spell-grid" :style="{ gridTemplateColumns: 'repeat(' + (classSpellCols(kbClsPage).length + 1) + ', auto)' }">
+                    <div class="kb-spell-grid" :style="{ gridTemplateColumns: 'repeat(' + (classSpellCols(clsActiveRes(kbClsPage)).length + 1) + ', auto)' }">
                       <div class="kb-sg-h">等级</div>
-                      <div v-for="(c, ci) in classSpellCols(kbClsPage)" :key="'hc' + ci" class="kb-sg-h">{{ c }}</div>
-                      <template v-for="lv in classSpellLevels(kbClsPage)" :key="'r' + lv">
+                      <div v-for="(c, ci) in classSpellCols(clsActiveRes(kbClsPage))" :key="'hc' + ci" class="kb-sg-h">{{ c }}</div>
+                      <template v-for="lv in classSpellLevels(clsActiveRes(kbClsPage))" :key="'r' + lv">
                         <div class="kb-sg-lv">{{ lv }}</div>
-                        <div v-for="(c, ci) in classSpellCols(kbClsPage)" :key="'c' + lv + '-' + ci" class="kb-sg-c">{{ classSpellVal(kbClsPage, lv, c) }}</div>
+                        <div v-for="(c, ci) in classSpellCols(clsActiveRes(kbClsPage))" :key="'c' + lv + '-' + ci" class="kb-sg-c">{{ classSpellVal(clsActiveRes(kbClsPage), lv, c) }}</div>
                       </template>
                     </div>
                   </details>

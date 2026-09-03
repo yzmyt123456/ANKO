@@ -762,6 +762,8 @@ createApp({
       if (s.includes('范型')) s = '范型'; // 武术范型3级 + 范型特性7/10/15/18 同一行
       if (s === '圣誓') s = '誓言'; // 圣武士:选择神圣誓言(3) 与 圣誓特性(7/15/20) 同一行
       if (s.includes('至圣斩')) s = '至圣斩'; // 至圣斩(2) 与 精通至圣斩(11) 同一行
+      if (s.includes('宿敌')) s = '宿敌'; // 游侠:宿敌1/6/14 同一行
+      if (s.includes('自然探索者') || s.includes('偏好环境')) s = '自然探索者'; // 游侠:自然探索者1/6/10 同一行
       if (s.includes('灵光')) s = '灵光'; // 守护灵光6 / 勇气灵光10 / 灵光增效18 同一行
       if (s.includes('气')) s = '气'; // 武僧:气(2) 与 真气驻拳(6) 气系成长同一行
       for (const k of ['学院', '道途', '流派', '宗派', '领域', '传承', '法门', '誓言', '结社', '起源']) {
@@ -1147,7 +1149,17 @@ createApp({
     classLevelRowFeats(lv, data) {
       const row = this.classLevelRows(data).find(r => r.lv === lv);
       if (!row) return [];
-      return String(row.feats || '').split(/[，,、]/).map(s => s.trim()).filter(Boolean);
+      const names = String(row.feats || '').split(/[，,、]/).map(s => s.trim()).filter(Boolean);
+      const flat = [];
+      names.forEach(n => {
+        // 游侠6级一行同时提升两条线 → 展开成两个节点分别落线
+        if (n === '增加宿敌及偏好环境') {
+          flat.push('增加宿敌', '增加偏好环境');
+        } else {
+          flat.push(n);
+        }
+      });
+      return flat;
     },
     classLevelFeats(lv, data) {
       // 某等级获得的特性卡(表名匹配)

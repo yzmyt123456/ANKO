@@ -118,6 +118,7 @@ createApp({
       kbMonsters: [],
       kbKnowledge: [],
       kbRaces: [],
+      kbRacePage: null,
       kbRaceResults: [],
       kbClasses: [],
       kbClsPage: null,
@@ -450,7 +451,16 @@ createApp({
       this.kbSchool = '';
       this.kbCategory = '';
       if (tab === 'knowledge' && !this.kbKnowledge.length) this.loadKbKnowledge();
-      if (tab === 'races' && !this.kbRaces.length) this.loadKbRaces();
+      if (tab === 'races') {
+        // 种族页直接进入仪表盘(左侧可切换 9 大种族),默认打开首个
+        const boot = async () => {
+          if (!this.kbRaces.parents || !this.kbRaces.parents.length) await this.loadKbRaces();
+          if (!this.kbRacePage && this.kbRaces.parents && this.kbRaces.parents.length) {
+            await this.openKbRace(this.kbRaces.parents[0]);
+          }
+        };
+        boot();
+      }
       if (tab === 'classes') {
         // 职业页直接进入仪表盘(内置 12 职业导航),默认打开首个职业
         const boot = async () => {
@@ -766,9 +776,11 @@ createApp({
     },
 
     async openKbRace(r) {
+      // 种族改为页内仪表盘展示(知识库-种族 tab),左侧导航切换即调用本方法
+      this.kbTab = 'races';
       try {
         const data = await API.get(`/rules/knowledge/${r.id}`);
-        this.kbDetail = { type: 'race', data };
+        this.kbRacePage = data;
       } catch (e) { this.showToast(e.message, 'error'); }
     },
 

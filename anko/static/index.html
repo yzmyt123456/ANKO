@@ -134,8 +134,6 @@
           </div>
         </section>
 
-
-
         <!-- ==================== 人物卡 ==================== -->
         <section v-else-if="view === 'characters'" class="view">
           <div v-if="!characters.length" class="empty-state">
@@ -372,29 +370,66 @@
             <div v-if="!kbSpells.length" class="inline-empty">没有找到法术</div>
           </div>
 
-          <!-- 种族:分层知识卡 -->
-          <div v-else-if="kbTab === 'races'">
-            <div v-if="kbRaceResults.length" class="kb-kno-list" style="margin-bottom:14px;">
-              <div v-for="k in kbRaceResults" :key="k.id" class="kb-kno-card" @click="openKbKnowledge(k)">
-                <b>{{ k.title }}</b>
-                <span v-if="k.kind === 'race'" class="kb-chip">种族</span>
-                <span v-else-if="k.kind === 'race_part'" class="kb-chip">细分</span>
-                <p v-html="linkify(truncate(k.content, 150))"></p>
-                <span class="muted">{{ k.book }} · 第{{ k.page }}页</span>
-              </div>
+          <!-- 种族:直接进入种族仪表盘(左侧可切换 9 大种族,免卡片/弹窗两层) -->
+          <div v-else-if="kbTab === 'races'" class="kb-class-page">
+            <div v-if="kbRaceResults.length" class="kb-kno-list" style="margin-bottom:14px;"><div v-for="k in kbRaceResults" :key="k.id" class="kb-kno-card" @click="openKbRace(k)"><b>{{ k.title }}</b><span v-if="k.kind === 'race'" class="kb-chip">种族</span><span v-else-if="k.kind === 'race_part'" class="kb-chip">细分</span><p v-html="linkify(truncate(k.content, 150))"></p><span class="muted">{{ k.book }} · 第{{ k.page }}页</span></div></div>
+            <div v-if="kbRacePage" class="cls-frame">
+              <aside class="cls-nav">
+                <div class="cls-nav-title">选择种族</div>
+                <button v-for="r in kbRaces.parents" :key="r.id"
+                        :class="['cls-nav-item', { on: kbRacePage && r.id === kbRacePage.id }]"
+                        :title="r.title" @click="openKbRace(r)">
+                  <span class="cls-nav-zh">{{ r.title.split(' ')[0] }}</span>
+                  <span class="cls-nav-en">{{ r.title }}</span>
+                </button>
+              </aside>
+              <div class="cls-main">
+          <div class="kb-meta">
+            <span class="tag">种族</span>
+            <span class="tag">玩家手册 · 第{{ kbRacePage.page }}页</span>
+          </div>
+          <a v-if="kbRacePage.image" :href="kbRacePage.image" target="_blank" rel="noopener">
+            <img :src="kbRacePage.image" class="kb-art" alt="种族插图" />
+          </a>
+          <p v-if="raceParts(kbRacePage.content).intro" class="kb-race-intro">{{ nice(raceParts(kbRacePage.content).intro) }}</p>
+
+          <div v-if="raceTraits(kbRacePage.children).length" class="kb-race-block">
+            <div class="kb-race-block-label">✨ 种族特质</div>
+            <div v-for="t in raceTraits(kbRacePage.children)" :key="t.id" class="kb-trait-item">
+              <div class="kb-trait-title">{{ t.title }}</div>
+              <p>{{ nice(t.content) }}</p>
             </div>
-            <div class="kb-race-grid">
-              <div v-for="r in kbRaces.parents" :key="r.id" class="kb-race-card" @click="openKbRace(r)">
-                <div class="kb-race-name">{{ r.title.split(' ')[0] }}</div>
-                <div class="kb-race-en">{{ r.title }}</div>
-                <p class="kb-race-preview">{{ truncate(r.preview, 60) }}</p>
-                <span class="kb-chip">第{{ r.page }}页</span>
-              </div>
-            </div>
-            <div v-if="!kbRaces.parents || !kbRaces.parents.length" class="inline-empty">暂未导入种族数据,请先在设置中导入规则包。</div>
           </div>
 
-          <!-- 职业:直接进入职业仪表盘(页面内置职业导航,免卡片/弹窗两层) -->
+          <div v-if="raceSubs(kbRacePage.children).length" class="kb-race-block">
+            <div class="kb-race-block-label">🗂 下级种族与细分</div>
+            <div v-for="s in raceSubs(kbRacePage.children)" :key="s.id" class="kb-race-sub">
+              <details>
+                <summary>{{ s.title }}<span class="kb-chip">第{{ s.page }}页</span></summary>
+                <p v-if="s.content">{{ nice(s.content) }}</p>
+                <div v-if="s.children && s.children.length" class="kb-subtraits">
+                  <div v-for="t in s.children" :key="t.id" class="kb-trait-item">
+                    <div class="kb-trait-title">{{ t.title }}</div>
+                    <p>{{ nice(t.content) }}</p>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div v-if="raceParts(kbRacePage.content).story" class="kb-race-block">
+            <details class="kb-story">
+              <summary>📜 背景故事</summary>
+              <div class="kb-story-body">{{ nice(raceParts(kbRacePage.content).story) }}</div>
+            </details>
+          </div>
+        
+              </div>
+            </div>
+            <div v-else-if="!kbRaces.parents || !kbRaces.parents.length" class="inline-empty">暂未导入种族数据,请先在设置中导入规则包。</div>
+          </div>
+
+<!-- 职业:直接进入职业仪表盘(页面内置职业导航,免卡片/弹窗两层) -->
           <div v-else-if="kbTab === 'classes'" class="kb-class-page">
             <template v-if="kbClsPage">
           <div class="cls-frame">
@@ -1187,48 +1222,7 @@
           </div>
         </template>
 
-        <!-- 种族知识卡(分层):特质与亚种优先,小故事在底部折叠 -->
-        <template v-else-if="kbDetail.type === 'race' && kbDetail.data">
-          <div class="kb-meta">
-            <span class="tag">种族</span>
-            <span class="tag">玩家手册 · 第{{ kbDetail.data.page }}页</span>
-          </div>
-          <a v-if="kbDetail.data.image" :href="kbDetail.data.image" target="_blank" rel="noopener">
-            <img :src="kbDetail.data.image" class="kb-art" alt="种族插图" />
-          </a>
-          <p v-if="raceParts(kbDetail.data.content).intro" class="kb-race-intro">{{ nice(raceParts(kbDetail.data.content).intro) }}</p>
-
-          <div v-if="raceTraits(kbDetail.data.children).length" class="kb-race-block">
-            <div class="kb-race-block-label">✨ 种族特质</div>
-            <div v-for="t in raceTraits(kbDetail.data.children)" :key="t.id" class="kb-trait-item">
-              <div class="kb-trait-title">{{ t.title }}</div>
-              <p>{{ nice(t.content) }}</p>
-            </div>
-          </div>
-
-          <div v-if="raceSubs(kbDetail.data.children).length" class="kb-race-block">
-            <div class="kb-race-block-label">🗂 下级种族与细分</div>
-            <div v-for="s in raceSubs(kbDetail.data.children)" :key="s.id" class="kb-race-sub">
-              <details>
-                <summary>{{ s.title }}<span class="kb-chip">第{{ s.page }}页</span></summary>
-                <p v-if="s.content">{{ nice(s.content) }}</p>
-                <div v-if="s.children && s.children.length" class="kb-subtraits">
-                  <div v-for="t in s.children" :key="t.id" class="kb-trait-item">
-                    <div class="kb-trait-title">{{ t.title }}</div>
-                    <p>{{ nice(t.content) }}</p>
-                  </div>
-                </div>
-              </details>
-            </div>
-          </div>
-
-          <div v-if="raceParts(kbDetail.data.content).story" class="kb-race-block">
-            <details class="kb-story">
-              <summary>📜 背景故事</summary>
-              <div class="kb-story-body">{{ nice(raceParts(kbDetail.data.content).story) }}</div>
-            </details>
-          </div>
-        </template>
+        
 
         <!-- 地图 -->
         <template v-else>

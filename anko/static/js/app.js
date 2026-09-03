@@ -725,6 +725,7 @@ createApp({
       if (s.endsWith('狂暴')) s = '狂暴';
       if (s.startsWith('神圣干预')) s = '神圣干预';
       if (s.includes('荒野形态')) s = '荒野形态'; // 荒野形态 2/4/8 提升在同一行
+      if (s.includes('范型')) s = '范型'; // 武术范型3级 + 范型特性7/10/15/18 同一行
       for (const k of ['学院', '道途', '流派', '宗派', '领域', '传承', '法门', '誓言', '结社', '起源']) {
         if (s.endsWith(k)) { s = k; break; }
       }

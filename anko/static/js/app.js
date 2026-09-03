@@ -688,8 +688,13 @@ createApp({
       return n.replace(/[（(].*?[)）]/g, '').trim().slice(0, 2);
     },
     clsGroupKey(name) {
-      // 把"同一条成长线"归并:去掉括号数字差异(额外攻击 / 额外攻击(2) / 属性值提升)
-      return String(name || '').replace(/[（(]\d+[)）]|\s*\d+\s*/g, '').trim();
+      // 把"同一条成长线"归并:去掉括号数字差异与"选择/原初/特性"前缀后缀
+      return String(name || '')
+        .replace(/[（(]\d+[)）]|\s*\d+\s*/g, '')
+        .replace(/^选择/, '')
+        .replace(/^原初/, '')
+        .replace(/特性$/, '')
+        .trim();
     },
     clsTableLanes(data) {
       // 等级进度表的多行轨道:熟练加值 / 施法·环位(有则行) / 职业特性(随主职/子职视图)
@@ -749,7 +754,7 @@ createApp({
         lanes.push({ key: 'spell', label: '施法·环位', cells: cellsOf(spellNodes), lines: [] });
       }
 
-      // ③ 职业特性 / 变体能力(视图内:子职能力替换"选择道途"占位)
+      // ③ 职业特性 / 变体能力:按"同一条成长线"拆成多个独立行(属性值提升一行、道途一行…)
       const featNodes = [];
       const view = this.kbClsView;
       const subOn = lv => view !== 'base' && this.classSubs(data).some(s =>
@@ -772,11 +777,24 @@ createApp({
         seenK[key] = 1;
         return true;
       });
-      lanes.push({
-        key: 'feats',
-        label: view === 'base' ? '职业特性' : '变体能力',
-        cells: cellsOf(featNodes2),
-        lines: linesOf(featNodes2),
+      // 同一"能力线"放一条独立轨道(可横线连等级;无同伴则该行只有一个点)
+      const byG = {};
+      featNodes2.forEach(nd => {
+        if (!byG[nd.group]) byG[nd.group] = { name: nd.title.replace(/\(子职能力\)/, ''), nodes: [] };
+        byG[nd.group].nodes.push(nd);
+      });
+      Object.keys(byG).sort((a, b) => {
+        const firstA = Math.min(...byG[a].nodes.map(n => n.lv));
+        const firstB = Math.min(...byG[b].nodes.map(n => n.lv));
+        return firstA - firstB || a.localeCompare(b, 'zh');
+      }).forEach(g => {
+        const nds = byG[g].nodes;
+        lanes.push({
+          key: 'g' + g,
+          label: byG[g].name,
+          cells: cellsOf(nds),
+          lines: linesOf(nds),
+        });
       });
       return lanes;
     },

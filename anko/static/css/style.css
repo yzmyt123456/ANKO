@@ -1207,5 +1207,22 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .pf-line.kind-sub { background: #9a63f0; }
 .pf-line.kind-spell { background: #3b82f6; }
 
+/* ---- 精致化:更轻的标尺/节点/连线与清爽排版 ---- */
+.pf-lane-row { grid-template-columns: 108px minmax(0, 1fr); margin: 0; border-bottom: 1px solid #f2ecdc; }
+.pf-lane-row:last-child { border-bottom: none; }
+.pf-ll-label { font-size: 11px; color: #9a7d47; letter-spacing: .3px; padding-right: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pf-lane-grid { min-width: 760px; gap: 2px 3px; }
+.pf-lane-headrow .pf-ll-label, .pf-lane-title .pf-ll-label { font-weight: 800; color: #7a6533; }
+.pf-scale.kb-lv-btn { height: 24px; background: transparent; border: none; color: #a08a5a; font-weight: 600; border-radius: 0; }
+.pf-scale.kb-lv-btn:hover { color: var(--primary-dark); }
+.pf-scale.kb-lv-btn.on { background: transparent; border-bottom: 2px solid var(--primary); color: var(--primary); box-shadow: none; border-radius: 0; }
+.pf-lane-title-inner { border-top: none; border-bottom: 1px solid #eadfc2; }
+.pf-lv-badge { background: #f7c948; color: #5a3c00; box-shadow: none; }
+.pf-lvcell { min-height: 30px; border-radius: 8px; }
+.pf-node { width: 21px; height: 21px; font-size: 9.5px; border-width: 1px; }
+.pf-line { height: 2px; margin-top: -1px; opacity: .55; }
+.pf-lvcell.on { background: linear-gradient(180deg, rgba(59, 130, 246, .12), rgba(59, 130, 246, .05)); }
+
+
 
 

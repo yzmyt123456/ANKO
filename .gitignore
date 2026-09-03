@@ -5,15 +5,13 @@ __pycache__/
 .venv/
 venv/
 
-# 本地数据库与运行时产物
-*.db
+# ?????????????????*.db
 *.sqlite3
 *.log
 data/
 logs/
 
-# 测试与工具
-.pytest_cache/
+# ????????.pytest_cache/
 .coverage
 htmlcov/
 
@@ -22,9 +20,14 @@ htmlcov/
 .vscode/
 *.swp
 
-# 前端校验用 npm 依赖
+# ????????npm ???
 scripts/vendor/node_modules/
 scripts/vendor/package-lock.json
 
-# NGA reference crawl(���û� Cookie,���ύ)
-reference_nga/
+# NGA reference crawl(??? Cookie,???)
+# NGA ????(?????;Cookie ???)
+reference_nga/cookie.txt
+reference_nga/__pycache__/
+reference_nga/out/done_pages.txt
+reference_nga/out/done_pages.txt.bak
+reference_nga/out/errors.txt

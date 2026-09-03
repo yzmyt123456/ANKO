@@ -61,7 +61,7 @@ def main() -> None:
     # 2. 计算差异(用 --base 或 origin/main 作为基线)
     base = args.base or git("rev-parse", "origin/main")
     diff = subprocess.check_output(
-        ["git", "diff", "--name-status", base, head],
+        ["git", "-c", "core.quotepath=false", "diff", "--name-status", base, head],
         text=True,
         encoding="utf-8",
         errors="replace",

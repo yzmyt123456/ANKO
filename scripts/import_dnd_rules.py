@@ -344,13 +344,19 @@ def _build_class(c: dict) -> dict:
             for y2, t2, x2 in items:
                 if not re.search(r"[\u4e00-\u9fff]", t2) or _GRADE_RE.match(t2.strip()):
                     continue
+                if t2.strip() in (
+                    "熟练项 Proficiencies", "生命值 Hit Point", "生命值 Hit Points", "装备 Equipment",
+                ):
+                    # 栏外基础卡标题(如页边"熟练项/生命值")不是等级表特性格
+                    continue
                 if x2 <= x or x2 - x > 300 or len(t2) > 36:
                     continue
                 if abs(y2 - y) > 8:
                     continue
                 dx = abs(x2 - header_x) if header_x is not None else x2
-                if best is None or (abs(y2 - y), dx) < best[:2]:
-                    best = (abs(y2 - y), dx, x2, t2)
+                # 先比"与职业特性列对齐"(列距离),再比行内纵向距离,防止栏边词同高误夺
+                if best is None or (dx, abs(y2 - y)) < best[:2]:
+                    best = (dx, abs(y2 - y), x2, t2)
             if best is not None:
                 page_has_feat += 1
             # 熟练加值:同行 x 最小的 +N 格(等级格右侧第一数值列)

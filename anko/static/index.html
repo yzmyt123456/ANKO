@@ -256,10 +256,9 @@
               <div class="seg-panel">
                 <div class="seg-title">🧭 骰子引导续写 <span class="muted">(逐段生成 · 可中途修改)</span></div>
                 <p v-if="!segCast" class="muted seg-tip">
-                  先点上方“🤖 生成新角色”,系统会自动把角色摘要带到这里;<br/>
-                  之后每一段都会先写进正文框、等你改好,再“掷骰→生成下一段”。
+                  下方“导游人格 / 导游提案 / 安价盒”无需角色也能用;要开始逐段续写正文,先点上方“🤖 生成新角色”或先输入“登场角色参考”,再“掷骰→生成下一段”。
                 </p>
-                <template v-else>
+                <template>
                   <label class="seg-persona">导游人格
                     <select v-model="segPersona" :disabled="segBusy">
                       <option v-for="p in dmPersonas" :key="p.id" :value="p.id">{{ p.name }} · {{ p.desc }}</option>

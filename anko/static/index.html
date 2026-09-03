@@ -479,6 +479,20 @@
                 </aside>
               </div>
 
+              <details class="kb-comm-note" v-if="clsComm(kbClsPage)">
+                <summary>📊 社区强度参考 <span class="kb-comm-tag">(非规则 · 2014 玩家手册印象)</span></summary>
+                <div class="kb-comm-body">
+                  <p class="kb-comm-class"><b>总体评级 {{ clsComm(kbClsPage).rate }}</b> — {{ clsComm(kbClsPage).note }}</p>
+                  <ul v-if="clsComm(kbClsPage).subs.length" class="kb-comm-subs">
+                    <li v-for="sub in clsComm(kbClsPage).subs" :key="sub.name">
+                      <span class="kb-comm-name">{{ sub.name }}</span>
+                      <b class="kb-comm-rate">{{ sub.rate }}</b>
+                      <span v-if="sub.nick" class="kb-comm-nick">外号:{{ sub.nick }}</span>
+                    </li>
+                  </ul>
+                </div>
+              </details>
+
               <div class="cls-stage">
                 <div class="pf-lanes">
                   <div class="pf-lane-row pf-lane-title">

@@ -1326,6 +1326,20 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-class-page .kb-lv-panel .kb-trait-item:last-child { border-bottom: none; }
 .kb-class-page .kb-trait-title { font-size: 13.5px; color: #3d2c1a; }
 
+/* 职业页:社区强度参考(非规则) */
+.kb-comm-note { margin: 2px 2px 12px; border: 1px dashed #d8cba6; border-radius: 10px; background: #fffaf0; font-size: 12.5px; }
+.kb-comm-note summary { cursor: pointer; padding: 7px 12px; font-weight: 600; color: #6a5329; list-style: none; }
+.kb-comm-note summary::before { content: '▸ '; color: #c9a94f; }
+.kb-comm-note[open] summary::before { content: '▾ '; }
+.kb-comm-tag { font-weight: 400; font-size: 11.5px; color: #a08b5f; margin-left: 6px; }
+.kb-comm-body { padding: 2px 14px 12px; color: #5a4a33; line-height: 1.9; }
+.kb-comm-class b { color: #9a6b1f; }
+.kb-comm-subs { list-style: none; margin: 8px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 2px 16px; }
+.kb-comm-subs li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.kb-comm-name { font-weight: 600; color: #3d2c1a; }
+.kb-comm-rate { color: #9a6b1f; font-weight: 700; }
+.kb-comm-nick { color: #7c8a5f; font-size: 11.5px; border-left: 1px solid #e5cf9c; padding-left: 8px; }
+
 
 
 

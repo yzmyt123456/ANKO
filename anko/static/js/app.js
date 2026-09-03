@@ -14,6 +14,72 @@ const PAGE_META = {
 };
 
 // 职业规则元信息:主属性 / 施法类型(9 环全施法、半施法至5环、战系无表)/ 施法关键属性
+const CLS_COMMUNITY = {
+  '野蛮人': { rate: 'A-', note: '纯物理坦克/爆发,简单粗暴,承伤能力极强;短处是控制与非战斗能力少。', subs: [
+    ['Berserker', 'B', '疯狗/力竭王'],
+    ['Totem', 'S', '熊蛮'],
+  ] },
+  '吟游诗人': { rate: 'S', note: '全技能+全施法+激励,真正的万金油。', subs: [
+    ['Lore', 'S/A+', '万金油/百宝箱'],
+    ['Valor', 'B+', '战诗/战吼诗人'],
+  ] },
+  '牧师': { rate: 'S', note: '领域差异大,治疗与辅助上限最高。', subs: [
+    ['Knowledge', 'B+', '学者/图书馆员'],
+    ['Life', 'A', '奶妈/移动泉水'],
+    ['Light', 'A-', '阳光炮台'],
+    ['Nature', 'B+', '绿野牧师'],
+    ['Tempest', 'A-', '雷神牧师'],
+    ['Trickery', 'C+', '骗子牧师/盗版游荡者'],
+    ['War', 'B+', '圣战牧师'],
+  ] },
+  '德鲁伊': { rate: 'A', note: '施法+变形皆可;月亮结社前期极强势。', subs: [
+    ['Land', 'B/A-', '地形法师/图德'],
+    ['Moon', 'S', '月德/熊德'],
+  ] },
+  '战士': { rate: 'A+', note: '战职里最全面,专长多、连击多。', subs: [
+    ['Champion', 'B', 'CHAMP'],
+    ['Battle Master', 'A+', '战术大师'],
+    ['Eldritch Knight', 'A-', '魔剑/法战'],
+  ] },
+  '武僧': { rate: 'C+/B-', note: '5e 里公认偏弱的战职之一(属性依赖重、气点少)。', subs: [
+    ['Open Hand', 'B', '点穴大师'],
+    ['Shadow', 'A-', '忍者/影舞者'],
+    ['Four Elements', 'C', '元素拳/气元素使'],
+  ] },
+  '圣武士': { rate: 'S/A+', note: '爆发+光环+自保全面,复仇尤为强势。', subs: [
+    ['Devotion', 'A', '光辉骑士'],
+    ['Ancients', 'A', '树誓/古老者'],
+    ['Vengeance', 'S/A+', '黑骑'],
+  ] },
+  '游侠': { rate: 'C+/B', note: 'PHB 时期强度评价偏低,但有地形工具+战系施法。', subs: [
+    ['Hunter', 'B-', '老猎人'],
+    ['Beast Master', 'C', '兽王/人形铲屎官'],
+  ] },
+  '游荡者': { rate: 'A+', note: '技能大师+稳定偷袭爆发。', subs: [
+    ['Thief', 'B/A', '盗圣/快手'],
+    ['Assassin', 'A-', '一刀斩/暗杀者'],
+    ['Arcane Trickster', 'A-', '魔盗/魔法小偷'],
+  ] },
+  '术士': { rate: 'A-', note: '法术资源灵活,可玩性高;狂野魔法不稳定。', subs: [
+    ['Draconic', 'A-', '龙术/龙裔术士'],
+    ['Wild Magic', 'B/C+', '混沌术/狂法'],
+  ] },
+  '邪术师': { rate: 'A+', note: '魔能爆体系+契约祈唤,单体攻击与多功能兼备。', subs: [
+    ['Archfey', 'B+', '妖精契约'],
+    ['Fiend', 'A-', '恶魔契约/万金油魔契'],
+    ['Great Old One', 'A-/B+', '克苏鲁术/旧神'],
+  ] },
+  '法师': { rate: 'S', note: '法术最多、最灵活,公认上限最高。', subs: [
+    ['Abjuration', 'A-', '罩子法师'],
+    ['Conjuration', 'B+', '召唤师'],
+    ['Divination', 'S/A+', '预言家/剧本家'],
+    ['Enchantment', 'B-', '控心术士'],
+    ['Evocation', 'B+/A-', '火球轰炸机'],
+    ['Illusion', 'B+', '幻术师/假象王'],
+    ['Necromancy', 'C+/B', '亡灵法师/骨爷'],
+    ['Transmutation', 'C+', '点金师/变化师'],
+  ] },
+};
 const CLASS_META = {
   '野蛮人': { main: '力量 · 体质', cast: 'none', ab: '', note: '纯战系;道途不提供法术' },
   '吟游诗人': { main: '魅力', cast: 'full9', ab: '魅力', note: '9 环全施法者' },
@@ -505,6 +571,21 @@ createApp({
     },
     clsMeta(data) {
       return CLASS_META[this.classZh(data.title)] || {};
+    },
+    clsComm(data) {
+      // 社区强度参考(非规则;2014 PHB 印象)
+      const entry = CLS_COMMUNITY[this.classZh(data.title || '')];
+      if (!entry) return null;
+      const subs = this.classSubs(data).map(s => {
+        const title = String(s.title || '');
+        const found = entry.subs.find(m => title.includes(m[0]));
+        return {
+          name: this.classZh(title),
+          rate: found ? found[1] : '—',
+          nick: found ? found[2] : '',
+        };
+      });
+      return { rate: entry.rate, note: entry.note, subs };
     },
     castLabel(data) {
       const m = this.clsMeta(data);

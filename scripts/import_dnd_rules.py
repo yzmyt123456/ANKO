@@ -299,11 +299,72 @@ _CLASS_HP = {
 }
 
 
+def _strip_story_table_junk(zh: str, content: str) -> str | None:
+    """职业简介误并等级表文字时,按该职业页面段落锚点重建简介(仅德鲁伊/野蛮人/术士)。"""
+    lines = (content or "").split("\n")
+    junk = next((i for i, l in enumerate(lines) if l.strip() == "职业"), None)
+    if junk is None:
+        return None
+
+    def find(prefix: str, start: int = 0) -> int | None:
+        for i in range(start, len(lines)):
+            if lines[i].startswith(prefix):
+                return i
+        return None
+
+    if zh == "德鲁伊":
+        bal = find("维持平衡", junk + 1)
+        hd = find("自然之力")
+        p2 = find("德鲁伊的法术")
+        cb = find("德鲁伊也会", bal + 1) if bal is not None else None
+        cc = find("德鲁伊经常", bal + 1) if bal is not None else None
+        if None in (bal, hd, p2, cb, cc) or not (hd < p2 < junk < bal < cb < cc):
+            return None
+        return "\n\n".join([
+            "\n".join(lines[:hd]),
+            "\n".join(lines[hd:p2]),
+            "\n".join(lines[p2:junk]),
+            "\n".join(lines[bal:cb]),
+            "\n".join(lines[cb:cc]),
+            "\n".join(lines[cc:]),
+        ]).strip()
+    if zh == "野蛮人":
+        p2 = find("野蛮人活跃")
+        h2 = find("危险的生活")
+        tail = find("野蛮人面对危险时", junk + 1)
+        if None in (p2, h2, tail) or not (p2 < h2 < junk < tail):
+            return None
+        return "\n\n".join([
+            "\n".join(lines[:p2]),
+            "\n".join(lines[p2:h2]),
+            "\n".join(lines[h2:junk]),
+            "\n".join(lines[tail:]),
+        ]).strip()
+    if zh == "术士":
+        p2 = find("术法力量")
+        p3 = find("术士不需要")
+        h2 = find("未知力量")
+        tail = find("驱使术士冒险", junk + 1)
+        if None in (p2, p3, h2, tail) or not (p2 < p3 < h2 < junk < tail):
+            return None
+        return "\n\n".join([
+            "\n".join(lines[:p2]),
+            "\n".join(lines[p2:p3]),
+            "\n".join(lines[p3:h2]),
+            "\n".join(lines[h2:junk]),
+            "\n".join(lines[tail:]),
+        ]).strip()
+    return None
+
+
 def _fix_known_class_texts(node: dict) -> None:
     """文本层勘误(玩家手册 PDF 矢量字抽取常见丢字):不依赖视觉识图二次兜底。"""
     import json
 
     zh = (node.get("title") or "").split(" ")[0]
+    story = _strip_story_table_junk(zh, node.get("content") or "")
+    if story is not None:
+        node["content"] = story
     for k in node.get("children", []):
         if k.get("kind") == "class_levels":
             rows = json.loads(k["content"])
@@ -339,26 +400,6 @@ def _fix_known_class_texts(node: dict) -> None:
                 "content": circle_body,
                 "children": [],
             })
-        # 德鲁伊首章:职业等级表文字被并进简介 → 删掉"职业"表头到"维持平衡"之间的表格行
-        if zh == "德鲁伊" and k.get("kind") == "class" and (k.get("content") or ""):
-            cts = (k.get("content") or "").split("\n")
-            tab = next((i for i, l in enumerate(cts) if l.strip() == "职业"), None)
-            bal = next((i for i, l in enumerate(cts) if l.startswith("维持平衡")), None)
-            if tab is not None and bal is not None and tab < bal:
-                hd = next((i for i, l in enumerate(cts) if l.startswith("自然之力")), None)
-                p2 = next((i for i, l in enumerate(cts) if l.startswith("德鲁伊的法术")), None)
-                cb = next((i for i, l in enumerate(cts[bal + 1:]) if l.startswith("德鲁伊也会")), None)
-                cc = next((i for i, l in enumerate(cts[bal + 1:]) if l.startswith("德鲁伊经常")), None)
-                if hd is not None and p2 is not None and cb is not None and cc is not None:
-                    cb += bal + 1
-                    cc += bal + 1
-                    k["content"] = "\n\n".join([
-                        "\n".join(cts[:p2]),
-                        "\n".join(cts[p2:tab]),
-                        "\n".join(cts[bal:cb]),
-                        "\n".join(cts[cb:cc]),
-                        "\n".join(cts[cc:]),
-                    ]).strip()
         # 战士等职业表与右侧"生命值"同高重叠时,正文易被误当作表格丢弃 → 自动回填
         if (
             k.get("kind") == "class_base"

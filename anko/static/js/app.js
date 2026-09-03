@@ -619,7 +619,24 @@ createApp({
       const s = this.classSubs(data).find(x => 's' + x.id === viewId);
       const cards = (s && s.children || []).filter(c => this.subFeatLv(c, s.children) === lv);
       if (cards.length) {
-        return { names: cards.map(c => this.classZh(c.title)), cards };
+        // 子职有专属能力时,同时保留该级主职的核心成长(如诗人3级"专精"、6级"反迷惑"),
+        // 只移除"选择…"占位与"…特性"占位
+        const keep = this.classLevelRowFeats(lv, data)
+          .filter(n => !/^选择/.test(n) && !/特性$/.test(n));
+        const names = [...cards.map(c => this.classZh(c.title))];
+        keep.forEach(n => { if (!names.includes(n)) names.push(n); });
+        const feats = this.classFeats(data);
+        const baseCards = keep
+          .map(n => {
+            const exact = feats.find(f => this.classZh(f.title) === n);
+            return exact || feats.find(f => {
+              const zh = this.classZh(f.title);
+              return n.includes(zh) || zh.includes(n);
+            });
+          })
+          .filter(Boolean)
+          .filter(f => !cards.some(c => c.id === f.id));
+        return { names, cards: [...cards, ...baseCards], isSubLevel: true };
       }
       // 子职在该级没有专属能力时,回显主职该级成长(如属性值提升),使 1-20 表连续
       return this.classViewFeats(data, 'base', lv);

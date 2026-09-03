@@ -275,6 +275,38 @@ def _parse_cast_rows(items: list) -> list[dict]:
     return rows
 
 
+_DESTROY_UNDEAD_TEXT = (
+    "第 5 级起，当不死生物进行对抗你驱散特性的豁免失败时，"
+    "如果其挑战等级等于或低于一个既定的下限，则该不死生物将被立即摧毁。"
+    "相应的数值列在表格“摧毁不死生物”中。\n\n"
+    "摧毁不死生物（表）\n"
+    "牧师等级 | 摧毁不死生物的挑战等级\n"
+    "5 | 1/2 或更低\n"
+    "8 | 1 或更低\n"
+    "11 | 2 或更低\n"
+    "14 | 3 或更低\n"
+    "17 | 4 或更低"
+)
+
+
+def _fix_known_class_texts(node: dict) -> None:
+    """文本层勘误(玩家手册 PDF 矢量字抽取常见丢字):不依赖视觉识图二次兜底。"""
+    import json
+
+    for k in node.get("children", []):
+        if k.get("kind") == "class_levels":
+            rows = json.loads(k["content"])
+            for r in rows:
+                f = r.get("feats", "")
+                if "/休）" in f and "短休" not in f:
+                    r["feats"] = f.replace("/休）", "/短休）")
+            k["content"] = json.dumps(rows, ensure_ascii=False)
+        if k.get("kind") == "class_feature" and k.get("title", "").startswith(
+            "摧毁不死生物"
+        ):
+            k["content"] = _DESTROY_UNDEAD_TEXT
+
+
 def _build_class(c: dict) -> dict:
     """解析单个职业的行流 → 树节点。"""
     import json
@@ -489,6 +521,8 @@ def _build_class(c: dict) -> dict:
         node["content"] = f"§故事\n{chr(10).join(story_parts)}"
     # 战斗风格选项卡(战士/圣武士/游侠)并入对应"战斗风格"卡
     _merge_class_style_options(node)
+    # 文本层已知勘误:等级表引导神力"X/休)"补"短";摧毁不死生物卡正文/表格规范化
+    _fix_known_class_texts(node)
     return node
 
 _ENTRY_ANCHOR_CACHE: dict[tuple, re.Pattern] = {}

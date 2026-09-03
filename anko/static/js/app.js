@@ -723,6 +723,7 @@ createApp({
         .replace(/特性$/, '')
         .trim();
       if (s.endsWith('狂暴')) s = '狂暴';
+      if (s.startsWith('神圣干预')) s = '神圣干预';
       for (const k of ['学院', '道途', '流派', '宗派', '领域', '传承', '法门', '誓言', '结社', '起源']) {
         if (s.endsWith(k)) { s = k; break; }
       }

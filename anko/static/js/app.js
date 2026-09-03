@@ -764,7 +764,7 @@ createApp({
         names.slice(0, 3).forEach(nm => {
           const kind = subOn(lv) ? 'sub' : 'feat';
           featNodes.push({
-            lv, kind, group: this.clsGroupKey(nm), badge: this.clsAbbr(nm),
+            lv, kind, group: this.clsGroupKey(nm), badge: '',
             title: `${nm}${kind === 'sub' ? '(子职能力)' : ''}`,
           });
         });

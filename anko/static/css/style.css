@@ -1223,6 +1223,35 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .pf-line { height: 2px; margin-top: -1px; opacity: .55; }
 .pf-lvcell.on { background: linear-gradient(180deg, rgba(59, 130, 246, .12), rgba(59, 130, 246, .05)); }
 
+/* ---- 更克制：能力节点=细描边圆点(不写字)；数字仅保留在环位/熟练 ---- */
+.pf-node { width: 21px; height: 21px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; background: #fff; border: 1.5px solid #cbd5e1; box-shadow: none; color: #475569; }
+.pf-node.kind-feat { background: #f8fafc; border-color: #cbd5e1; }
+.pf-node.kind-feat::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #94a3b8; display: block; }
+.pf-node.kind-sub { background: #f5f3ff; border-color: #c4b5fd; }
+.pf-node.kind-sub::after { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #7c3aed; display: block; }
+.pf-node.kind-spell { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; font-weight: 700; }
+.pf-node.kind-prof { background: #f8fafc; border-color: #d1d5db; color: #4b5563; font-weight: 700; }
+.pf-line { opacity: .5; }
+.pf-line.kind-feat { background: #94a3b8; }
+.pf-line.kind-sub { background: #a78bfa; }
+.pf-line.kind-spell { background: #60a5fa; }
+
+/* 下方面板：去掉圆角药丸/大圆角卡,改为紧凑文字与细分隔线 */
+.kb-class-page .kb-lv-panel { border: 1px solid #eadfc4; border-left: 3px solid #9fb6e8; border-radius: 12px; background: #fffdf8; box-shadow: 0 2px 10px rgba(120, 90, 30, .05); }
+.kb-class-page .kb-lv-panel-head { font-size: 15px; color: #4a351a; letter-spacing: .3px; }
+.kb-class-page .kb-lv-feat-chips { display: inline; }
+.kb-class-page .kb-lv-feat-chips .kb-lv-feat-chip { display: inline; padding: 0; border: 0; background: none; color: #6a5329; font-size: 13px; font-weight: 600; }
+.kb-class-page .kb-lv-feat-chips .kb-lv-feat-chip::after { content: ' · '; color: #d3c39b; }
+.kb-class-page .kb-lv-feat-chips .kb-lv-feat-chip:last-child::after { content: ''; }
+.kb-class-page .kb-lv-feat-chips .kb-prof { color: #8a6d3b; }
+.kb-class-page .kb-res-bar { background: none; border: none; padding: 2px 0; }
+.kb-class-page .kb-res-chip { background: none; border: none; color: #1e6f5c; font-size: 12px; padding: 0; margin-right: 4px; }
+.kb-class-page .kb-res-title { color: #1e6f5c; }
+.kb-class-page .kb-lv-panel .kb-trait-item { background: transparent; border: 0; border-bottom: 1px dashed #ece2c8; border-radius: 0; box-shadow: none; margin: 0; padding: 5px 0; }
+.kb-class-page .kb-lv-panel .kb-trait-item:last-child { border-bottom: none; }
+.kb-class-page .kb-trait-title { font-size: 13.5px; color: #3d2c1a; }
+
+
 
 
 

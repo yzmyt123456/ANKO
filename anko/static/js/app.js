@@ -693,7 +693,8 @@ createApp({
     clsGroupKey(name) {
       // 把"同一条成长线"归并:去掉括号数字差异与"选择/原初/特性"前缀后缀
       return String(name || '')
-        .replace(/[（(]\d+[)）]|\s*\d+\s*/g, '')
+        .replace(/[（(][^（）()]*[）)]/g, '')
+        .replace(/\d+/g, '')
         .replace(/^选择/, '')
         .replace(/^原初/, '')
         .replace(/特性$/, '')

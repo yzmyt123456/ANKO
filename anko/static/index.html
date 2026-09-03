@@ -533,7 +533,7 @@
                       <p v-if="clsSlotIntro(kbClsPage, kbClsLv)" class="kb-entry-desc">{{ clsReflow(clsSlotIntro(kbClsPage, kbClsLv)) }}</p>
                       <div class="kb-pick-row">
                         <button v-for="o in classSubChoices(kbClsPage, kbClsLv)" :key="o.s.id"
-                                class="kb-pick-btn" @click="kbClsView = 's' + o.s.id">
+                                class="kb-pick-btn" @click="pfPickSub(o.s)">
                           <b>{{ classZh(o.s.title) }}</b>
                           <span>{{ o.cards.map(c => classZh(c.title)).join('、') }}</span>
                         </button>

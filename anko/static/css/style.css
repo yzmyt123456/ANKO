@@ -407,6 +407,18 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .dec-tip { font-size: 11.5px; margin: 2px 0 8px; }
 .dec-hit { margin: 8px 0; padding: 8px 10px; border: 1px dashed #c9a94f; border-radius: 8px; background: #fff7e0; color: #6a5329; font-size: 13px; }
 .ai-loading { color: var(--primary-dark); font-size: 12.5px; margin: 8px 0; }
+.dec-mode { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.dec-mode-btn { flex: 1; min-width: 160px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text-2); cursor: pointer; font-size: 13px; }
+.dec-mode-btn.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+.dec-bail { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); margin: 4px 0 8px; }
+.dec-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 6px; margin: 6px 0 10px; }
+.dec-stat-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); font-size: 13px; }
+.dec-stat-label { font-weight: 700; }
+.dec-stat-rolls { font-size: 11px; }
+.dec-stat-total { margin-left: auto; font-size: 16px; color: var(--primary-dark); }
+.dec-stat-bail { color: #b7791f; font-size: 11px; }
+.dec-num-preset { display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 0 10px; }
+.dec-num-expr { width: 150px; }
 .compose-card form { display: flex; flex-direction: column; gap: 12px; }
 .compose-card label { font-size: 12.5px; color: var(--text-2); }
 

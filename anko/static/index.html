@@ -1254,41 +1254,104 @@
         <button class="icon-btn" :disabled="decBusy" @click="closeDecision()">✕</button>
       </div>
       <div class="modal-body">
-        <div class="dec-progress">
-          <span v-for="(s, i) in ['名字','种族','职业','背景','阵营']" :key="i"
-                :class="['dec-step', {on: i === decIdx, done: i < decIdx || decDone}]">{{ s }}</span>
+        <div class="dec-mode">
+          <button type="button" :class="['dec-mode-btn', {on: decMode === 'wizard'}]" :disabled="decBusy" @click="decMode = 'wizard'">🧙 建卡向导</button>
+          <button type="button" :class="['dec-mode-btn', {on: decMode === 'dice'}]" :disabled="decBusy" @click="decMode = 'dice'">🎯 数值判定(d100 意愿 / DC)</button>
         </div>
-        <template v-if="!decDone">
-          <div v-if="decIdx === 0">
-            <p class="dec-q">先给这位登场者起个名字吧?</p>
-            <label>角色名 <input v-model="decName" placeholder="如:莉莉安 / 铁下巴·格罗姆" /></label>
-            <button class="btn primary full" @click="decWriteNext">下一步:决定种族 →</button>
+
+        <template v-if="decMode === 'wizard'">
+          <div class="dec-progress">
+            <span v-for="(s, i) in ['名字','种族','职业','属性','背景','阵营']" :key="i"
+                  :class="['dec-step', {on: i === decIdx, done: i < decIdx || decDone}]">{{ s }}</span>
           </div>
-          <div v-else>
-            <p class="dec-q">{{ decQ() }}</p>
-            <div class="dec-row">
-              <input v-model="decRollInput" class="seg-expr" placeholder="点数或 1dn,如 7 / 1d8" :disabled="decBusy" />
-              <button class="btn" :disabled="decBusy" @click="decRoll">🎲 掷骰</button>
-              <button class="btn ai-btn" :disabled="decBusy || !decHit" @click="decWriteNext">✍️ 写入正文并下一步</button>
+          <template v-if="!decDone">
+            <div v-if="decIdx === 0">
+              <p class="dec-q">先给这位登场者起个名字吧?</p>
+              <label>角色名 <input v-model="decName" placeholder="如:莉莉安 / 铁下巴·格罗姆" /></label>
+              <button class="btn primary full" @click="decWriteNext">下一步:决定种族 →</button>
             </div>
-            <p class="muted dec-tip">可直接打点数(如 3),也可写 1dn 让骰娘掷;超出列表范围会提示重掷。</p>
-            <label>选项列表(每行一个,可增删/改)
-              <textarea v-model="decOpts" rows="8" :disabled="decBusy"></textarea>
-            </label>
-            <div v-if="decHit" class="dec-hit">🎲 掷出 {{ decHit.expr }} = {{ decHit.total }} → 选中 <b>{{ decHit.selected }}</b></div>
+            <div v-else-if="decCurKey() === 'stats'">
+              <p class="dec-q">{{ decQ() }}</p>
+              <p class="muted dec-tip">每项属性掷 <b>两次 1d16+2</b>,取数值高的一次;普通人的各项数据通常为 10。</p>
+              <label class="dec-bail">
+                <input type="checkbox" v-model="decStatBail" :disabled="decBusy" />
+                职业核心属性({{ decStatMainText() }})若两次都低于 10,破例补骰一次保底
+              </label>
+              <div class="dec-stats">
+                <div v-for="row in decStats" :key="row.key" class="dec-stat-row">
+                  <span class="dec-stat-label">{{ row.label }}</span>
+                  <span v-if="decStatMainText().indexOf(row.label) >= 0" class="tag">职业核心</span>
+                  <span class="muted dec-stat-rolls">{{ row.rolls.length ? '两掷 ' + row.rolls.join(' / ') : '待掷' }}</span>
+                  <b class="dec-stat-total">{{ row.total === null ? '—' : row.total }}</b>
+                  <em v-if="row.rerolled" class="dec-stat-bail">(补骰)</em>
+                </div>
+              </div>
+              <div class="dec-row">
+                <button class="btn" :disabled="decBusy" @click="decRoll">🎲 掷六维(2×1d16+2 取高)</button>
+                <button class="btn ai-btn" :disabled="decBusy || !decHit" @click="decWriteNext">✍️ 写入正文并下一步</button>
+              </div>
+            </div>
+            <div v-else>
+              <p class="dec-q">{{ decQ() }}</p>
+              <div class="dec-row">
+                <input v-model="decRollInput" class="seg-expr" placeholder="点数或 1dn,如 7 / 1d8" :disabled="decBusy" />
+                <button class="btn" :disabled="decBusy" @click="decRoll">🎲 掷骰</button>
+                <button class="btn ai-btn" :disabled="decBusy || !decHit" @click="decWriteNext">✍️ 写入正文并下一步</button>
+              </div>
+              <p class="muted dec-tip">可直接打点数(如 3),也可写 1dn 让骰娘掷;超出列表范围会提示重掷。</p>
+              <label>选项列表(每行一个,可增删/改)
+                <textarea v-model="decOpts" rows="8" :disabled="decBusy"></textarea>
+              </label>
+              <div v-if="decHit" class="dec-hit">🎲 掷出 {{ decHit.expr }} = {{ decHit.total }} → 选中 <b>{{ decHit.selected }}</b></div>
+            </div>
+          </template>
+          <div v-if="decDone" class="gen-result">
+            <div class="gen-name">决策完成 ✅</div>
+            <pre class="gen-process-text">{{ decSummary() }}</pre>
+            <p class="muted">设定已同步到下方“骰子引导续写”的登场角色参考,正文也已在正文框里,可用续写面板继续推进。</p>
           </div>
         </template>
-        <div v-if="decDone" class="gen-result">
-          <div class="gen-name">决策完成 ✅</div>
-          <pre class="gen-process-text">{{ decSummary() }}</pre>
-          <p class="muted">设定已同步到下方“骰子引导续写”的登场角色参考,正文也已在正文框里,可用续写面板继续推进。</p>
-        </div>
+
+        <template v-else>
+          <p class="dec-q">🎯 数值判定 —— 想判定角色“愿不愿意 / 行不行”,直接掷 d100 或 d20。</p>
+          <div class="dec-num-preset">
+            <button type="button" class="btn small" @click="decNumPreset('wish')">🙋 意愿 d100</button>
+            <button type="button" class="btn small" @click="decNumPreset('dc')">⚔️ DC 检定 d20</button>
+            <button type="button" class="btn small" @click="decNumPreset('wild')">🌪 狂野/大成败 d100</button>
+          </div>
+          <label>判定问题(可空,会送给 AI 参考)
+            <input v-model="decAsk" placeholder="如:初华愿意一起旅行吗?" :disabled="decBusy" />
+          </label>
+          <div class="dec-row">
+            <input v-model="decExpr" class="seg-expr dec-num-expr" placeholder="1d100 / 1d70+30" :disabled="decBusy" />
+            <button class="btn" :disabled="decBusy" @click="decNumRoll">🎲 掷判定</button>
+            <button class="btn ai-btn" :disabled="decBusy || !decNumHit" @click="decNumWrite">✍️ 把结果写进正文</button>
+          </div>
+          <p class="muted dec-tip">表达式可带修正,如 1d70+30 = “好朋友 +30”。</p>
+          <label>结果档位(每行一个“N以上:说明”或“N以下:说明”,掷出后自动取满足的最高档)
+            <textarea v-model="decThres" rows="4" :disabled="decBusy"></textarea>
+          </label>
+          <div v-if="decNumHit" class="dec-hit">
+            🎲 判定 {{ decNumHit.expr }} = <b>{{ decNumHit.total }}</b>
+            <template v-if="decNumHit.result"> → 结果:<b>{{ decNumHit.result }}</b></template>
+          </div>
+          <ul v-if="decNumLog.length" class="seg-rolls">
+            <li v-for="(r, i) in decNumLog" :key="i">🎲 {{ r }}</li>
+          </ul>
+        </template>
+
         <div v-if="decErr" class="ai-error">{{ decErr }}</div>
         <div v-if="decBusy" class="ai-loading">⏳ AI 正在把这一掷写进正文…</div>
       </div>
       <div class="modal-foot">
-        <button class="btn" @click="decRestart" :disabled="decBusy">🔄 重新开始</button>
-        <button v-if="decDone" class="btn primary" @click="closeDecision">完成,去正文修改 →</button>
+        <template v-if="decMode === 'wizard'">
+          <button class="btn" @click="decRestart" :disabled="decBusy">🔄 重新开始</button>
+          <button v-if="decDone" class="btn primary" @click="closeDecision">完成,去正文修改 →</button>
+        </template>
+        <template v-else>
+          <button class="btn" @click="decNumReset" :disabled="decBusy">🗑 清空本次判定</button>
+          <button class="btn primary" :disabled="decBusy" @click="closeDecision">完成</button>
+        </template>
       </div>
     </div>
   </div>

@@ -25,3 +25,6 @@ htmlcov/
 # å‰ç«¯æ ¡éªŒç”¨ npm ä¾èµ–
 scripts/vendor/node_modules/
 scripts/vendor/package-lock.json
+
+# NGA reference crawl(º¬ÓÃ»§ Cookie,ÎğÌá½»)
+reference_nga/

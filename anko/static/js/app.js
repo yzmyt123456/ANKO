@@ -99,6 +99,7 @@ const DEC_ROUNDS = [
   { key: 'name', q: '先给她/他起个名字?', expr: '' },
   { key: 'race', q: '这位登场者的种族是?', expr: '1d9', preset: '人类\n精灵\n矮人\n半精灵\n半兽人\n侏儒\n提夫林\n龙裔\n半身人' },
   { key: 'klass', q: '她/他以何职业踏上冒险?', expr: '1d12', preset: '野蛮人\n吟游诗人\n牧师\n德鲁伊\n战士\n武僧\n圣武士\n游侠\n游荡者\n术士\n邪术师\n法师' },
+  { key: 'stats', q: '六维属性怎么投?(两次 1d16+2 取高)', expr: '1d16+2', preset: '' },
   { key: 'background', q: '出身与背景是?', expr: '1d13', preset: '侍僧\n骗子\n罪犯\n艺人\n平民英雄\n公会工匠\n隐者\n贵族\n化外之民\n智者\n水手\n士兵\n流浪儿' },
   { key: 'alignment', q: '阵营呢?', expr: '1d9', preset: '守序善良\n守序中立\n守序邪恶\n中立善良\n绝对中立\n中立邪恶\n混乱善良\n混乱中立\n混乱邪恶' },
 ];
@@ -198,8 +199,9 @@ createApp({
       segLive: '',           // 正在生成的下一段预览
       segController: null,
 
-      // 安科决策台(逐项掷骰定角色)
+      // 安科决策台(逐项掷骰定角色 + 数值判定)
       decOpen: false,
+      decMode: 'wizard',     // wizard=建卡向导 / dice=数值判定(意愿、DC)
       decIdx: 0,
       decName: '',
       decOpts: '',           // 当前步骤的选项(每行一个,可增删)
@@ -212,6 +214,16 @@ createApp({
       decErr: '',
       decDraftName: '',
       decDone: false,
+      // 属性步骤:两次 1d16+2 取高
+      decStatExpr: '1d16+2',
+      decStats: [],
+      decStatBail: false,    // 职业核心属性双低保底再骰一次
+      // 数值判定(安价/意愿/DC)
+      decAsk: '',
+      decExpr: '1d100',
+      decThres: '50以上:愿意参与眼前的事\n70以上:愿意同行/接受请求',
+      decNumHit: null,
+      decNumLog: [],
 
       // 知识库
       kbTab: 'spells',
@@ -2005,21 +2017,49 @@ createApp({
       this.decBusy = false;
       this.decErr = '';
       this.decDone = false;
+      this.decMode = 'wizard';
+      this.decStats = [];
+      this.decStatBail = false;
+      this.decAsk = '';
+      this.decExpr = '1d100';
+      this.decThres = '50以上:愿意参与眼前的事\n70以上:愿意同行/接受请求';
+      this.decNumHit = null;
+      this.decNumLog = [];
       this.decOpen = true;
     },
     closeDecision() {
       if (this.decBusy) return;
       this.decOpen = false;
     },
+    decCurKey() {
+      const r = DEC_ROUNDS[this.decIdx];
+      return r ? r.key : '';
+    },
     decPrep(idx) {
       const r = DEC_ROUNDS[idx];
       this.decIdx = idx;
       this.decHit = null;
       this.decErr = '';
-      if (r && r.key !== 'name' && r.preset) {
+      if (!r) return;
+      if (r.key === 'stats') {
+        this.decInitStats();
+        return;
+      }
+      if (r.key !== 'name' && r.preset) {
         this.decOpts = r.preset;
         this.decRollInput = r.expr;
       }
+    },
+    decInitStats() {
+      this.decStats = this.dndStatKeys.map(k => ({
+        key: k,
+        label: this.dndStatLabels[k] || k,
+        rolls: [],
+        total: null,
+        rerolled: false,
+      }));
+      this.decHit = null;
+      this.decRollInput = this.decStatExpr || '1d16+2';
     },
     decCommitName() {
       const name = this.decName.trim();
@@ -2031,6 +2071,7 @@ createApp({
     async decRoll() {
       const r = DEC_ROUNDS[this.decIdx];
       if (!r || r.key === 'name') return;
+      if (r.key === 'stats') { await this.decRollStats(); return; }
       const opts = this.decOpts.split('\n').map(x => x.trim()).filter(Boolean);
       if (!opts.length) { this.decErr = '请至少保留一个选项'; return; }
       const input = (this.decRollInput || '').trim() || `1d${opts.length}`;
@@ -2055,6 +2096,51 @@ createApp({
       this.decHit = { key: r.key, expr: input, total, selected: opts[total - 1] };
       this.decRollInput = input;
     },
+    decMainOf(label) {
+      const meta = CLASS_META[this.decChoices.klass];
+      if (!meta) return false;
+      return meta.main.split(/[·或/]/).map(s => s.trim()).filter(Boolean).includes(label);
+    },
+    decStatMainText() {
+      const meta = CLASS_META[this.decChoices.klass];
+      return meta ? meta.main : '';
+    },
+    async decRollStats() {
+      if (this.decBusy) return;
+      const r = DEC_ROUNDS[this.decIdx];
+      if (!r || r.key !== 'stats') return;
+      const expr = (this.decStatExpr || '1d16+2').trim();
+      if (!/\b\d?\s*d\s*\d/i.test(expr)) { this.decErr = '属性骰表达式需形如 1d16+2'; return; }
+      this.decBusy = true; this.decErr = '';
+      const rows = this.decStats && this.decStats.length ? this.decStats : (this.decInitStats(), this.decStats);
+      for (const row of rows) row.rolls = [];
+      try {
+        for (const row of rows) {
+          const r1 = await API.post('/rolls', { expression: expr, maid_id: this.rollMaidId, save: true });
+          const r2 = await API.post('/rolls', { expression: expr, maid_id: this.rollMaidId, save: true });
+          const t1 = (r1.record || {}).total, t2 = (r2.record || {}).total;
+          if (this.segRollIds.indexOf((r1.record || {}).id) < 0) this.segRollIds.push((r1.record || {}).id);
+          if (this.segRollIds.indexOf((r2.record || {}).id) < 0) this.segRollIds.push((r2.record || {}).id);
+          row.rolls = [t1, t2];
+          row.total = Math.max(t1, t2);
+          row.rerolled = false;
+          if (this.decStatBail && this.decMainOf(row.label) && t1 < 10 && t2 < 10) {
+            const r3 = await API.post('/rolls', { expression: expr, maid_id: this.rollMaidId, save: true });
+            const t3 = (r3.record || {}).total;
+            if (this.segRollIds.indexOf((r3.record || {}).id) < 0) this.segRollIds.push((r3.record || {}).id);
+            row.rolls.push(t3);
+            row.total = Math.max(row.total, t3);
+            row.rerolled = true;
+          }
+        }
+      } catch (e) { this.decErr = e.message; this.decBusy = false; return; }
+      const labelText = x => `${x.label}${x.total}${x.rerolled ? '(补骰)' : ''}`;
+      const selected = rows.map(labelText).join(' ');
+      const rollsText = rows.map(x => `${x.label}:两掷 ${x.rolls.join(' / ')}${x.rerolled ? ` → 核心保底补骰 ${x.rolls[x.rolls.length - 1]}` : ''} → 取高 ${x.total}`).join('\n');
+      this.decHit = { key: 'stats', expr, total: null, selected, note: `${expr} ×2 取高`, rollsText };
+      this.decLog.push(`六维属性 → ${selected}\n${rollsText}`);
+      this.decBusy = false;
+    },
     async decWriteNext() {
       if (this.decBusy) return;
       const r = DEC_ROUNDS[this.decIdx];
@@ -2063,14 +2149,18 @@ createApp({
       if (!hit) { this.decErr = '先掷骰得到结果'; return; }
       this.decBusy = true; this.decErr = '';
       const summary = this.decSummary();
+      const outcome = hit.key === 'stats'
+        ? `六维属性(两次 ${hit.expr} 取高)结果为:${hit.selected}`
+        : `掷骰 ${hit.expr}=${hit.total},选中「${hit.selected}」`;
+      const noteText = hit.note || (hit.key === 'stats' ? `${hit.expr} ×2 取高` : `${hit.expr}=${hit.total}`);
       const instruction =
-        `刚才的决策:${r.q} 掷骰 ${hit.expr}=${hit.total},选中「${hit.selected}」。` +
-        `请写一小段 80~160 字的安科正文(世界观感+自然登场),只输出正文。`;
+        `刚才的决策:${r.q},${outcome}。` +
+        `请写一小段 80~160 字的安科正文(把这一结果自然带进故事,只输出正文)。`;
       try {
         const resp = await fetch('/api/ai/generate-segment/stream', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ context: this.entryForm.content, cast: summary, instruction, roll_note: `${hit.expr}=${hit.total}` }),
+          body: JSON.stringify({ context: this.entryForm.content, cast: summary, instruction, roll_note: noteText }),
         });
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({}));
@@ -2099,7 +2189,7 @@ createApp({
         }
       } catch (e) { this.decErr = e.message; this.decBusy = false; return; }
       this.decChoices[hit.key] = hit.selected;
-      this.decLog.push(`${r.q} → ${hit.selected} [${hit.expr}=${hit.total}]`);
+      this.decLog.push(`${r.q} → ${outcome}`);
       if (this.decIdx + 1 < DEC_ROUNDS.length) {
         this.decPrep(this.decIdx + 1);
       } else {
@@ -2115,6 +2205,7 @@ createApp({
       if (c.name) lines.push(`姓名:${c.name}`);
       if (c.race) lines.push(`种族:${c.race}`);
       if (c.klass) lines.push(`职业:${c.klass}`);
+      if (c.stats) lines.push(`属性:${c.stats}`);
       if (c.background) lines.push(`背景:${c.background}`);
       if (c.alignment) lines.push(`阵营:${c.alignment}`);
       return lines.join('\n');
@@ -2125,6 +2216,114 @@ createApp({
     },
     decRestart() {
       this.openDecision();
+    },
+    /* --- 数值判定模式:d100 意愿 / DC 检定 --- */
+    decNumJudge(total) {
+      if (!this.decThres) return '';
+      let above = '', aboveNum = -1, below = '', belowNum = Infinity;
+      for (const raw of this.decThres.split('\n')) {
+        const line = raw.trim();
+        if (!line) continue;
+        let m = line.match(/^(\d+)\s*(?:以上|≥|>=)\s*[:：]?\s*(.*)$/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (total >= n && n > aboveNum) { aboveNum = n; above = m[2].trim(); }
+          continue;
+        }
+        m = line.match(/^(\d+)\s*(?:以下|≤|<=)\s*[:：]?\s*(.*)$/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (total <= n && n < belowNum) { belowNum = n; below = m[2].trim(); }
+        }
+      }
+      return above || below;
+    },
+    decNumPreset(type) {
+      if (type === 'dc') {
+        this.decExpr = '1d20';
+        this.decThres = '15以上:检定成功\n10以上:部分成功';
+      } else if (type === 'wild') {
+        this.decExpr = '1d100';
+        this.decThres = '95以上:大成功\n70以上:顺利\n50以上:一般\n5以下:大失败';
+      } else {
+        this.decExpr = '1d100';
+        this.decThres = '50以上:愿意参与眼前的事\n70以上:愿意同行/接受请求';
+      }
+      this.decErr = '';
+    },
+    async decNumRoll() {
+      if (this.decBusy) return;
+      const expr = this.decExpr.trim();
+      if (!expr) { this.decErr = '请输入骰子表达式(如 1d100、1d70+30)'; return; }
+      this.decErr = '';
+      let total = null;
+      try {
+        const resp = await API.post('/rolls', { expression: expr, maid_id: this.rollMaidId, save: true });
+        const rec = resp.record || {};
+        total = rec.total;
+        if (this.segRollIds.indexOf(rec.id) < 0) this.segRollIds.push(rec.id);
+      } catch (e) { this.decErr = e.message; return; }
+      const result = this.decNumJudge(total);
+      this.decNumHit = { expr, total, result };
+      const line = `判定 ${expr} = ${total}${result ? ` · ${result}` : ''}`;
+      this.decNumLog.push(line);
+      this.decExpr = expr;
+    },
+    decNumReset() {
+      this.decNumHit = null;
+      this.decNumLog = [];
+      this.decErr = '';
+    },
+    async decNumWrite() {
+      const hit = this.decNumHit;
+      if (!hit) { this.decErr = '先掷骰得到数值'; return; }
+      if (this.decBusy) return;
+      this.decBusy = true; this.decErr = '';
+      const ask = this.decAsk.trim() || '这次判定';
+      const outcome = hit.result ? `,结果为「${hit.result}」` : '';
+      const instruction =
+        `刚才的判定:「${ask}」掷骰 ${hit.expr}=${hit.total}${outcome}。` +
+        `请写一小段 80~160 字的安科正文(把这一数值结果自然转化为角色的态度/行动,只输出正文)。`;
+      const castText = this.segCast || this.decSummary() || '无特定登场角色';
+      try {
+        const resp = await fetch('/api/ai/generate-segment/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            context: this.entryForm.content,
+            cast: castText,
+            instruction,
+            roll_note: `${hit.expr}=${hit.total}`,
+          }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error((err.detail && (typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail))) || 'HTTP ' + resp.status);
+        }
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '', full = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const parts = buf.split('\n\n');
+          buf = parts.pop() || '';
+          for (const part of parts) {
+            const line = part.replace(/^data:\s*/, '').trim();
+            if (!line) continue;
+            const obj = JSON.parse(line);
+            if (obj.type === 'delta') full += obj.text;
+            else if (obj.type === 'error') throw new Error(obj.message);
+          }
+        }
+        if (full) {
+          const prefix = this.entryForm.content ? '\n\n' : '';
+          this.entryForm.content += prefix + full.trim();
+        }
+      } catch (e) { this.decErr = e.message; this.decBusy = false; return; }
+      this.decNumHit = null;
+      this.decBusy = false;
     },
 
     /* ---------------- 剧情 ---------------- */

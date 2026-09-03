@@ -918,6 +918,24 @@ createApp({
       this.clsChoice = {};
       this.layoutColLines();
     },
+    clsEntryText(data, lv) {
+      // 选择入口名(只列"选择…/…特性"占位,不混入专精等)
+      const names = this.classLevelRowFeats(lv, data);
+      return names.filter(n => /^选择/.test(n) || /特性$/.test(n)).join('、');
+    },
+    clsSlotIntro(data, lv) {
+      // 选择入口的引言(如吟游诗人学院那段协会介绍),没有则空
+      const names = this.classLevelRowFeats(lv, data);
+      const slot = names.find(n => /^选择/.test(n) || /特性$/.test(n));
+      if (!slot) return '';
+      const core = slot.replace(/^选择/, '').replace(/特性$/, '').trim();
+      if (!core) return '';
+      const card = this.classFeats(data).find(f => {
+        const zh = this.classZh(f.title);
+        return zh === core || zh.includes(core) || core.includes(zh);
+      });
+      return card ? (card.content || '') : '';
+    },
     clsActiveRes(data) {
       // 施法资源数据源:选中子职且其带独立施法表(奥法骑士/诡术师)→用子职表;否则用主职表
       if (this.kbClsView !== 'base') {

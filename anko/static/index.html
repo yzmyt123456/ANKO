@@ -520,9 +520,8 @@
 
                 <div class="kb-lv-panel">
                   <div class="kb-lv-panel-head">{{ classViewName(kbClsPage) }} · Lv {{ kbClsLv }} 获得</div>
-                  <p v-if="kbClsView === 'base' && classViewFeats(kbClsPage, kbClsView, kbClsLv).isSubLevel" class="kb-lv-entry">
-                    🎯 选择入口：本等级将选择「{{ classViewFeats(kbClsPage, kbClsView, kbClsLv).names.join('、') }}」——下方为其可选的子职业，选中后该级实际能力见各子职业。
-                  </p>
+                  <p v-if="clsEntryText(kbClsPage, kbClsLv)" class="kb-lv-entry">🎯 选择入口：本等级将选择「{{ clsEntryText(kbClsPage, kbClsLv) }}」</p>
+                  <p v-if="clsSlotIntro(kbClsPage, kbClsLv)" class="kb-entry-intro">{{ clsReflow(clsSlotIntro(kbClsPage, kbClsLv)) }}</p>
                   <div class="kb-lv-feat-chips">
                     <span v-if="classRowProf(kbClsLv, kbClsPage)" class="kb-lv-feat-chip kb-prof">熟练加值 {{ classRowProf(kbClsLv, kbClsPage) }}</span>
                     <span v-for="(n, i) in classViewFeats(kbClsPage, kbClsView, kbClsLv).names" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
@@ -563,11 +562,11 @@
                     </p>
                   </template>
                   <div v-if="kbClsView === 'base' && classViewFeats(kbClsPage, kbClsView, kbClsLv).isSubLevel" class="kb-sub-choice">
-                    <div class="kb-lv-note">💡 上方为"选择入口"说明;选定下方任一子职业后,该等级实际将获得:</div>
-                    <div v-for="o in classSubChoices(kbClsPage, kbClsLv)" :key="o.s.id" class="kb-sub-choice-item">
+                    <div class="kb-lv-note">👇 直接选择：点击下方任一子职业，本面板立即显示该等级实际获得的能力</div>
+                    <div v-for="o in classSubChoices(kbClsPage, kbClsLv)" :key="o.s.id" class="kb-sub-choice-item kb-entry-opt">
                       <button class="kb-choice-btn" @click="kbClsView = 's' + o.s.id">{{ classZh(o.s.title) }}</button>
                       <span v-for="(c, i) in o.cards" :key="i" class="kb-lv-feat-chip">{{ classZh(c.title) }}</span>
-                      <span class="kb-choice-hint">点子职查看该级能力详情</span>
+                      <span class="kb-choice-hint">点击后在本面板查看该级详情</span>
                     </div>
                   </div>
                 </div>

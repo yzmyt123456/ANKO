@@ -532,6 +532,7 @@
                     <div v-for="f in classViewFeats(kbClsPage, kbClsView, kbClsLv).cards" :key="f.id" class="kb-trait-item">
                       <div class="kb-trait-title">{{ f.title }}</div>
                       <template v-if="featOptions(f.content)">
+                        <p v-if="featOptions(f.content).intro" class="kb-choice-intro">{{ featOptions(f.content).intro }}</p>
                         <div class="kb-choice-tabs">
                           <button v-for="(o, i) in featOptions(f.content).options" :key="i"
                                   :class="['kb-choice-tab', { on: (clsChoice[f.id] || 0) === i }]"
@@ -596,6 +597,7 @@
                           <span v-if="classFeatLv(f, kbClsPage)" class="kb-chip">Lv{{ classFeatLv(f, kbClsPage) }}</span>
                         </summary>
                         <template v-if="featOptions(f.content)">
+                          <p v-if="featOptions(f.content).intro" class="kb-choice-intro">{{ featOptions(f.content).intro }}</p>
                           <div class="kb-choice-tabs">
                             <button v-for="(o, i) in featOptions(f.content).options" :key="i"
                                     :class="['kb-choice-tab', { on: (clsChoice[f.id] || 0) === i }]"
@@ -627,6 +629,7 @@
                               {{ c.title }}
                             </summary>
                             <template v-if="featOptions(c.content)">
+                              <p v-if="featOptions(c.content).intro" class="kb-choice-intro">{{ featOptions(c.content).intro }}</p>
                               <div class="kb-choice-tabs">
                                 <button v-for="(o, i) in featOptions(c.content).options" :key="i"
                                         :class="['kb-choice-tab', { on: (clsChoice[c.id] || 0) === i }]"

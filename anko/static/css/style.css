@@ -1005,6 +1005,7 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-choice-tab:hover { border-color: var(--primary); color: var(--primary-dark); }
 .kb-choice-tab.on { background: var(--primary); border-color: var(--primary); color: #fff; }
 .kb-choice-body { font-size: 13.5px; color: var(--text-2); line-height: 2; margin: 2px 0; white-space: pre-line; }
+.kb-choice-intro { font-size: 13px; color: #5a4a33; line-height: 2; margin: 6px 0 8px; padding: 6px 10px; background: rgba(240, 232, 210, .30); border-left: 3px solid #d9c9a4; border-radius: 0 8px 8px 0; white-space: pre-line; }
 .kb-prof { background: #fff7e6; border-color: #fde68a; color: #b45309; }
 .kb-res-bar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0 8px; padding: 6px 8px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; }
 .kb-res-title { font-size: 12px; font-weight: 700; color: #15803d; margin-right: 2px; }

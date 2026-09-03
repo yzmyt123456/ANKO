@@ -63,6 +63,10 @@ const totem = [...frame.querySelectorAll('.pf-sub')].find(b => b.textContent.inc
 click(totem);
 await sleep(300);
 console.log('图腾头部子职施法:', frame.querySelector('.pf-stat').textContent.includes('动物交谈术'));
+lvBtn(3).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+await sleep(250);
+const introEl = frame.querySelector('.kb-choice-intro');
+console.log('图腾 Lv3 选项卡引言:', introEl ? introEl.textContent.replace(/\s+/g, ' ').slice(0, 40) + '…' : '无');
 console.log('子职卡数:', frame.querySelectorAll('.kb-subclass-card').length);
 console.log('errors:', errors.length ? errors : '无');
 process.exit(0);

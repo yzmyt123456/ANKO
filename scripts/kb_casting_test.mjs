@@ -41,6 +41,13 @@ if (ek) {
   console.log('原书施法表图:', (ek.querySelector('.kb-spell-table img') || { getAttribute: () => '无' }).getAttribute('src'));
 }
 console.log('勇士无施法资源折叠:', champion ? !champion.querySelector('.kb-spell-table') : '?');
+// 战士 1 级战斗风格:应以选项卡形式出现(防御/箭术等)
+const lvBtnF = num => [...f2.querySelectorAll('.pf-scale')].find(b =>
+  (b.querySelector('.cls-lv-num') || { textContent: '' }).textContent.trim() === String(num));
+lvBtnF(1).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+await sleep(300);
+const tabText = [...f2.querySelectorAll('.kb-choice-tab')].map(t => t.textContent.trim()).join(',');
+console.log('战士Lv1 战斗风格选项卡:', tabText);
 // 法师:进度表应出现蓝色"环位数字"圆与青色"戏法/法术"圆
 const navWiz = [...f2.querySelectorAll('.pf-cls')].find(b =>
   (b.querySelector('.cls-nav-zh') || { textContent: '' }).textContent.trim() === '法师');

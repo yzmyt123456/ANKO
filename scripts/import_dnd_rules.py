@@ -148,6 +148,34 @@ def _class_feature_level(feats_map: dict[str, int], title: str, body: str) -> in
 
 
 _NUM_NULL = {"—", "–", "-", "－"}
+_STYLE_OPTION_PREFIX = ("箭术", "防御", "对打", "巨武器战斗", "双武器战斗", "防护")
+
+
+def _merge_class_style_options(node: dict) -> None:
+    """把职业下的战斗风格选项卡并入"战斗风格"类卡正文(供前端拆成选项卡),并移除冗余卡。"""
+    cards = [
+        c for c in node.get("children", [])
+        if c.get("kind") == "class_feature" and "战斗风格" in (c.get("title") or "")
+    ]
+    opts = [
+        c for c in node.get("children", [])
+        if c.get("kind") == "class_feature" and c.get("title")
+        and any(c["title"].startswith(p + " ") for p in _STYLE_OPTION_PREFIX)
+    ]
+    if not cards or not opts:
+        return
+    lines = ["可选战斗风格:"]
+    for o in opts:
+        body = clean_cn_spaces((o.get("content") or "").strip())
+        lines.append(f"{o['title']}。{body}".rstrip())
+    block = "\n\n" + "\n\n".join(lines)
+    for card in cards:
+        if "可选战斗风格" not in (card.get("content") or ""):
+            card["content"] = (card.get("content") or "") + block
+    node["children"] = [c for c in node["children"] if c not in opts]
+
+
+
 
 
 def _spell_anchor_cols(items: list) -> list | None:
@@ -459,6 +487,8 @@ def _build_class(c: dict) -> dict:
 
     if story_parts:
         node["content"] = f"§故事\n{chr(10).join(story_parts)}"
+    # 战斗风格选项卡(战士/圣武士/游侠)并入对应"战斗风格"卡
+    _merge_class_style_options(node)
     return node
 
 _ENTRY_ANCHOR_CACHE: dict[tuple, re.Pattern] = {}

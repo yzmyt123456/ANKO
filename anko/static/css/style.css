@@ -988,6 +988,13 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .kb-entry-intro { font-size: 13px; color: #5a4a33; line-height: 1.95; margin: -2px 0 10px; padding: 8px 12px; background: rgba(240, 232, 210, .32); border-left: 3px solid #d9c9a4; border-radius: 0 8px 8px 0; white-space: pre-line; }
 .kb-sub-choice .kb-entry-opt { align-items: center; padding: 7px 0; border-bottom: 1px dashed #ece2c8; flex-wrap: wrap; }
 .kb-sub-choice .kb-entry-opt:last-child { border-bottom: none; }
+.kb-entry-card { border-left: 3px solid #d9c9a4; }
+.kb-entry-desc { font-size: 13px; color: #5a4a33; line-height: 1.95; margin: 4px 0 8px; white-space: pre-line; }
+.kb-pick-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 2px; }
+.kb-pick-btn { flex: 1 1 190px; display: flex; flex-direction: column; gap: 3px; padding: 9px 14px; border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; cursor: pointer; text-align: left; box-shadow: none; }
+.kb-pick-btn b { font-size: 14px; color: #1f2937; }
+.kb-pick-btn span { font-size: 11.5px; color: #8a6d3b; }
+.kb-pick-btn:hover { border-color: var(--primary); }
 
 /* 占位级(选择XX/XX特性)下方:可选子职业该级能力 */
 .kb-sub-choice { margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px; }

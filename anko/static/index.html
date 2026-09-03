@@ -520,17 +520,26 @@
 
                 <div class="kb-lv-panel">
                   <div class="kb-lv-panel-head">{{ classViewName(kbClsPage) }} · Lv {{ kbClsLv }} 获得</div>
-                  <p v-if="clsEntryText(kbClsPage, kbClsLv)" class="kb-lv-entry">🎯 选择入口：本等级将选择「{{ clsEntryText(kbClsPage, kbClsLv) }}」</p>
-                  <p v-if="clsSlotIntro(kbClsPage, kbClsLv)" class="kb-entry-intro">{{ clsReflow(clsSlotIntro(kbClsPage, kbClsLv)) }}</p>
-                  <div class="kb-lv-feat-chips">
+                                                      <div class="kb-lv-feat-chips">
                     <span v-if="classRowProf(kbClsLv, kbClsPage)" class="kb-lv-feat-chip kb-prof">熟练加值 {{ classRowProf(kbClsLv, kbClsPage) }}</span>
-                    <span v-for="(n, i) in classViewFeats(kbClsPage, kbClsView, kbClsLv).names" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
+                    <span v-for="(n, i) in clsVisibleChips(kbClsPage, kbClsLv)" :key="i" class="kb-lv-feat-chip">{{ n }}</span>
                   </div>
                   <div class="kb-res-bar" v-if="classRowResParts(kbClsLv, clsActiveRes(kbClsPage)).length">
                     <span class="kb-res-title">🔮 施法资源</span>
                     <span v-for="(p, i) in classRowResParts(kbClsLv, clsActiveRes(kbClsPage))" :key="i" class="kb-res-chip">{{ p }}</span>
                   </div>
-                  <div v-if="classViewFeats(kbClsPage, kbClsView, kbClsLv).cards.length" class="kb-subtraits">
+                  <div v-if="clsEntryText(kbClsPage, kbClsLv)" class="kb-trait-item kb-entry-card">
+                      <div class="kb-trait-title">{{ clsEntryText(kbClsPage, kbClsLv) }}</div>
+                      <p v-if="clsSlotIntro(kbClsPage, kbClsLv)" class="kb-entry-desc">{{ clsReflow(clsSlotIntro(kbClsPage, kbClsLv)) }}</p>
+                      <div class="kb-pick-row">
+                        <button v-for="o in classSubChoices(kbClsPage, kbClsLv)" :key="o.s.id"
+                                class="kb-pick-btn" @click="kbClsView = 's' + o.s.id">
+                          <b>{{ classZh(o.s.title) }}</b>
+                          <span>{{ o.cards.map(c => classZh(c.title)).join('、') }}</span>
+                        </button>
+                      </div>
+                    </div>
+<div v-if="classViewFeats(kbClsPage, kbClsView, kbClsLv).cards.length" class="kb-subtraits">
                     <div v-for="f in classViewFeats(kbClsPage, kbClsView, kbClsLv).cards" :key="f.id" class="kb-trait-item">
                       <div class="kb-trait-title">{{ f.title }}</div>
                       <template v-if="featOptions(f.content)">
@@ -561,14 +570,7 @@
                       📖 该等级职业表未列新增能力(可能为法术位/熟练项提升,详见下方职业特性与子职)。
                     </p>
                   </template>
-                  <div v-if="kbClsView === 'base' && classViewFeats(kbClsPage, kbClsView, kbClsLv).isSubLevel" class="kb-sub-choice">
-                    <div class="kb-lv-note">👇 直接选择：点击下方任一子职业，本面板立即显示该等级实际获得的能力</div>
-                    <div v-for="o in classSubChoices(kbClsPage, kbClsLv)" :key="o.s.id" class="kb-sub-choice-item kb-entry-opt">
-                      <button class="kb-choice-btn" @click="kbClsView = 's' + o.s.id">{{ classZh(o.s.title) }}</button>
-                      <span v-for="(c, i) in o.cards" :key="i" class="kb-lv-feat-chip">{{ classZh(c.title) }}</span>
-                      <span class="kb-choice-hint">点击后在本面板查看该级详情</span>
-                    </div>
-                  </div>
+                  
                 </div>
               </div>
 

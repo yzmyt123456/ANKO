@@ -923,6 +923,11 @@ createApp({
       this.clsChoice = {};
       this.layoutColLines();
     },
+    clsVisibleChips(data, lv) {
+      // 顶部能力标签:剔除"选择…/…特性"占位名(占位内容由下方选项卡呈现)
+      const names = this.classViewFeats(data, this.kbClsView, lv).names;
+      return names.filter(n => !/^选择/.test(n) && !/特性$/.test(n));
+    },
     clsEntryText(data, lv) {
       // 选择入口名(只列"选择…/…特性"占位,不混入专精等)
       const names = this.classLevelRowFeats(lv, data);

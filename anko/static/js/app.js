@@ -615,6 +615,18 @@ createApp({
         const cards = this.classLevelFeats(lv, data).concat(
           shared.map(s => ({ id: s.key, title: s.title, content: s.content, children: [] }))
         );
+        // 游荡者偷袭成长:奇数级各 +1d6,下面面板给出该级偷袭简介
+        if (
+          this.classZh((data.title || '')) === '游荡者' && lv >= 3 && lv % 2 === 1
+        ) {
+          const dice = (lv + 1) / 2;
+          cards.push({
+            id: 'rogue-sneak-' + lv,
+            title: `偷袭（${dice}d6）`,
+            content: `该等级偷袭 +1：从 ${dice - 1}d6 提升到 ${dice}d6。你成功发动偷袭时，额外伤害改为 ${dice}d6（每回合一次；需攻击检定有优势，或目标身旁有与你对敌且未失能的生物且你的攻击检定无劣势）。`,
+            children: [],
+          });
+        }
         return {
           names,
           cards,
@@ -862,7 +874,7 @@ createApp({
         // 游荡者偷袭伤害随等级提高(奇数级:2d6…10d6):主职视图按表补圈
         if (view === 'base' && this.classZh((data.title || '')) === '游荡者' && lv >= 3 && lv % 2 === 1) {
           const dice = (lv + 1) / 2;
-          featNodes.push({ lv, kind: 'feat', group: '偷袭', badge: String(dice), title: `偷袭（${dice}d6）` });
+          featNodes.push({ lv, kind: 'feat', group: '偷袭', badge: '偷', title: `偷袭（${dice}d6）` });
         }
       }
       // 去重(同名同能力才去重;同一槽位同级的多个不同能力各自保留,如附赠熟练项+语出惊人)

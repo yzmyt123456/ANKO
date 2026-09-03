@@ -148,7 +148,7 @@ def _class_feature_level(feats_map: dict[str, int], title: str, body: str) -> in
 
 
 _NUM_NULL = {"—", "–", "-", "－"}
-_STYLE_OPTION_PREFIX = ("箭术", "防御", "对打", "巨武器战斗", "双武器战斗", "防护")
+_STYLE_OPTION_PREFIX = ("箭术", "防御", "对决", "巨武器战斗", "守护", "双武器战斗")
 
 
 def _merge_class_style_options(node: dict) -> None:

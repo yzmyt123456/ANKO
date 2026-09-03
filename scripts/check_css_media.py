@@ -7,7 +7,7 @@ rules = tinycss2.parse_stylesheet(css)
 print("顶层节点数:", len(rules))
 
 selectors = [".kb-group", ".kb-grid-list", ".kb-entry", ".kb-tab",
-             ".modal", ":root", ".gen-process", ".rule-lib", ".settings-grid",
+             ".modal", ":root", ".gen-process", ".settings-grid",
              ".dnd-stats", ".wiki-link"]
 found = {s: False for s in selectors}
 

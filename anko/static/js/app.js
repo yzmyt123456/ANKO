@@ -640,7 +640,18 @@ createApp({
             });
           })
           .filter(Boolean)
-          .filter(f => !cards.some(c => c.id === f.id));
+          .filter(f => !cards.some(c => c.id === f.id))
+          // 领域级已有“引导神力:×××”时,不再叠显通用“引导神力”卡(避免同屏两条)
+          .filter(f => {
+            const zh = this.classZh(f.title);
+            if (!/^引导神力/.test(zh)) return true;
+            const heads = cards.map(c => {
+              const z = this.classZh(c.title);
+              const at = z.search(/[:：]/);
+              return at > 0 ? z.slice(0, at) : z;
+            });
+            return !heads.includes(zh);
+          });
         return { names, cards: [...cards, ...baseCards], isSubLevel: true };
       }
       // 子职在该级没有专属能力时,回显主职该级成长(如属性值提升),使 1-20 表连续

@@ -1277,6 +1277,11 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .pf-rows .pf-lvcell::after, .pf-rows .pf-scale::after { display: none; }
 .pf-vlines { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; }
 .pf-vlines i { position: absolute; top: 0; bottom: 0; width: 1px; background: linear-gradient(180deg, rgba(140, 110, 60, .05), rgba(140, 110, 60, .5) 50%, rgba(140, 110, 60, .05)); transform: translateX(-.5px); }
+.pf-hlines { position: absolute; left: 0; right: 0; top: 0; bottom: 0; pointer-events: none; z-index: 0; }
+.pf-hlines i { position: absolute; height: 2px; background: #94a3b8; }
+.pf-hlines i.kind-sub { background: #a78bfa; }
+.pf-hlines i.kind-spell { background: #60a5fa; }
+
 
 
 

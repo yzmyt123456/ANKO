@@ -124,6 +124,7 @@ createApp({
       kbClasses: [],
       kbClsPage: null,
       pfColLines: [],
+      pfHLines: [],
       kbClsLv: 1,
       kbClsView: 'base',
       clsChoice: {},
@@ -946,18 +947,42 @@ createApp({
       return m ? m[2] : this.clsHitDie(data);
     },
     layoutColLines() {
-      // 按"等级数字"的实际列右缘测出竖线x,覆盖层整表绘制(与网格行无关,永不中断)
+      // 量测:竖线=各等级数字列右缘;横向连线=节点中心到节点中心(覆盖层绘制,永不错位)
       this.$nextTick(() => {
         const rows = this.$refs && this.$refs.pfRows;
         if (!rows) return;
+        const box = rows.getBoundingClientRect();
         const sels = rows.querySelectorAll('.pf-scale');
         if (sels.length < 2) return;
-        const box = rows.getBoundingClientRect();
-        const arr = [];
-        for (let i = 0; i < sels.length - 1; i++) {
-          arr.push(Math.round(sels[i].getBoundingClientRect().right - box.left));
+        const centers = [];
+        const cols = [];
+        for (let i = 0; i < sels.length; i++) {
+          const r = sels[i].getBoundingClientRect();
+          centers[i] = (r.left + r.right) / 2 - box.left;
+          if (i < sels.length - 1) cols.push(Math.round(r.right - box.left));
         }
-        this.pfColLines = arr;
+        this.pfColLines = cols;
+        // 每行动能行中心
+        const laneRows = [];
+        const lanes = this.clsTableLanes(this.kbClsPage || { children: [] });
+        lanes.forEach((lane, li) => {
+          const c = rows.querySelector(`.pf-lvcell[data-li="${li}"]`);
+          if (c) {
+            const rr = c.getBoundingClientRect();
+            laneRows[li] = rr.top + rr.height / 2 - box.top;
+          }
+        });
+        const hs = [];
+        lanes.forEach((lane, li) => {
+          if (laneRows[li] == null) return;
+          (lane.lines || []).forEach(ln => {
+            const x1 = centers[ln.a - 1];
+            const x2 = centers[ln.b - 1];
+            if (x1 == null || x2 == null) return;
+            hs.push({ x1, x2, y: laneRows[li], kind: ln.kind });
+          });
+        });
+        this.pfHLines = hs;
       });
     },
     clsCurrentIntro(data) {

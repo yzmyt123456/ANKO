@@ -493,17 +493,14 @@
                   <div ref="pfRows" class="pf-rows">
                     <span class="pf-ll-label pf-rowhead" :style="{ gridRow: 1, gridColumn: 1 }">等级</span>
                     <button v-for="n in classLevelList()" :key="'s' + n"
-                            :class="['pf-scale', 'kb-lv-btn', { on: kbClsLv === n, 'pf-lastcol': n === 20 }]"
+                            :data-lv="n" :class="['pf-scale', 'kb-lv-btn', { on: kbClsLv === n, 'pf-lastcol': n === 20 }]"
                             :style="{ gridRow: 1, gridColumn: n + 1 }" @click="kbClsLv = n">
                       <span class="cls-lv-num">{{ n }}</span>
                     </button>
                     <template v-for="(lane, li) in clsTableLanes(kbClsPage)" :key="lane.key">
                       <span class="pf-ll-label pf-rowhead" :style="{ gridRow: li + 2, gridColumn: 1 }">{{ lane.label }}</span>
-                      <i v-for="(ln, x) in lane.lines" :key="'h' + li + '-' + x"
-                         class="pf-hline" :class="'kind-' + ln.kind"
-                         :style="{ gridRow: li + 2, gridColumn: (ln.a + 2) + ' / ' + (ln.b + 2) }"></i>
                       <template v-for="n in classLevelList()" :key="'u' + n">
-                        <div class="pf-lvcell" :style="{ gridRow: li + 2, gridColumn: n + 1 }"
+                        <div class="pf-lvcell" :data-li="li" :data-lv="n" :style="{ gridRow: li + 2, gridColumn: n + 1 }"
                              :class="{ on: kbClsLv === n, has: lane.cells[n].length, 'pf-lastcol': n === 20 }"
                              @click="kbClsLv = n" :title="lane.cells[n].length ? 'Lv' + n : ''">
                           <span v-for="(nd, i) in lane.cells[n]" :key="'nd' + i"
@@ -511,6 +508,10 @@
                         </div>
                       </template>
                     </template>
+                    <div class="pf-hlines">
+                      <i v-for="(h, i) in pfHLines" :key="'h' + i" :class="'kind-' + h.kind"
+                         :style="{ left: h.x1 + 'px', width: Math.max(2, h.x2 - h.x1) + 'px', top: (h.y - 1) + 'px' }"></i>
+                    </div>
                     <div class="pf-vlines">
                       <i v-for="(x, i) in pfColLines" :key="'vl' + i" :style="{ left: x + 'px' }"></i>
                     </div>

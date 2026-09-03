@@ -317,6 +317,28 @@ def _fix_known_class_texts(node: dict) -> None:
         ):
             k["content"] = _DESTROY_UNDEAD_TEXT
             k["lv"] = 5
+        # 德鲁伊:同一张卡误合"荒野形态+德鲁伊结社"(均 Lv2) → 拆成两张
+        if (
+            k.get("kind") == "class_feature"
+            and k.get("title", "").startswith("荒野形态 Wild Shape 德鲁伊结社 Druid Circle")
+        ):
+            body = k.get("content") or ""
+            marker = "第 2 级时，你将选择参与一个德鲁伊结社"
+            at = body.find(marker)
+            wild_body = body[:at].strip() if at > 0 else body
+            circle_body = body[at:].strip() if at > 0 else (
+                "第 2 级时，你将选择参与一个德鲁伊结社。你可以从大地结社 Circle of the Land 或月亮结社 Circle of the Moon 中选择其一。\n\n"
+                "第 2、6、10、14 级时，你将获得所选结社相应的特性；大地结社与月亮结社的具体能力见下方「子职业」卡片。"
+            )
+            k["title"] = "荒野形态 Wild Shape"
+            k["content"] = wild_body
+            node["children"].append({
+                "title": "德鲁伊结社 Druid Circle",
+                "page": k.get("page"),
+                "kind": "class_feature",
+                "content": circle_body,
+                "children": [],
+            })
         # 战士等职业表与右侧"生命值"同高重叠时,正文易被误当作表格丢弃 → 自动回填
         if (
             k.get("kind") == "class_base"

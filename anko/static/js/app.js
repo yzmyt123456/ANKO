@@ -764,7 +764,8 @@ createApp({
         names.slice(0, 3).forEach(nm => {
           const kind = subOn(lv) ? 'sub' : 'feat';
           featNodes.push({
-            lv, kind, group: this.clsGroupKey(nm), badge: '',
+            lv, kind, group: this.clsGroupKey(nm),
+            badge: Array.from(nm.replace(/[（(].*$/, '').trim())[0] || '',
             title: `${nm}${kind === 'sub' ? '(子职能力)' : ''}`,
           });
         });
@@ -783,6 +784,7 @@ createApp({
         if (!byG[nd.group]) byG[nd.group] = { name: nd.title.replace(/\(子职能力\)/, ''), nodes: [] };
         byG[nd.group].nodes.push(nd);
       });
+      let labelOnce = true;
       Object.keys(byG).sort((a, b) => {
         const firstA = Math.min(...byG[a].nodes.map(n => n.lv));
         const firstB = Math.min(...byG[b].nodes.map(n => n.lv));
@@ -791,10 +793,11 @@ createApp({
         const nds = byG[g].nodes;
         lanes.push({
           key: 'g' + g,
-          label: byG[g].name,
+          label: labelOnce ? '职业能力' : '',
           cells: cellsOf(nds),
           lines: linesOf(nds),
         });
+        labelOnce = false;
       });
       return lanes;
     },

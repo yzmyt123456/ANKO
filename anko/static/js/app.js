@@ -691,8 +691,8 @@ createApp({
       return n.replace(/[（(].*?[)）]/g, '').trim().slice(0, 2);
     },
     clsGroupKey(name) {
-      // 同一条成长线归并:去掉括号内容(不屈(2次)/额外攻击(3)…)、"选择/原初/特性"前后缀;
-      // 以"狂暴"结尾的(狂暴/坚韧狂暴/持久狂暴)视为狂暴线
+      // 同一条成长线归并:去括号/数字、"选择/原初/特性"前后缀;狂暴系并入狂暴线;
+      // 学院/道途/流派/宗派等槽位词归一到槽名(选择吟游诗人学院=学院特性=学院)
       let s = String(name || '')
         .replace(/[（(][^（）()]*[）)]/g, '')
         .replace(/\d+/g, '')
@@ -701,6 +701,9 @@ createApp({
         .replace(/特性$/, '')
         .trim();
       if (s.endsWith('狂暴')) s = '狂暴';
+      for (const k of ['学院', '道途', '流派', '宗派', '领域', '传承', '法门', '誓言', '结社', '起源']) {
+        if (s.endsWith(k)) { s = k; break; }
+      }
       return s;
     },
     clsTableLanes(data) {
@@ -1029,6 +1032,7 @@ createApp({
       const names = String(row.feats || '').split(/[，,、/]/).map(s => s.trim()).filter(Boolean);
       return names
         .map(n => {
+          if (/^选择/.test(n)) return undefined; // 选择入口:不展示正文卡
           const exact = feats.find(f => this.classZh(f.title) === n);
           return exact || feats.find(f => {
             const zh = this.classZh(f.title);

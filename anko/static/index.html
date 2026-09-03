@@ -520,6 +520,9 @@
 
                 <div class="kb-lv-panel">
                   <div class="kb-lv-panel-head">{{ classViewName(kbClsPage) }} · Lv {{ kbClsLv }} 获得</div>
+                  <p v-if="kbClsView === 'base' && classViewFeats(kbClsPage, kbClsView, kbClsLv).isSubLevel" class="kb-lv-entry">
+                    🎯 选择入口：本等级将选择「{{ classViewFeats(kbClsPage, kbClsView, kbClsLv).names.join('、') }}」——下方为其可选的子职业，选中后该级实际能力见各子职业。
+                  </p>
                   <div class="kb-lv-feat-chips">
                     <span v-if="classRowProf(kbClsLv, kbClsPage)" class="kb-lv-feat-chip kb-prof">熟练加值 {{ classRowProf(kbClsLv, kbClsPage) }}</span>
                     <span v-for="(n, i) in classViewFeats(kbClsPage, kbClsView, kbClsLv).names" :key="i" class="kb-lv-feat-chip">{{ n }}</span>

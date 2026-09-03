@@ -33,6 +33,7 @@ if (!frame) { console.log('errors:', errors.length ? errors : '无'); process.ex
 console.log('职业导航数:', frame.querySelectorAll('.cls-nav-item').length);
 console.log('右上属性卡行:', frame.querySelectorAll('.pf-stat-row').length);
 console.log('右侧本职基础卡:', frame.querySelectorAll('.pf-side-card').length);
+console.log('进度表金色特性圆点:', frame.querySelectorAll('.pf-dot.kind-feat').length);
 const barbNav = [...frame.querySelectorAll('.cls-nav-item')].find(b => b.textContent.includes('野蛮人'));
 if (barbNav) { click(barbNav); await sleep(1600); }
 const title = frame.querySelector('.cls-title');

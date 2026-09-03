@@ -678,6 +678,44 @@ createApp({
     classRowChips(lv, data) {
       return this.classViewFeats(data, this.kbClsView, lv).names.slice(0, 3);
     },
+    clsCellItems(lv, data) {
+      // 等级进度表单元格里的"圆形图标"清单(仿 PF 图:金=特性/紫=子职/蓝数字=环位/青=法术)
+      const out = [];
+      const push = (badge, kind, title) => {
+        out.push({ key: out.length, badge, kind, title });
+      };
+      const view = this.kbClsView;
+      const isSub = view !== 'base' &&
+        this.classSubs(data).some(s => ('s' + s.id) === view &&
+          (s.children || []).some(c => this.subFeatLv(c, s.children) === lv));
+      const names = this.classViewFeats(data, view, lv).names.slice(0, 3);
+      for (const nm of names) push('', isSub ? 'sub' : 'feat', nm);
+      // 施法资源(环阶数字圆 / 已知戏法 0 / 已知法术 S 等)
+      const rows = this.classLevelRows(this.clsActiveRes(data));
+      const r = rows.find(x => x.lv === lv);
+      if (r && r.res) {
+        for (const [k, v] of Object.entries(r.res)) {
+          if (v === null || v === 0) continue;
+          let badge = '';
+          let kind = 'spell';
+          let title = `${k} ${v}`;
+          if (k === '已知戏法') { badge = '0'; kind = 'known'; }
+          else if (k === '已知法术') { badge = 'S'; kind = 'known'; }
+          else if (k === '术法点') { badge = '术'; kind = 'known'; }
+          else if (k === '已知祈唤') { badge = 'I'; kind = 'known'; }
+          else if (k === '法术位环阶') {
+            badge = String(v); kind = 'spell';
+            const cnt = r.res['法术位'];
+            if (cnt) title = `法术位 ×${cnt} · 最大环阶 ${v}`;
+          }
+          else if (/^([1-9])环$/.test(k)) { badge = k[0]; kind = 'spell'; }
+          else if (k === '法术位') { continue; } // 数量并入"法术位环阶"的提示
+          push(badge, kind, title);
+          if (out.length >= 9) break;
+        }
+      }
+      return out;
+    },
     classResMini(lv, data) {
       // 等级格内的小法术徽:key→短标签,title→完整说明(仿 PF 每级圆形图标)
       const r = this.classLevelRows(data).find(x => x.lv === lv);

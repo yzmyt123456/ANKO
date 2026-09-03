@@ -1161,3 +1161,23 @@ input[type="checkbox"] { width: auto; margin: 0; }
   .settings-grid { grid-template-columns: 1fr; }
 }
 
+/* ---- 等级进度表:圆形图标网格(仿 PF) ---- */
+.pf-dots { display: flex; flex-wrap: wrap; gap: 4px; max-width: 100%; }
+.pf-dot {
+  width: 25px; height: 25px; min-width: 25px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: #fff;
+  border: 1px solid rgba(0, 0, 0, .18); line-height: 1; box-shadow: inset 0 -2px 3px rgba(0,0,0,.12);
+}
+.pf-dot.kind-feat { background: linear-gradient(180deg, #f7c948, #d29a0b); color: #5a3c00; text-shadow: 0 1px 0 rgba(255,255,255,.35); }
+.pf-dot.kind-sub { background: linear-gradient(180deg, #b68cff, #7c3aed); }
+.pf-dot.kind-spell { background: linear-gradient(180deg, #63a5fb, #245fdd); }
+.pf-dot.kind-known { background: linear-gradient(180deg, #2dd4ee, #0f7f95); }
+.pf-dot.kind-empty { background: rgba(130, 100, 40, .10); border: 1px dashed #cbbf9e; }
+.cls-lv-cell.on .pf-dot.kind-empty { background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.5); }
+.pf-legend { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-left: 10px; font-weight: 600; font-size: 11px; color: #7a6533; vertical-align: middle; }
+.pf-legend .pf-dot { width: 14px; height: 14px; min-width: 14px; font-size: 0; margin-right: 3px; }
+.cls-lv-cell { align-items: flex-start; }
+.cls-lv-cell .pf-dots { justify-content: center; width: 100%; }
+
+

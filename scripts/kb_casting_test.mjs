@@ -41,5 +41,14 @@ if (ek) {
   console.log('原书施法表图:', (ek.querySelector('.kb-spell-table img') || { getAttribute: () => '无' }).getAttribute('src'));
 }
 console.log('勇士无施法资源折叠:', champion ? !champion.querySelector('.kb-spell-table') : '?');
+// 法师:进度表应出现蓝色"环位数字"圆与青色"戏法/法术"圆
+const navWiz = [...f2.querySelectorAll('.pf-cls')].find(b =>
+  (b.querySelector('.cls-nav-zh') || { textContent: '' }).textContent.trim() === '法师');
+click(navWiz);
+await sleep(1500);
+const wf = doc.querySelector('.cls-frame');
+const sd = wf.querySelectorAll('.cls-lv-grid .pf-dot.kind-spell');
+console.log('法师蓝色环位圆点数:', sd.length, '| 首个圆内容:', sd[0] ? sd[0].textContent.trim() : '');
+console.log('法师青色法术圆点数:', wf.querySelectorAll('.cls-lv-grid .pf-dot.kind-known').length);
 console.log('errors:', errors.length ? errors : '无');
 process.exit(0);

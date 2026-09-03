@@ -453,6 +453,7 @@ def _build_class(c: dict) -> dict:
                     continue
                 if t2.strip() in (
                     "熟练项 Proficiencies", "生命值 Hit Point", "生命值 Hit Points", "装备 Equipment",
+                    "＋你的体质调整值", "+你的体质调整值",
                 ):
                     # 栏外基础卡标题(如页边"熟练项/生命值")不是等级表特性格
                     continue

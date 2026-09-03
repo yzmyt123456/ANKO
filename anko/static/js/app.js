@@ -178,6 +178,17 @@ createApp({
       genController: null,
       genProcess: '',
 
+      // AI 逐段续写(骰子引导)
+      segBusy: false,
+      segErr: '',
+      segCast: '',           // 已生成登场角色的摘要(供续写参考)
+      segWant: '',           // 本段“想发生什么”(可选)
+      segExpr: '1d100',      // 文内掷骰表达式
+      segRollIds: [],        // 本段关联的掷骰记录 id
+      segRollLog: [],        // 已掷骰历史(文本)
+      segLive: '',           // 正在生成的下一段预览
+      segController: null,
+
       // 知识库
       kbTab: 'spells',
       kbQuery: '',
@@ -1858,8 +1869,104 @@ createApp({
         }
         await this.loadCharacters();
         this.closeGenCharModal();
-        this.showToast(`角色「${created.name}」已创建并登场 🎉`);
+        this.segCast = this.buildSegCast(this.genDraft);
+        this.segRollIds = [];
+        this.segRollLog = [];
+        this.showToast(`角色「${created.name}」已创建并登场 🎉 可在下方“骰子引导续写”开始写作`);
       } catch (e) { this.showToast(e.message, 'error'); }
+    },
+
+    /* ---------------- 骰子引导:逐段续写正文 ---------------- */
+    buildSegCast(d) {
+      if (!d) return '';
+      const s = d.stats || {};
+      const lines = [
+        `姓名:${d.name || ''}`,
+        `称号:${d.title || ''}`,
+        `职业:${s.klass || ''}`, `种族:${s.race || ''}`, `阵营:${s.alignment || ''}`,
+      ].filter(x => x && x.includes(':'));
+      if (d.bio) lines.push(`背景:${d.bio}`);
+      if (Array.isArray(d.tags) && d.tags.length) lines.push(`标签:${d.tags.join('、')}`);
+      return lines.join('\n');
+    },
+    async segDice() {
+      if (!this.segExpr.trim()) { this.showToast('请输入骰子表达式', 'error'); return; }
+      try {
+        const resp = await API.post('/rolls', {
+          expression: this.segExpr.trim(),
+          maid_id: this.rollMaidId,
+          save: true,
+        });
+        const r = resp.record || {};
+        const j = r.judgement && r.judgement.level ? ` · ${r.judgement.level}` : '';
+        const line = `${r.expression} = ${r.total}${j}`;
+        const note = (resp.description || line).trim();
+        this.segRollIds.push(r.id);
+        this.segRollLog.push(note);
+        this.segExpr = r.expression;
+        const prefix = this.entryForm.content ? '\n\n' : '';
+        this.entryForm.content += `${prefix}🎲 ${note}`;
+        this.showToast('已掷骰并记入正文 🎲');
+        if (this.segRollIds.length === 1) await this.loadRollHistory();
+      } catch (e) { this.showToast(e.message, 'error'); }
+    },
+    async segGenerate() {
+      if (!this.segCast) { this.showToast('请先生成一位登场角色', 'error'); return; }
+      if (this.segBusy) return;
+      this.segBusy = true; this.segErr = ''; this.segLive = '';
+      this.segController = new AbortController();
+      const lastRoll = this.segRollLog.length ? this.segRollLog[this.segRollLog.length - 1] : '';
+      try {
+        const resp = await fetch('/api/ai/generate-segment/stream', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            context: this.entryForm.content,
+            cast: this.segCast,
+            instruction: this.segWant.trim(),
+            roll_note: lastRoll,
+          }),
+          signal: this.segController.signal,
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error((err.detail && (typeof err.detail === 'string' ? err.detail : JSON.stringify(err.detail))) || ('HTTP ' + resp.status));
+        }
+        const reader = resp.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const parts = buf.split('\n\n');
+          buf = parts.pop() || '';
+          for (const part of parts) {
+            const line = part.replace(/^data:\s*/, '').trim();
+            if (!line) continue;
+            const obj = JSON.parse(line);
+            if (obj.type === 'delta') this.segLive += obj.text;
+            else if (obj.type === 'error') { this.segErr = obj.message; this.segLive = ''; }
+            else if (obj.type === 'done') { /* 结束 */ }
+          }
+        }
+        if (this.segLive && !this.segErr) {
+          // 一段完成:正式并入正文,玩家可自由编辑后再继续
+          const prefix = this.entryForm.content ? '\n\n' : '';
+          this.entryForm.content += prefix + this.segLive.trim();
+          this.segLive = '';
+          this.segWant = '';
+          this.showToast('本段已写入正文,可修改后继续 ✍️');
+        }
+      } catch (e) {
+        if (e.name !== 'AbortError') this.segErr = e.message;
+      } finally {
+        this.segBusy = false;
+        this.segController = null;
+      }
+    },
+    segStop() {
+      if (this.segController) this.segController.abort();
     },
 
     /* ---------------- 剧情 ---------------- */
@@ -1893,6 +2000,15 @@ createApp({
       this.currentStory = s;
       this.view = 'storyDetail';
       this.entryForm = { chapter: '', content: '', character_ids: [] };
+      // 清掉上一局的逐段引导状态(避免串到别的故事线)
+      this.segCast = '';
+      this.segWant = '';
+      this.segLive = '';
+      this.segBusy = false;
+      this.segErr = '';
+      this.segRollIds = [];
+      this.segRollLog = [];
+      if (this.segController) { this.segController.abort(); this.segController = null; }
       window.scrollTo({ top: 0 });
       try {
         this.entries = await API.get(`/stories/${s.id}/entries`);
@@ -1915,10 +2031,13 @@ createApp({
         chapter: this.entryForm.chapter.trim() || null,
         content: this.entryForm.content,
         character_ids: this.entryForm.character_ids,
+        roll_ids: this.segRollIds.slice(),
       };
       try {
         await API.post(`/stories/${this.currentStory.id}/entries`, body);
         this.entryForm = { chapter: '', content: '', character_ids: [] };
+        this.segRollIds = [];
+        this.segRollLog = [];
         this.showToast('剧情已保存 ✍️');
         this.entries = await API.get(`/stories/${this.currentStory.id}/entries`);
       } catch (e) { this.showToast(e.message, 'error'); }

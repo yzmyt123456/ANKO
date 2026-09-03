@@ -343,6 +343,42 @@ def build_generate_prompt(
     return prompt
 
 
+_STORY_SEGMENT_PROMPT = """你是一位资深的安科导游。玩家用骰子推进剧情,你要接着“当前正文”写出**下一段**(一段即可)。
+
+当前正文:
+{context}
+
+登场角色卡片:
+{cast}
+
+最近掷骰结果(供参考,不要在正文里重复骰点):
+{roll_note}
+
+本段指示:
+{instruction}
+
+要求:
+1. 只输出一段 150~400 字的安科正文,风格贴合上文,自然收尾,不要标题、不要序号、不要额外说明。
+2. 不要在本段内自行掷骰;如果你认为该在此处做一次判定,在段落末尾另起一行只输出一行:“判定:表达式”,例如“判定:1d100”。
+3. 必须紧密承接上文与登场角色的设定。
+"""
+
+
+def build_story_segment_prompt(
+    context: str,
+    cast: str,
+    instruction: str = "",
+    roll_note: str = "",
+) -> str:
+    return (
+        _STORY_SEGMENT_PROMPT
+        .replace("{context}", (context or "").strip()[:6000] or "(正文为空,写一段开场)")
+        .replace("{cast}", (cast or "").strip()[:1500] or "(暂无角色卡)")
+        .replace("{roll_note}", (roll_note or "").strip()[:600] or "(尚未掷骰)")
+        .replace("{instruction}", (instruction or "").strip()[:500] or "自然推进剧情一个段落")
+    )
+
+
 def split_process_and_json(text: str) -> tuple[str, str]:
     """把 AI 输出拆分为(过程文本, JSON 原文)。"""
     if PROCESS_MARKER in text:
@@ -472,6 +508,27 @@ class AIService:
         if extra_rules.strip():
             prompt += (
                 "\n\n【本地规则参考(创建角色时请参考并尽量符合)】\n"
+                f"{extra_rules.strip()[:2500]}"
+            )
+        async for delta in client.chat_stream(
+            [{"role": "user", "content": prompt}]
+        ):
+            yield delta
+
+    async def generate_story_segment_stream(
+        self,
+        context: str,
+        cast: str,
+        instruction: str = "",
+        roll_note: str = "",
+        extra_rules: str = "",
+    ):
+        """续写一段安科正文(流式):供“逐段生成、玩家可中途修改”流程使用。"""
+        client = AIClient(self._current())
+        prompt = build_story_segment_prompt(context, cast, instruction, roll_note)
+        if extra_rules.strip():
+            prompt += (
+                "\n\n【本地规则参考(保证世界观/规则一致)】\n"
                 f"{extra_rules.strip()[:2500]}"
             )
         async for delta in client.chat_stream(

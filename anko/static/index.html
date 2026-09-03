@@ -249,6 +249,36 @@
                 </div>
                 <button type="submit" class="btn primary full">保存剧情</button>
               </form>
+
+              <div class="seg-panel">
+                <div class="seg-title">🧭 骰子引导续写 <span class="muted">(逐段生成 · 可中途修改)</span></div>
+                <p v-if="!segCast" class="muted seg-tip">
+                  先点上方“🤖 生成新角色”,系统会自动把角色摘要带到这里;<br/>
+                  之后每一段都会先写进正文框、等你改好,再“掷骰→生成下一段”。
+                </p>
+                <template v-else>
+                  <label>登场角色参考(可编辑)
+                    <textarea v-model="segCast" rows="3"></textarea>
+                  </label>
+                  <label>本段想让角色遭遇什么(可空,留空由导游自然推进)
+                    <input v-model="segWant" placeholder="如:在酒馆门口被陌生人叫住……" :disabled="segBusy" />
+                  </label>
+                  <div class="seg-row">
+                    <input v-model="segExpr" class="seg-expr" placeholder="1d100" :disabled="segBusy" />
+                    <button class="btn" :disabled="segBusy" @click="segDice">🎲 掷骰并记入正文</button>
+                    <button class="btn ai-btn" :disabled="segBusy || !segCast" @click="segGenerate">
+                      ✍️ {{ segBusy ? '生成中…' : '生成下一段(接正文)' }}
+                    </button>
+                    <button v-if="segBusy" class="btn danger" @click="segStop">停止</button>
+                  </div>
+                  <div v-if="segBusy && segLive" class="seg-live">{{ segLive }}</div>
+                  <div v-if="segErr" class="seg-err">{{ segErr }}</div>
+                  <ul v-if="segRollLog.length" class="seg-rolls">
+                    <li v-for="(r, i) in segRollLog" :key="i">🎲 {{ r }}</li>
+                  </ul>
+                  <p class="muted seg-tip">流程:生成一段 → 在正文框里修改 → 掷骰判定 → 再生成下一段;保存剧情后本段的掷骰也会关联记录。</p>
+                </template>
+              </div>
             </aside>
           </div>
         </section>

@@ -50,6 +50,15 @@ class GenerateCharacterRequest(BaseModel):
     )
 
 
+class StorySegmentRequest(BaseModel):
+    """逐段续写安科正文请求。"""
+
+    context: Optional[str] = Field("", description="当前正文(玩家可编辑后传入)")
+    cast: Optional[str] = Field("", description="登场角色卡片摘要")
+    instruction: Optional[str] = Field("", description="本段指示(可空)")
+    roll_note: Optional[str] = Field("", description="最近一次掷骰结果文本")
+
+
 @router.get("/status", response_model=AIStatus)
 def ai_status(request: Request) -> AIStatus:
     """查询 AI 服务是否已配置。"""
@@ -179,6 +188,63 @@ async def generate_character_stream(
             yield (
                 f"data: {json.dumps({'type': 'error', 'message': f'生成失败:{exc}'}, ensure_ascii=False)}\n\n"
             )
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.post("/generate-segment/stream")
+async def generate_segment_stream(
+    payload: StorySegmentRequest, request: Request
+) -> StreamingResponse:
+    """逐段续写安科正文(SSE):正文可被玩家在段落之间自由修改后继续。"""
+    service = request.app.state.ai_service
+    if not service.enabled:
+        raise HTTPException(
+            status_code=503,
+            detail="AI 尚未配置。请到「设置」页填写 AI 服务地址、API Key 与模型。",
+        )
+
+    async def event_stream():
+        try:
+            # 从知识库检索与当前角色/判定相关的参考片段
+            extra_rules = ""
+            try:
+                rule_svc = request.app.state.rule_service
+                kws = ["职业", "种族", "属性", "检定", "安科"]
+                refs = []
+                for kw in kws:
+                    refs += rule_svc.search_knowledge(kw, limit=1)
+                seen = set()
+                parts = []
+                for r in refs:
+                    key = r.get("page")
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    parts.append(
+                        f"[玩家手册 p{r.get('page')} {r.get('title', '')[:24]}]\n"
+                        f"{(r.get('content') or '')[:300]}"
+                    )
+                extra_rules = "\n\n".join(parts[:4])
+            except Exception:  # noqa: BLE001 知识库缺失不阻断生成
+                extra_rules = ""
+            async for delta in service.generate_story_segment_stream(
+                context=payload.context or "",
+                cast=payload.cast or "",
+                instruction=payload.instruction or "",
+                roll_note=payload.roll_note or "",
+                extra_rules=extra_rules,
+            ):
+                yield f"data: {json.dumps({'type': 'delta', 'text': delta}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
+        except (ValueError, AIError) as exc:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(exc)}, ensure_ascii=False)}\n\n"
+        except Exception as exc:  # noqa: BLE001
+            yield f"data: {json.dumps({'type': 'error', 'message': f'生成失败:{exc}'}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(
         event_stream(),

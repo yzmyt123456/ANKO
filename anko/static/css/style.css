@@ -1245,7 +1245,11 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .pf-node.kind-prof { background: #f4f4f5; color: #6b7280; }
 .pf-lv-badge { width: auto; height: auto; background: transparent; color: #7a6533; font-size: 13px; font-weight: 800; border: none; padding: 0 2px; box-shadow: none; }
 
-/* ---- 学原图:等级间用"中间深两端浅"褐色竖线;去掉整列高亮色带 ---- */
+/* ---- 学原图:竖线连续贯穿整表;去掉行间横线 ---- */
+.pf-lane-row { border-bottom: none !important; }
+.pf-lvcell::after { top: 0; bottom: 0; }
+.pf-lvcell { border-radius: 0; }
+
 .pf-lvcell { position: relative; background: transparent; box-shadow: none; }
 .pf-lvcell::after { content: ''; position: absolute; top: 5px; bottom: 5px; right: -2px; width: 1px; background: linear-gradient(180deg, rgba(140, 110, 60, .04), rgba(140, 110, 60, .42) 50%, rgba(140, 110, 60, .04)); }
 .pf-lvcell:last-child::after { display: none; }

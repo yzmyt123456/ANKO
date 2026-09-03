@@ -123,6 +123,7 @@ createApp({
       kbRaceResults: [],
       kbClasses: [],
       kbClsPage: null,
+      pfColLines: [],
       kbClsLv: 1,
       kbClsView: 'base',
       clsChoice: {},
@@ -493,6 +494,7 @@ createApp({
       try {
         const data = await API.get(`/rules/knowledge/${k.id}`);
         this.kbClsPage = data;
+        this.layoutColLines();
       } catch (e) { this.showToast(e.message, 'error'); }
     },
 
@@ -890,6 +892,7 @@ createApp({
     pfPickSub(s) {
       this.kbClsView = 's' + s.id;
       this.clsChoice = {};
+      this.layoutColLines();
     },
     clsActiveRes(data) {
       // 施法资源数据源:选中子职且其带独立施法表(奥法骑士/诡术师)→用子职表;否则用主职表
@@ -941,6 +944,21 @@ createApp({
     clsHitNum(data) {
       const m = /(\d+)d(\d+)/.exec(this.clsHitDie(data));
       return m ? m[2] : this.clsHitDie(data);
+    },
+    layoutColLines() {
+      // 按"等级数字"的实际列右缘测出竖线x,覆盖层整表绘制(与网格行无关,永不中断)
+      this.$nextTick(() => {
+        const rows = this.$refs && this.$refs.pfRows;
+        if (!rows) return;
+        const sels = rows.querySelectorAll('.pf-scale');
+        if (sels.length < 2) return;
+        const box = rows.getBoundingClientRect();
+        const arr = [];
+        for (let i = 0; i < sels.length - 1; i++) {
+          arr.push(Math.round(sels[i].getBoundingClientRect().right - box.left));
+        }
+        this.pfColLines = arr;
+      });
     },
     clsCurrentIntro(data) {
       if (this.kbClsView !== 'base') {

@@ -490,7 +490,7 @@
                     </div>
                   </div>
 
-                  <div class="pf-rows">
+                  <div ref="pfRows" class="pf-rows">
                     <span class="pf-ll-label pf-rowhead" :style="{ gridRow: 1, gridColumn: 1 }">等级</span>
                     <button v-for="n in classLevelList()" :key="'s' + n"
                             :class="['pf-scale', 'kb-lv-btn', { on: kbClsLv === n, 'pf-lastcol': n === 20 }]"
@@ -511,7 +511,9 @@
                         </div>
                       </template>
                     </template>
-
+                    <div class="pf-vlines">
+                      <i v-for="(x, i) in pfColLines" :key="'vl' + i" :style="{ left: x + 'px' }"></i>
+                    </div>
                   </div>
                   </div>
                 </div>

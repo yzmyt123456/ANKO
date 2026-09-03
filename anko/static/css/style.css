@@ -1272,6 +1272,13 @@ input[type="checkbox"] { width: auto; margin: 0; }
 .pf-hline.kind-sub::after { background: #a78bfa; }
 .pf-hline.kind-spell::after { background: #60a5fa; }
 
+/* ---- 覆盖线:整表高度一次性贯穿 ---- */
+.pf-rows { position: relative; }
+.pf-rows .pf-lvcell::after, .pf-rows .pf-scale::after { display: none; }
+.pf-vlines { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; }
+.pf-vlines i { position: absolute; top: 0; bottom: 0; width: 1px; background: linear-gradient(180deg, rgba(140, 110, 60, .05), rgba(140, 110, 60, .5) 50%, rgba(140, 110, 60, .05)); transform: translateX(-.5px); }
+
+
 
 
 

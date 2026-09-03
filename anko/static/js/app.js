@@ -701,6 +701,24 @@ createApp({
       }
       return '';
     },
+    clsReflow(text) {
+      // 合并 PDF 抽取时保留的"软折行"(中文字间不留空格),段落间仍保留空行
+      if (!text) return text;
+      const re = /[\u4e00-\u9fff，。；：！？、…—·（）0-9A-Za-z]/;
+      return text
+        .split(/\n\s*\n+/)
+        .map(para => {
+          const lines = para.split(/\n+/).map(s => s.trim());
+          let out = lines[0] || '';
+          for (const ln of lines.slice(1)) {
+            const prev = out.slice(-1);
+            const next = ln.slice(0, 1);
+            out += (re.test(prev) && re.test(next)) ? ln : ' ' + ln;
+          }
+          return out;
+        })
+        .join('\n\n');
+    },
     subFeatures(sub) {
       return (sub && sub.children || []).filter(x => x.kind !== 'class_levels');
     },

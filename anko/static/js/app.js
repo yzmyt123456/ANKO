@@ -754,19 +754,30 @@ createApp({
         lanes.push({ key: 'spell', label: '施法·环位', cells: cellsOf(spellNodes), lines: [] });
       }
 
-      // ③ 职业特性 / 变体能力:按"同一条成长线"拆成多个独立行(属性值提升一行、道途一行…)
+      // ③ 职业特性 / 变体能力:按"同一条成长线"拆成多个独立行
       const featNodes = [];
       const view = this.kbClsView;
+      // 主职表中的"占位槽"(选择道途/道途特性/流派等):子职能力应替换进同一条槽线
+      const isSlot = nm => /^选择|特性$/.test(nm) || /道途|流派|学院|宗派|领域|传承|法门|誓言|结社|起源|法术传承/.test(nm);
+      const baseSlot = {};
+      for (let lv = 1; lv <= 20; lv++) {
+        const baseNames = this.classViewFeats(data, 'base', lv).names;
+        const slot = baseNames.find(isSlot);
+        if (slot) baseSlot[lv] = this.clsGroupKey(slot);
+      }
       const subOn = lv => view !== 'base' && this.classSubs(data).some(s =>
         ('s' + s.id) === view && (s.children || []).some(c => this.subFeatLv(c, s.children) === lv));
       for (let lv = 1; lv <= 20; lv++) {
         const names = this.classViewFeats(data, view, lv).names;
         names.slice(0, 3).forEach(nm => {
-          const kind = subOn(lv) ? 'sub' : 'feat';
+          const isSub = subOn(lv);
+          const kind = isSub ? 'sub' : 'feat';
+          // 子职能力落点在"道途/流派"占位级 → 与主职那条线合并(都属同一槽)
+          const group = (isSub && baseSlot[lv]) ? baseSlot[lv] : this.clsGroupKey(nm);
           featNodes.push({
-            lv, kind, group: this.clsGroupKey(nm),
+            lv, kind, group,
             badge: Array.from(nm.replace(/[（(].*$/, '').trim())[0] || '',
-            title: `${nm}${kind === 'sub' ? '(子职能力)' : ''}`,
+            title: `${nm}${isSub ? '(子职能力)' : ''}`,
           });
         });
       }

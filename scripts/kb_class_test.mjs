@@ -54,6 +54,10 @@ console.log('狂战士 Lv6 含无我狂暴:', frame.querySelector('.kb-lv-panel'
 lvBtn(4).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 await sleep(250);
 console.log('狂战士 Lv4 回显主职ASI:', frame.querySelector('.kb-lv-panel').textContent.includes('属性值提升'));
+// 11级:坚韧狂暴应显示自己的描述(而非1级狂暴)
+lvBtn(11).dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+await sleep(250);
+console.log('野蛮人 Lv11 含坚韧狂暴描述:', frame.querySelector('.kb-lv-panel').textContent.includes('坚韧狂暴'));
 // 图腾武者道途:子职施法识别(兽语术仪式)
 const totem = [...frame.querySelectorAll('.pf-sub')].find(b => b.textContent.includes('图腾'));
 click(totem);

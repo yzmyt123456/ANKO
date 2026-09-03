@@ -691,14 +691,17 @@ createApp({
       return n.replace(/[（(].*?[)）]/g, '').trim().slice(0, 2);
     },
     clsGroupKey(name) {
-      // 把"同一条成长线"归并:去掉括号数字差异与"选择/原初/特性"前缀后缀
-      return String(name || '')
+      // 同一条成长线归并:去掉括号内容(不屈(2次)/额外攻击(3)…)、"选择/原初/特性"前后缀;
+      // 以"狂暴"结尾的(狂暴/坚韧狂暴/持久狂暴)视为狂暴线
+      let s = String(name || '')
         .replace(/[（(][^（）()]*[）)]/g, '')
         .replace(/\d+/g, '')
         .replace(/^选择/, '')
         .replace(/^原初/, '')
         .replace(/特性$/, '')
         .trim();
+      if (s.endsWith('狂暴')) s = '狂暴';
+      return s;
     },
     clsTableLanes(data) {
       // 等级进度表的多行轨道:熟练加值 / 施法·环位(有则行) / 职业特性(随主职/子职视图)
@@ -1025,10 +1028,13 @@ createApp({
       const feats = this.classFeats(data);
       const names = String(row.feats || '').split(/[，,、/]/).map(s => s.trim()).filter(Boolean);
       return names
-        .map(n => feats.find(f => {
-          const zh = this.classZh(f.title);
-          return n === zh || n.includes(zh) || zh.includes(n);
-        }))
+        .map(n => {
+          const exact = feats.find(f => this.classZh(f.title) === n);
+          return exact || feats.find(f => {
+            const zh = this.classZh(f.title);
+            return n.includes(zh) || zh.includes(n);
+          });
+        })
         .filter(Boolean)
         .slice(0, 6);
     },
